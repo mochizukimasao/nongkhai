@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.html": "html"
+    },
+    "html.format.enable": true,
+    "html.format.wrapLineLength": 120,
+    "html.format.indentInnerHtml": true,
+    "editor.formatOnSave": false,
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.root": "/",
+    "liveServer.settings.CustomBrowser": "chrome"
+}
+

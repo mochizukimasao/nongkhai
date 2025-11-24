@@ -1,0 +1,18 @@
+{
+  "name": "nongkhai",
+  "version": "1.0.0",
+  "description": "OmmWriter Style Editor",
+  "scripts": {
+    "dev": "npx http-server . -p 5500 -o",
+    "start": "npx http-server . -p 5500 -o"
+  },
+  "keywords": [
+    "editor",
+    "writing",
+    "notes"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {}
+}
+

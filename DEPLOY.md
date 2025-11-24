@@ -57,3 +57,4 @@ git push -u origin main
 - `index.html`がルートパス（`/`）で配信されます
 - IndexedDB（Dexie）はブラウザのローカルストレージを使用するため、各ユーザーのブラウザにデータが保存されます
 
+

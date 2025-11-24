@@ -138,7 +138,8 @@
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
-            z-index: 1000;
+            z-index: 2000;
+            /* Higher than floating menu button */
             display: flex;
             flex-direction: column;
         }
@@ -149,12 +150,19 @@
 
         #sidebar-header {
             padding: 20px;
+            padding-top: 60px;
+            /* Extra top padding to avoid overlap with floating menu button */
             font-size: 1.2rem;
             font-weight: bold;
             border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
+            /* Space between left empty area and right buttons */
             align-items: center;
+            min-height: 60px;
+            /* Ensure header has enough height */
+            position: relative;
+            z-index: 1;
         }
 
         #note-list {
@@ -543,7 +551,26 @@
             /* Faint */
             cursor: pointer;
             padding: 5px;
-            transition: color 0.3s ease;
+            transition: opacity 0.3s ease, visibility 0.3s ease, color 0.3s ease, display 0.3s ease;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Ensure button is hidden when sidebar is open - multiple selectors for reliability */
+        #sidebar.open ~ #btn-floating-menu,
+        body.sidebar-open #btn-floating-menu {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        /* Hide floating menu button when sidebar is open */
+        body.sidebar-open #btn-floating-menu {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         }
 
         #btn-floating-menu:hover {
@@ -579,8 +606,9 @@
         <!-- Sidebar -->
         <div id="sidebar">
             <div id="sidebar-header">
+                <!-- Empty space on the left (where Notes text was) -->
+                <div style="width: 1px; height: 1px;"></div>
                 <div style="display:flex; align-items:center; gap:5px;">
-                    <span style="margin-right: 5px;">Notes</span>
                     <button id="btn-sidebar-new" class="tool-btn" title="New Note"
                         style="margin:0; width:30px; height:30px;">
                         <svg viewBox="0 0 24 24">
@@ -593,12 +621,12 @@
                             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
                         </svg>
                     </button>
+                    <button id="btn-close-sidebar" class="tool-btn" style="margin: 0;">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                        </svg>
+                    </button>
                 </div>
-                <button id="btn-close-sidebar" class="tool-btn" style="margin: 0;">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                    </svg>
-                </button>
             </div>
             <ul id="note-list">
                 <!-- Notes will be injected here -->
@@ -1002,10 +1030,30 @@
 
             // --- Sidebar Logic ---
             function toggleSidebar() {
+                const isOpening = !sidebar.classList.contains('open');
                 sidebar.classList.toggle('open');
                 sidebarOverlay.classList.toggle('visible');
+                
+                // Hide/show floating menu button when sidebar opens/closes
                 if (sidebar.classList.contains('open')) {
+                    document.body.classList.add('sidebar-open');
+                    // Force hide button with multiple methods
+                    if (btnFloatingMenu) {
+                        btnFloatingMenu.style.display = 'none';
+                        btnFloatingMenu.style.visibility = 'hidden';
+                        btnFloatingMenu.style.opacity = '0';
+                        btnFloatingMenu.style.pointerEvents = 'none';
+                    }
                     updateNoteList();
+                } else {
+                    document.body.classList.remove('sidebar-open');
+                    // Restore button visibility
+                    if (btnFloatingMenu) {
+                        btnFloatingMenu.style.display = '';
+                        btnFloatingMenu.style.visibility = '';
+                        btnFloatingMenu.style.opacity = '';
+                        btnFloatingMenu.style.pointerEvents = '';
+                    }
                 }
                 playSound('click');
             }
