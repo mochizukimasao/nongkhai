@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OmmWriter Style Editor</title>
+    <style>
+        :root {
+            /* OmmWriter-inspired palette (Dark Mode Default) */
+            --bg-color: #1a1a1a;
+            /* Deep dark grey */
+            --text-color: #d0d0d0;
+            /* Soft grey text */
+            --highlight-color: #d0d0d0;
+            /* Same as text for highlight layer */
+            --caret-color: #fff;
+            --toolbar-bg: rgba(26, 26, 26, 0.9);
+            --toolbar-border: transparent;
+            --button-bg: transparent;
+            --button-hover: rgba(255, 255, 255, 0.1);
+            --button-active: rgba(255, 255, 255, 0.2);
+            --button-text: #888;
+            --button-text-active: #fff;
+            --button-select-active: #4a90e2;
+            /* Blue for active selection mode */
+
+            /* Typography */
+            --font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif;
+            --font-size: 17px;
+            --line-height: 1.8;
+        }
+
+        /* Light Mode Override - Softer Grey */
+        body.light-mode {
+            --bg-color: #e6e6e6;
+            /* Softer grey, easier on eyes */
+            --text-color: #333333;
+            /* Dark grey text */
+            --highlight-color: #333333;
+            --caret-color: #000;
+            --toolbar-bg: rgba(230, 230, 230, 0.9);
+            --button-hover: rgba(0, 0, 0, 0.05);
+            --button-active: rgba(0, 0, 0, 0.1);
+            --button-text: #666;
+            --button-text-active: #222;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #editor-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            overflow-y: auto;
+            /* Scroll handled here? No, let's handle scroll on textarea/div */
+            /* Actually, for overlay to work, we need a wrapper that scrolls, OR the textarea scrolls and we sync. 
+               Syncing scroll is safer for native feel. */
+            overflow: hidden;
+            /* Container doesn't scroll, elements inside do */
+            display: flex;
+            justify-content: center;
+        }
+
+        /* The scrollable wrapper for both layers */
+        #editor-scroll-area {
+            position: relative;
+            width: 100%;
+            max-width: 720px;
+            height: 100%;
+            margin: 0 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #editor-scroll-area::-webkit-scrollbar {
+            width: 8px;
+        }
+    </style>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <style>
+        /* Base & Reset */
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            overflow: hidden;
+            /* Prevent body scroll */
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* App Container */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Sidebar (Drawer) */
+        #sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 100%;
+            background-color: #252525;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar.open {
+            transform: translateX(0);
+        }
+
+        #sidebar-header {
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #note-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .note-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            /* Flex layout for delete btn */
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .note-item:hover {
+            background-color: #333;
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .note-action-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 16px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .note-action-btn:hover {
+            color: #ff4444;
+            background-color: rgba(255, 68, 68, 0.1);
+        }
+
+        .note-action-btn.restore:hover {
+            color: #44ff44;
+            background-color: rgba(68, 255, 68, 0.1);
+        }
+
+        .note-item.active {
+            background-color: #2a4050;
+            /* Active note highlight */
+            border-left: 4px solid #a8d5e2;
+        }
+
+        .note-title {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: bold;
+        }
+
+        .note-meta {
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .note-fav-icon {
+            color: #ffd700;
+            display: none;
+        }
+
+        .note-item.favorite .note-fav-icon {
+            display: inline;
+        }
+
+        /* Overlay for Sidebar */
+        #sidebar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 900;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #sidebar-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Editor Container */
+        #editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            /* Scroll handled by scroll-area */
+            display: flex;
+            justify-content: center;
+            /* Center the editor */
+        }
+
+        #editor-scroll-area {
+            width: 100%;
+            max-width: 800px;
+            /* OmmWriter style width */
+            height: 100%;
+            overflow-y: auto;
+            padding: 40px 20px 100px 20px;
+            /* Bottom padding for toolbar */
+            position: relative;
+            /* For absolute children */
+        }
+
+        /* Editor Layers */
+        .editor-layer {
+            width: 100%;
+            min-height: 100%;
+            /* Ensure it fills scroll area */
+            font-size: 17px;
+            /* Slightly smaller */
+            line-height: 2.0;
+            /* Relaxed line height */
+            border: none;
+            outline: none;
+            background: transparent;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #editor {
+            color: transparent;
+            /* Hide text color for overlay */
+            caret-color: #a8d5e2;
+            /* Custom caret color */
+            position: relative;
+            z-index: 2;
+            resize: none;
+            overflow: hidden;
+            /* Let container scroll */
+        }
+
+        #highlight-layer {
+            position: absolute;
+            top: 40px;
+            /* Match padding */
+            left: 20px;
+            /* Match padding */
+            right: 20px;
+            /* Match padding */
+            z-index: 1;
+            pointer-events: none;
+            color: #e0e0e0;
+            /* Text color */
+        }
+
+        /* Light Mode Overrides */
+        body.light-mode {
+            background-color: #e6e6e6;
+            color: #333;
+        }
+
+        body.light-mode #sidebar {
+            background-color: #f0f0f0;
+            border-right: 1px solid #ccc;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode #sidebar-header {
+            border-bottom: 1px solid #ddd;
+            color: #333;
+        }
+
+        body.light-mode .note-item {
+            border-bottom: 1px solid #ddd;
+        }
+
+        body.light-mode .note-item:hover {
+            background-color: #e0e0e0;
+        }
+
+        body.light-mode .note-item.active {
+            background-color: #d0e0f0;
+            border-left-color: #007aff;
+        }
+
+        body.light-mode #highlight-layer {
+            color: #333;
+        }
+
+        body.light-mode #editor {
+            caret-color: #007aff;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            height: 50px;
+            /* Smaller toolbar */
+            background-color: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 2px;
+            /* Tighter gap */
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+            overflow-x: auto;
+            /* Allow scroll on small screens */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body.light-mode #toolbar {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            /* Smaller buttons */
+            height: 36px;
+        }
+
+        .tool-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        body.light-mode .tool-btn {
+            color: #666;
+        }
+
+        body.light-mode .tool-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #000;
+        }
+
+        .tool-btn.active {
+            color: #a8d5e2;
+            background-color: rgba(168, 213, 226, 0.1);
+        }
+
+        body.light-mode .tool-btn.active {
+            color: #007aff;
+            background-color: rgba(0, 122, 255, 0.1);
+        }
+
+        .tool-btn.favorite-active {
+            color: #ffd700 !important;
+        }
+
+        .tool-btn svg {
+            width: 18px;
+            /* Smaller icons */
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .tool-btn span {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .separator {
+            width: 1px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+
+        body.light-mode .separator {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 2000;
+        }
+
+        body.light-mode #toast {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Scrollbar Styling - Ultra Minimal */
+        #editor-scroll-area::-webkit-scrollbar {
+            width: 4px;
+            background-color: transparent;
+        }
+
+        #editor-scroll-area::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        #editor-scroll-area::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0);
+            /* Explicitly transparent */
+            border-radius: 2px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Show scrollbar when scrolling */
+        #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Markdown Styles - Restored */
+        .md-bold {
+            text-decoration: underline;
+            text-decoration-style: dashed;
+            text-decoration-thickness: 1px;
+            font-weight: bold;
+        }
+
+        .md-heading {
+            border-bottom: 1px solid currentColor;
+            font-weight: bold;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* Font Styles */
+        .font-gothic #highlight-layer {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            line-height: 1.8;
+            /* Slightly tighter for Gothic */
+        }
+
+        /* Floating Menu Button */
+        #btn-floating-menu {
+            position: fixed;
+            top: 15px;
+            left: 20px;
+            z-index: 1500;
+            /* Above editor, below overlay/toast */
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.3);
+            /* Faint */
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.3s ease;
+        }
+
+        #btn-floating-menu:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        body.light-mode #btn-floating-menu {
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        body.light-mode #btn-floating-menu:hover {
+            color: rgba(0, 0, 0, 0.9);
+        }
+
+        #btn-floating-menu svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+        <!-- Floating Menu Button -->
+        <button id="btn-floating-menu" aria-label="Open Menu">
+            <svg viewBox="0 0 24 24">
+                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+            </svg>
+        </button>
+
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="margin-right: 5px;">Notes</span>
+                    <button id="btn-sidebar-new" class="tool-btn" title="New Note"
+                        style="margin:0; width:30px; height:30px;">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                    </button>
+                    <button id="btn-toggle-trash" class="tool-btn" title="Toggle Trash"
+                        style="margin:0; width:30px; height:30px;">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                        </svg>
+                    </button>
+                </div>
+                <button id="btn-close-sidebar" class="tool-btn" style="margin: 0;">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                    </svg>
+                </button>
+            </div>
+            <ul id="note-list">
+                <!-- Notes will be injected here -->
+            </ul>
+        </div>
+        <div id="sidebar-overlay"></div>
+
+        <div id="editor-container">
+            <div id="editor-scroll-area">
+                <div id="highlight-layer" class="editor-layer"></div>
+                <textarea id="editor" class="editor-layer" placeholder="Type here..." autofocus></textarea>
+            </div>
+        </div>
+        <div id="toast">Copied!</div>
+        <div id="toolbar">
+            <!-- Main Menu / New / Star -->
+            <div id="toolbar">
+                <!-- Main Menu / New / Star -->
+                <!-- Menu button removed -->
+                <button class="tool-btn" id="btn-new" aria-label="New Note">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-star" aria-label="Favorite">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                    </svg>
+                </button>
+
+                <div class="separator"></div>
+
+                <!-- Undo/Redo -->
+                <button class="tool-btn" id="btn-undo" aria-label="Undo">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-redo" aria-label="Redo">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" />
+                    </svg>
+                </button>
+
+                <div class="separator"></div>
+
+                <!-- Markdown Tools -->
+                <button class="tool-btn" id="btn-h1" aria-label="Heading 1">
+                    <span>#</span>
+                </button>
+                <button class="tool-btn" id="btn-bold" aria-label="Bold">
+                    <span>B</span>
+                </button>
+                <button class="tool-btn" id="btn-quote" aria-label="Quote">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-list" aria-label="Bullet List">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-ordered-list" aria-label="Ordered List">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z" />
+                    </svg>
+                </button>
+
+                <div class="separator"></div>
+
+                <!-- Clipboard Tools -->
+                <button class="tool-btn" id="btn-copy" aria-label="Copy All">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-paste" aria-label="Paste Plain">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z" />
+                    </svg>
+                </button>
+
+                <div class="separator"></div>
+
+                <!-- Navigation & Selection -->
+                <button class="tool-btn" id="btn-select-mode" aria-label="Selection Mode">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h1v2H5v14h14v-1h2zM11 6.83l1.59 1.58L8 13l1.41 1.41 4.59-4.59L15.59 11.41V6.83z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-up" aria-label="Move Cursor Up">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-down" aria-label="Move Cursor Down">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-left" aria-label="Move Cursor Left">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-right" aria-label="Move Cursor Right">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                    </svg>
+                </button>
+
+                <div class="separator"></div>
+
+                <!-- Font Toggle -->
+                <button class="tool-btn" id="btn-font" aria-label="Toggle Font">
+                    <span style="font-family: serif; font-size: 16px;">T</span>
+                </button>
+
+                <!-- Theme Toggle -->
+                <button class="tool-btn" id="btn-theme" aria-label="Toggle Theme">
+                    <svg id="icon-theme-sun" viewBox="0 0 24 24">
+                        <path
+                            d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z" />
+                    </svg>
+                    <svg id="icon-theme-moon" viewBox="0 0 24 24" style="display: none;">
+                        <path
+                            d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 18.59 14.42 21 10.75 21c-5.1 0-9.25-4.15-9.25-9.25 0-3.67 2.41-6.71 7.87-7.74z" />
+                    </svg>
+                </button>
+
+                <!-- Sound Toggle -->
+                <button class="tool-btn" id="btn-sound" aria-label="Toggle Sound">
+                    <svg id="icon-sound-on" viewBox="0 0 24 24" style="display: none;">
+                        <path
+                            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                    </svg>
+                    <svg id="icon-sound-off" viewBox="0 0 24 24">
+                        <path
+                            d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                    </svg>
+                </button>
+
+                <!-- Fullscreen Toggle -->
+                <button class="tool-btn" id="btn-fullscreen" aria-label="Toggle Fullscreen">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <script>
+            const editor = document.getElementById('editor');
+            const highlightLayer = document.getElementById('highlight-layer');
+            const scrollArea = document.getElementById('editor-scroll-area');
+            const toast = document.getElementById('toast');
+
+            // --- Toolbar Buttons ---
+            // --- Toolbar Buttons ---
+            const btnFloatingMenu = document.getElementById('btn-floating-menu');
+            const btnSidebarNew = document.getElementById('btn-sidebar-new');
+            // const btnMenu = document.getElementById('btn-menu'); // Removed
+            const btnNew = document.getElementById('btn-new');
+            const btnStar = document.getElementById('btn-star');
+            const btnUndo = document.getElementById('btn-undo');
+            const btnRedo = document.getElementById('btn-redo');
+            const btnH1 = document.getElementById('btn-h1');
+            const btnBold = document.getElementById('btn-bold');
+            const btnQuote = document.getElementById('btn-quote');
+            const btnList = document.getElementById('btn-list');
+            const btnOrderedList = document.getElementById('btn-ordered-list');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnPaste = document.getElementById('btn-paste');
+            const btnSelectMode = document.getElementById('btn-select-mode');
+            const btnUp = document.getElementById('btn-up');
+            const btnDown = document.getElementById('btn-down');
+            const btnLeft = document.getElementById('btn-left');
+            const btnRight = document.getElementById('btn-right');
+            const btnTheme = document.getElementById('btn-theme');
+            const iconThemeSun = document.getElementById('icon-theme-sun');
+            const iconThemeMoon = document.getElementById('icon-theme-moon');
+            const btnFont = document.getElementById('btn-font'); // New Font Button
+            const btnSound = document.getElementById('btn-sound');
+            const iconSoundOn = document.getElementById('icon-sound-on');
+            const iconSoundOff = document.getElementById('icon-sound-off');
+            const btnFullscreen = document.getElementById('btn-fullscreen');
+
+            // --- Sidebar Elements ---
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+            const noteList = document.getElementById('note-list');
+
+            // --- Auto-hide Scrollbar Logic ---
+            let scrollTimeout;
+            scrollArea.addEventListener('scroll', () => {
+                scrollArea.classList.add('scrolling');
+
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    scrollArea.classList.remove('scrolling');
+                }, 500); // Hide after 0.5 second of inactivity
+            });
+
+            // --- Font Toggle Logic ---
+            function toggleFont() {
+                document.body.classList.toggle('font-gothic');
+                const isGothic = document.body.classList.contains('font-gothic');
+                const span = btnFont.querySelector('span');
+
+                if (isGothic) {
+                    span.style.fontFamily = 'sans-serif';
+                    showToast('Font: Gothic');
+                } else {
+                    span.style.fontFamily = 'serif';
+                    showToast('Font: Mincho');
+                }
+                playSound('click');
+                saveSettings();
+            }
+
+            btnFont.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleFont();
+                editor.focus();
+            });
+            btnFont.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                toggleFont();
+            }, {
+                passive: false
+            });
+
+
+            // --- State ---
+            let isSoundEnabled = false;
+            let currentSoundProfile = 'relax'; // 'cute', 'relax', 'bubble'
+            const soundProfiles = ['cute', 'relax', 'bubble'];
+            let isSelectionMode = false;
+            let selectionAnchor = 0;
+            let audioCtx = null;
+
+            // --- DB State ---
+            let db;
+            let currentNoteId = null;
+            let showTrash = false; // Toggle state for sidebar
+
+            // --- Initialize DB ---
+            async function initDB() {
+                db = new Dexie("SimpleEditorDB");
+                db.version(2).stores({
+                    notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
+                }).upgrade(tx => {
+                    // Upgrade existing notes to have deleted: null
+                    return tx.notes.toCollection().modify(note => {
+                        note.deleted = null;
+                    });
+                });
+
+                // Cleanup old trash
+                await cleanupTrash();
+
+                // Load last edited note or create new (only if not deleted)
+                const lastNote = await db.notes
+                    .filter(n => !n.deleted) // Robust check for null/undefined
+                    .reverse()
+                    .sortBy('updated');
+
+                if (lastNote.length > 0 && lastNote[0].text.trim() === '') {
+                    // Reuse the last note if it's empty
+                    loadNote(lastNote[0].id);
+                } else {
+                    // Otherwise, start with a fresh note
+                    createNote();
+                }
+
+                updateNoteList();
+            }
+
+            async function cleanupTrash() {
+                const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+                // Delete items where 'deleted' timestamp is older than 30 days
+                // Dexie doesn't support complex filtering in delete directly easily, so iterate
+                await db.notes
+                    .filter(note => note.deleted !== null && note.deleted < thirtyDaysAgo)
+                    .delete();
+            }
+
+            // --- Note Logic ---
+            async function createNote() {
+                const id = await db.notes.add({
+                    text: '',
+                    created: Date.now(),
+                    updated: Date.now(),
+                    favorite: 0,
+                    deleted: null
+                });
+                loadNote(id);
+                showToast('New Note Created');
+                playSound('click');
+                if (sidebar.classList.contains('open')) toggleSidebar();
+            }
+
+            async function loadNote(id) {
+                const note = await db.notes.get(id);
+                if (note) {
+                    currentNoteId = id;
+                    editor.value = note.text;
+                    // If viewing a deleted note, maybe show a warning or disable editing?
+                    // For now, allow viewing.
+                    updateHighlights();
+                    syncHeight();
+                    updateStarState(note.favorite);
+                    scrollArea.scrollTop = 0;
+                }
+            }
+
+            async function saveCurrentNote() {
+                if (currentNoteId === null) return;
+
+                const text = editor.value;
+                try {
+                    await db.notes.update(currentNoteId, {
+                        text: text,
+                        updated: Date.now()
+                    });
+                    updateNoteList();
+                } catch (e) {
+                    console.error("Save failed", e);
+                    showToast("Save Failed!");
+                }
+            }
+
+            async function toggleFavorite() {
+                if (currentNoteId === null) return;
+                const note = await db.notes.get(currentNoteId);
+                const newFav = note.favorite ? 0 : 1;
+                await db.notes.update(currentNoteId, { favorite: newFav });
+                updateStarState(newFav);
+                updateNoteList();
+                showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
+                playSound('click');
+            }
+
+            async function deleteNote(id, event) {
+                if (event) event.stopPropagation();
+
+                const note = await db.notes.get(id);
+                if (!note) return;
+
+                if (note.deleted === null) {
+                    // Move to Trash
+                    await db.notes.update(id, { deleted: Date.now() });
+                    showToast('Moved to Trash');
+                } else {
+                    // Restore or Permanently Delete? 
+                    // Let's implement Restore for now if clicking delete in trash
+                    // Or maybe a separate restore button?
+                    // User asked for "Trash", usually implies Restore capability.
+                    // Let's make this button "Restore" if in trash?
+                    // Or "Delete Permanently"?
+                    // "ゴミ箱に入れて...自動的に削除" implies temporary storage.
+                    // Let's assume clicking delete in trash = Permanent Delete for manual cleanup
+                    if (confirm('Delete permanently?')) {
+                        await db.notes.delete(id);
+                        showToast('Deleted Permanently');
+                        if (currentNoteId === id) {
+                            editor.value = '';
+                            currentNoteId = null;
+                        }
+                    }
+                }
+                updateNoteList();
+                playSound('delete');
+            }
+
+            async function restoreNote(id, event) {
+                if (event) event.stopPropagation();
+                await db.notes.update(id, { deleted: null });
+                showToast('Restored from Trash');
+                updateNoteList();
+                playSound('click');
+            }
+
+            function updateStarState(isFav) {
+                if (isFav) {
+                    btnStar.classList.add('favorite-active');
+                } else {
+                    btnStar.classList.remove('favorite-active');
+                }
+            }
+
+            // --- Sidebar Logic ---
+            function toggleSidebar() {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('visible');
+                if (sidebar.classList.contains('open')) {
+                    updateNoteList();
+                }
+                playSound('click');
+            }
+
+            function toggleTrashView() {
+                showTrash = !showTrash;
+                const btn = document.getElementById('btn-toggle-trash');
+                btn.classList.toggle('active', showTrash);
+                updateNoteList();
+            }
+
+            async function updateNoteList() {
+                let notes;
+                if (showTrash) {
+                    // Show deleted notes (deleted is a timestamp)
+                    notes = await db.notes
+                        .filter(n => !!n.deleted)
+                        .reverse()
+                        .sortBy('deleted');
+                } else {
+                    // Show active notes (deleted is null or undefined)
+                    notes = await db.notes
+                        .filter(n => !n.deleted)
+                        .reverse()
+                        .sortBy('updated');
+                }
+
+                noteList.innerHTML = '';
+
+                if (notes.length === 0) {
+                    noteList.innerHTML = `<li style="padding:20px; color:#666; text-align:center;">${showTrash ? 'Trash is empty' : 'No notes'}</li>`;
+                    return;
+                }
+
+                notes.forEach(note => {
+                    const li = document.createElement('li');
+                    li.className = 'note-item';
+                    if (note.id === currentNoteId) li.classList.add('active');
+                    if (note.favorite) li.classList.add('favorite');
+
+                    const title = note.text.split('\n')[0].trim() || 'Untitled';
+                    const date = new Date(showTrash ? note.deleted : note.updated).toLocaleString();
+
+                    // Action Buttons
+                    let actionBtns = '';
+                    if (showTrash) {
+                        // Restore & Delete
+                        actionBtns = `
+                        <button class="note-action-btn restore" title="Restore">↩</button>
+                        <button class="note-action-btn delete" title="Delete Permanently">×</button>
+                    `;
+                    } else {
+                        // Delete (Move to Trash)
+                        actionBtns = `
+                        <button class="note-action-btn delete" title="Move to Trash">×</button>
+                    `;
+                    }
+
+                    li.innerHTML = `
+                    <div style="flex:1; overflow:hidden;">
+                        <div class="note-title">${title}</div>
+                        <div class="note-meta">
+                            <span>${date}</span>
+                            <span class="note-fav-icon">★</span>
+                        </div>
+                    </div>
+                    <div class="note-actions">
+                        ${actionBtns}
+                    </div>
+                `;
+
+                    // Click on item to load
+                    li.addEventListener('click', () => {
+                        loadNote(note.id);
+                        if (window.innerWidth < 600) toggleSidebar(); // Auto-close on mobile
+                    });
+
+                    // Button Events
+                    const btnDelete = li.querySelector('.delete');
+                    if (btnDelete) btnDelete.addEventListener('click', (e) => deleteNote(note.id, e));
+
+                    const btnRestore = li.querySelector('.restore');
+                    if (btnRestore) btnRestore.addEventListener('click', (e) => restoreNote(note.id, e));
+
+                    noteList.appendChild(li);
+                });
+            }
+
+            // --- Event Listeners for New Features ---
+
+
+
+            btnFloatingMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleSidebar();
+            });
+            // btnMenu.addEventListener('click', ...); // Removed
+
+            btnSidebarNew.addEventListener('click', (e) => {
+                e.preventDefault();
+                createNote();
+                // Keep sidebar open? Yes, usually.
+                // editor.focus(); // Focus editor?
+            });
+
+            btnNew.addEventListener('click', (e) => {
+                e.preventDefault();
+                createNote();
+                editor.focus();
+            });
+            btnStar.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleFavorite();
+            });
+
+            // Trash Toggle
+            document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleTrashView();
+            });
+
+            btnCloseSidebar.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleSidebar();
+            });
+            sidebarOverlay.addEventListener('click', toggleSidebar);
+
+            // --- Settings Persistence ---
+            function saveSettings() {
+                const settings = {
+                    theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
+                    font: document.body.classList.contains('font-gothic') ? 'gothic' : 'serif',
+                    soundEnabled: isSoundEnabled,
+                    soundProfile: currentSoundProfile
+                };
+                localStorage.setItem('editorSettings', JSON.stringify(settings));
+            }
+
+            function loadSettings() {
+                const saved = localStorage.getItem('editorSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+
+                    // Theme
+                    if (settings.theme === 'light') {
+                        document.body.classList.add('light-mode');
+                        iconThemeSun.style.display = 'none';
+                        iconThemeMoon.style.display = 'block';
+                    } else {
+                        document.body.classList.remove('light-mode');
+                        iconThemeSun.style.display = 'block';
+                        iconThemeMoon.style.display = 'none';
+                    }
+
+                    // Font
+                    if (settings.font === 'gothic') {
+                        document.body.classList.add('font-gothic');
+                        btnFont.querySelector('span').style.fontFamily = 'sans-serif';
+                    } else {
+                        document.body.classList.remove('font-gothic');
+                        btnFont.querySelector('span').style.fontFamily = 'serif';
+                    }
+
+                    // Sound
+                    if (settings.soundEnabled) {
+                        isSoundEnabled = true;
+                        currentSoundProfile = settings.soundProfile || 'relax';
+                        btnSound.classList.add('active');
+                        iconSoundOn.style.display = 'block';
+                        iconSoundOff.style.display = 'none';
+                        updateSoundIconColor();
+                    } else {
+                        isSoundEnabled = false;
+                        currentSoundProfile = settings.soundProfile || 'relax';
+                        btnSound.classList.remove('active');
+                        iconSoundOn.style.display = 'none';
+                        iconSoundOff.style.display = 'block';
+                        btnSound.style.color = '';
+                    }
+                }
+            }
+
+            // Initialize
+            window.addEventListener('DOMContentLoaded', () => {
+                loadSettings(); // Load settings first
+                initDB();
+                editor.focus();
+            });
+
+
+            // --- Helper: Prevent Default & Play Sound ---
+            function handleAction(e, action) {
+                e.preventDefault(); // Keep focus
+                action();
+                playSound('click');
+                editor.focus(); // Ensure focus
+            }
+
+            // --- Syntax Highlighting ---
+            function updateHighlights() {
+                let text = editor.value;
+
+                // Escape HTML to prevent XSS and rendering issues
+                text = text.replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                // Apply Markdown Styling
+                // Bold: **text** -> **<span class="md-bold">text</span>**
+                // We want to underline ONLY the text inside.
+                text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+
+                // Heading: # text (at start of line)
+                // Support # through ######
+                text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
+
+                // Handle trailing newline for display
+                if (text.endsWith('\n')) {
+                    text += '<br>';
+                }
+
+                highlightLayer.innerHTML = text;
+            }
+
+            editor.addEventListener('input', updateHighlights);
+
+            // Sync Scroll
+            // Since we are scrolling the parent #editor-scroll-area, and both children are absolute/full size,
+            // they should move together naturally if they are large enough?
+            // Wait, if they are position:absolute, they don't expand the parent?
+            // Actually, if they are absolute, the parent needs to know the size to scroll.
+            // Better approach: 
+            // Make textarea static (or relative) so it expands the parent.
+            // Make highlight layer absolute, top 0, left 0, matching size.
+            // Let's adjust the CSS logic slightly in JS or CSS.
+
+            // Correction:
+            // If textarea is static, it pushes the scroll height.
+            // Highlight layer is absolute.
+            // We just need to make sure highlight layer expands to match textarea height.
+            // Textarea auto-expands? No, textarea has fixed height 100% in CSS?
+            // In CSS: .editor-layer { min-height: 100%; }
+            // If content is longer than 100%, textarea grows? 
+            // Standard textarea with overflow:hidden (on itself) and height:auto (via scrollHeight) is one way.
+            // BUT here we have a scrollable container #editor-scroll-area.
+            // If we set textarea height to scrollHeight, it expands.
+
+            function syncHeight() {
+                // Reset height to min to get correct scrollHeight
+                editor.style.height = 'auto';
+                highlightLayer.style.height = 'auto';
+
+                const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
+                editor.style.height = height + 'px';
+                highlightLayer.style.height = height + 'px';
+            }
+
+            // Actually, standard textarea scrolls internally.
+            // If we want overlay, we usually make the container scroll, and textarea + div grow.
+            // Let's try the "Textarea grows, Container scrolls" approach.
+
+            editor.addEventListener('input', syncHeight);
+            window.addEventListener('resize', syncHeight);
+
+            // Initial call
+            window.addEventListener('DOMContentLoaded', () => {
+                updateHighlights();
+                syncHeight();
+                editor.focus();
+            });
+
+
+            // --- Undo/Redo ---
+            btnUndo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('undo')), { passive: false });
+            btnUndo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('undo')));
+
+            btnRedo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('redo')), { passive: false });
+            btnRedo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('redo')));
+
+            // --- Markdown Insertion ---
+            function insertMarkdown(type) {
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const text = editor.value;
+                const selectedText = text.substring(start, end);
+                let replacement = '';
+
+                if (type === 'h1') {
+                    const lastNewline = text.lastIndexOf('\n', start - 1);
+                    const lineStart = lastNewline + 1;
+                    const nextNewline = text.indexOf('\n', start);
+                    const actualLineEnd = nextNewline === -1 ? text.length : nextNewline;
+                    const currentLine = text.substring(lineStart, actualLineEnd);
+
+                    const match = currentLine.match(/^(#{1,6})\s*(.*)$/); // Added * for optional space
+
+                    if (match) {
+                        // Already a heading, cycle level
+                        const currentLevel = match[1].length;
+                        const headingText = match[2];
+                        let newLevel = (currentLevel % 6) + 1; // Cycle 1-6
+
+                        if (newLevel === 1 && currentLevel === 6) {
+                            // If it was H6 and now cycles to H1, remove heading instead
+                            replacement = headingText;
+                        } else {
+                            const newHashes = '#'.repeat(newLevel);
+                            replacement = `${newHashes} ${headingText}`;
+                        }
+
+                        editor.setRangeText(replacement, lineStart, actualLineEnd, 'end');
+                    } else {
+                        // Not a heading, apply H1
+                        if (selectedText.length > 0) {
+                            replacement = `# ${selectedText}`;
+                            editor.setRangeText(replacement, start, end, 'end');
+                        } else {
+                            // Insert H1 at the beginning of the current line
+                            replacement = '# ';
+                            editor.setRangeText(replacement, lineStart, lineStart, 'end');
+                        }
+                    }
+                    updateHighlights();
+                    syncHeight();
+                    return;
+                }
+
+                switch (type) {
+                    case 'bold':
+                        replacement = `**${selectedText}**`;
+                        break;
+                    case 'quote':
+                        replacement = `> ${selectedText}`;
+                        break;
+                    case 'list':
+                        replacement = `- ${selectedText}`;
+                        break;
+                    case 'ordered-list':
+                        replacement = `1. ${selectedText}`;
+                        break;
+                }
+
+                if (document.queryCommandSupported('insertText')) {
+                    document.execCommand('insertText', false, replacement);
+                } else {
+                    editor.setRangeText(replacement, start, end, 'end');
+                }
+                updateHighlights();
+                syncHeight();
+            }
+
+            btnH1.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('h1')), { passive: false });
+            btnH1.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('h1')));
+
+            btnBold.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('bold')), { passive: false });
+            btnBold.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('bold')));
+
+            btnQuote.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('quote')), { passive: false });
+            btnQuote.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('quote')));
+
+            btnList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('list')), { passive: false });
+            btnList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('list')));
+
+            btnOrderedList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('ordered-list')), { passive: false });
+            btnOrderedList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('ordered-list')));
+
+            // --- Clipboard Operations ---
+            function showToast(message) {
+                toast.textContent = message;
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, 2000);
+            }
+
+            function copyAll() {
+                navigator.clipboard.writeText(editor.value).then(() => {
+                    showToast('Copied All!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showToast('Copy Failed');
+                });
+            }
+
+            function pastePlain() {
+                navigator.clipboard.readText().then(text => {
+                    if (document.queryCommandSupported('insertText')) {
+                        document.execCommand('insertText', false, text);
+                    } else {
+                        const start = editor.selectionStart;
+                        const end = editor.selectionEnd;
+                        editor.setRangeText(text, start, end, 'end');
+                    }
+                    updateHighlights();
+                    syncHeight();
+                    showToast('Pasted!');
+                }).catch(err => {
+                    console.error('Failed to read clipboard: ', err);
+                    showToast('Paste Failed (Check Permissions)');
+                });
+            }
+
+            btnCopy.addEventListener('touchstart', (e) => handleAction(e, copyAll), { passive: false });
+            btnCopy.addEventListener('mousedown', (e) => handleAction(e, copyAll));
+
+            btnPaste.addEventListener('touchstart', (e) => handleAction(e, pastePlain), { passive: false });
+            btnPaste.addEventListener('mousedown', (e) => handleAction(e, pastePlain));
+
+
+            // --- Navigation & Selection Logic ---
+            function toggleSelectionMode() {
+                isSelectionMode = !isSelectionMode;
+                if (isSelectionMode) {
+                    btnSelectMode.classList.add('select-mode-active');
+                    selectionAnchor = editor.selectionStart; // Set anchor to current position
+                } else {
+                    btnSelectMode.classList.remove('select-mode-active');
+                    // Collapse selection to end
+                    const end = editor.selectionEnd;
+                    editor.setSelectionRange(end, end);
+                }
+            }
+
+            btnSelectMode.addEventListener('touchstart', (e) => handleAction(e, toggleSelectionMode), { passive: false });
+            btnSelectMode.addEventListener('mousedown', (e) => handleAction(e, toggleSelectionMode));
+
+            function moveCursor(direction) {
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const value = editor.value;
+                let newPos = isSelectionMode ? end : start;
+
+                let currentFocus = isSelectionMode ? (editor.selectionDirection === 'backward' ? start : end) : start;
+
+                if (direction === 'left') {
+                    newPos = Math.max(0, currentFocus - 1);
+                } else if (direction === 'right') {
+                    newPos = Math.min(value.length, currentFocus + 1);
+                } else if (direction === 'up') {
+                    const lastNewline = value.lastIndexOf('\n', currentFocus - 1);
+                    if (lastNewline === -1) {
+                        newPos = 0;
+                    } else {
+                        const prevLineStart = value.lastIndexOf('\n', lastNewline - 1) + 1;
+                        const currentColumn = currentFocus - (lastNewline + 1);
+                        newPos = Math.min(lastNewline, prevLineStart + currentColumn);
+                    }
+                } else if (direction === 'down') {
+                    const nextNewline = value.indexOf('\n', currentFocus);
+                    if (nextNewline === -1) {
+                        newPos = value.length;
+                    } else {
+                        const currentLineStart = value.lastIndexOf('\n', currentFocus - 1) + 1;
+                        const currentColumn = currentFocus - currentLineStart;
+                        const nextLineEnd = value.indexOf('\n', nextNewline + 1);
+                        const actualNextLineEnd = nextLineEnd === -1 ? value.length : nextLineEnd;
+                        newPos = Math.min(actualNextLineEnd, nextNewline + 1 + currentColumn);
+                    }
+                }
+
+                if (isSelectionMode) {
+                    if (newPos < selectionAnchor) {
+                        editor.setSelectionRange(newPos, selectionAnchor, 'backward');
+                    } else {
+                        editor.setSelectionRange(selectionAnchor, newPos, 'forward');
+                    }
+                } else {
+                    editor.setSelectionRange(newPos, newPos);
+                }
+            }
+
+            btnLeft.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('left')), { passive: false });
+            btnLeft.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('left')));
+            btnRight.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('right')), { passive: false });
+            btnRight.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('right')));
+            btnUp.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('up')), { passive: false });
+            btnUp.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('up')));
+            btnDown.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('down')), { passive: false });
+            btnDown.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('down')));
+
+
+            // --- State ---
+            // (Variables declared at top of script, removing duplicates here)
+
+            // ... (handleAction helper remains same) ...
+
+            // ... (updateHighlights, syncHeight remain same) ...
+
+            // ... (Undo/Redo, Markdown Insertion, Clipboard, Navigation remain same) ...
+
+            // --- Audio Logic (Web Audio API) ---
+            function initAudio() {
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            function playSound(type) {
+                if (!isSoundEnabled) return;
+
+                if (!audioCtx) initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Common connections
+                // Some profiles use filter, some don't.
+
+                if (currentSoundProfile === 'relax') {
+                    // --- RELAX PROFILE (OmmWriter-ish) ---
+                    const filter = audioCtx.createBiquadFilter();
+                    osc.type = 'sine';
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1000, t);
+
+                    if (type === 'enter') {
+                        osc.frequency.setValueAtTime(200, t);
+                        osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
+                        gain.gain.setValueAtTime(0, t);
+                        gain.gain.linearRampToValueAtTime(0.4, t + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                        osc.start(t);
+                        osc.stop(t + 0.3);
+                    } else if (type === 'space') {
+                        osc.frequency.setValueAtTime(400, t);
+                        gain.gain.setValueAtTime(0, t);
+                        gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                        osc.start(t);
+                        osc.stop(t + 0.2);
+                    } else if (type === 'delete') {
+                        osc.frequency.setValueAtTime(150, t);
+                        osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+                        gain.gain.setValueAtTime(0, t);
+                        gain.gain.linearRampToValueAtTime(0.4, t + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                        osc.start(t);
+                        osc.stop(t + 0.1);
+                    } else {
+                        const basePitch = 600;
+                        const randomPitch = basePitch + (Math.random() * 100 - 50);
+                        osc.frequency.setValueAtTime(randomPitch, t);
+                        gain.gain.setValueAtTime(0, t);
+                        gain.gain.linearRampToValueAtTime(0.25, t + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                        osc.start(t);
+                        osc.stop(t + 0.15);
+                    }
+                    osc.connect(filter);
+                    filter.connect(gain);
+
+                } else if (currentSoundProfile === 'cute') {
+                    // --- CUTE PROFILE (Original Sine) ---
+                    osc.type = 'sine';
+
+                    if (type === 'enter') {
+                        osc.frequency.setValueAtTime(600, t);
+                        osc.frequency.exponentialRampToValueAtTime(300, t + 0.1);
+                        gain.gain.setValueAtTime(0.5, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                        osc.start(t);
+                        osc.stop(t + 0.15);
+                    } else if (type === 'space') {
+                        osc.frequency.setValueAtTime(800, t);
+                        gain.gain.setValueAtTime(0.4, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                        osc.start(t);
+                        osc.stop(t + 0.1);
+                    } else if (type === 'delete') {
+                        osc.frequency.setValueAtTime(300, t);
+                        osc.frequency.linearRampToValueAtTime(200, t + 0.1);
+                        gain.gain.setValueAtTime(0.5, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                        osc.start(t);
+                        osc.stop(t + 0.1);
+                    } else {
+                        const pitch = 1000 + Math.random() * 200;
+                        osc.frequency.setValueAtTime(pitch, t);
+                        gain.gain.setValueAtTime(0.3, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+                        osc.start(t);
+                        osc.stop(t + 0.08);
+                    }
+                    osc.connect(gain);
+
+                } else if (currentSoundProfile === 'bubble') {
+                    // --- BUBBLE PROFILE (Puchi Puchi) ---
+                    osc.type = 'sine'; // Sine is best for "pop"
+
+                    if (type === 'enter') {
+                        // Big Pop
+                        osc.frequency.setValueAtTime(800, t);
+                        osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+                        gain.gain.setValueAtTime(0.6, t); k
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                        osc.start(t);
+                        osc.stop(t + 0.1);
+                    } else if (type === 'space') {
+                        // High Pop
+                        osc.frequency.setValueAtTime(1200, t);
+                        osc.frequency.exponentialRampToValueAtTime(600, t + 0.05);
+                        gain.gain.setValueAtTime(0.5, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                        osc.start(t);
+                        osc.stop(t + 0.05);
+                    } else if (type === 'delete') {
+                        // Reverse Pop? Or just low click
+                        osc.frequency.setValueAtTime(200, t);
+                        osc.frequency.linearRampToValueAtTime(50, t + 0.05);
+                        gain.gain.setValueAtTime(0.6, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                        osc.start(t);
+                        osc.stop(t + 0.05);
+                    } else {
+                        // Normal Puchi
+                        // Fast frequency sweep down
+                        const startFreq = 1000 + Math.random() * 400;
+                        osc.frequency.setValueAtTime(startFreq, t);
+                        osc.frequency.exponentialRampToValueAtTime(startFreq / 2, t + 0.03);
+
+                        gain.gain.setValueAtTime(0.5, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.03); // Very short
+
+                        osc.start(t);
+                        osc.stop(t + 0.03);
+                    }
+                    osc.connect(gain);
+                }
+
+                gain.connect(audioCtx.destination);
+            }
+
+            function updateSoundIconColor() {
+                if (!isSoundEnabled) {
+                    btnSound.style.color = ''; // Reset
+                    return;
+                }
+
+                const isLight = document.body.classList.contains('light-mode');
+
+                switch (currentSoundProfile) {
+                    case 'relax':
+                        btnSound.style.color = isLight ? '#007aff' : '#a8d5e2'; // Blue
+                        break;
+                    case 'cute':
+                        btnSound.style.color = isLight ? '#ff2d55' : '#ffb7b2'; // Pink
+                        break;
+                    case 'bubble':
+                        btnSound.style.color = isLight ? '#34c759' : '#e2f0cb'; // Green
+                        break;
+                }
+            }
+
+            function toggleSound() {
+                if (!isSoundEnabled) {
+                    // Turn On
+                    isSoundEnabled = true;
+                    initAudio();
+                    btnSound.classList.add('active');
+                    iconSoundOn.style.display = 'block';
+                    iconSoundOff.style.display = 'none';
+                    updateSoundIconColor();
+                    showToast(`Sound: ${currentSoundProfile.charAt(0).toUpperCase() + currentSoundProfile.slice(1)}`);
+                    playSound('click');
+                } else {
+                    // Cycle Profiles
+                    const currentIndex = soundProfiles.indexOf(currentSoundProfile);
+                    const nextIndex = currentIndex + 1;
+
+                    if (nextIndex < soundProfiles.length) {
+                        currentSoundProfile = soundProfiles[nextIndex];
+                        updateSoundIconColor();
+                        showToast(`Sound: ${currentSoundProfile.charAt(0).toUpperCase() + currentSoundProfile.slice(1)}`);
+                        playSound('click');
+                    } else {
+                        // Turn Off
+                        isSoundEnabled = false;
+                        btnSound.classList.remove('active');
+                        btnSound.style.color = ''; // Reset
+                        iconSoundOn.style.display = 'none';
+                        iconSoundOff.style.display = 'block';
+                        showToast('Sound: Off');
+                        currentSoundProfile = soundProfiles[0];
+                    }
+                }
+                saveSettings();
+            }
+
+            btnSound.addEventListener('click', (e) => { e.preventDefault(); toggleSound(); });
+            btnSound.addEventListener('touchstart', (e) => { e.preventDefault(); toggleSound(); }, { passive: false });
+
+
+            // --- Fullscreen Logic ---
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                    } else if (document.documentElement.webkitRequestFullscreen) {
+                        document.documentElement.webkitRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    }
+                }
+            }
+
+            btnFullscreen.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); editor.focus(); });
+            btnFullscreen.addEventListener('touchstart', (e) => { e.preventDefault(); toggleFullscreen(); }, { passive: false });
+
+            // --- Theme Logic ---
+            function toggleTheme() {
+                document.body.classList.toggle('light-mode');
+                const isLight = document.body.classList.contains('light-mode');
+
+                if (isLight) {
+                    iconThemeSun.style.display = 'none';
+                    iconThemeMoon.style.display = 'block';
+                } else {
+                    iconThemeSun.style.display = 'block';
+                    iconThemeMoon.style.display = 'none';
+                }
+                updateSoundIconColor(); // Update sound icon color for new theme
+                playSound('click');
+                saveSettings();
+            }
+
+            btnTheme.addEventListener('click', (e) => { e.preventDefault(); toggleTheme(); editor.focus(); });
+            btnTheme.addEventListener('touchstart', (e) => { e.preventDefault(); toggleTheme(); }, { passive: false });
+
+
+            // --- Typing Event & List Continuation ---
+
+            let saveTimeout;
+
+            // Handle IME input for sound AND Auto-save
+            editor.addEventListener('input', (e) => {
+                // Auto-save (Debounced)
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveCurrentNote, 500);
+
+                // Update UI
+                updateHighlights();
+                syncHeight();
+
+                // Sound for IME
+                if (e.inputType === 'insertCompositionText' || e.isComposing) {
+                    playSound('click');
+                }
+            });
+
+            editor.addEventListener('keydown', (e) => {
+                // CRITICAL: Check for IME composition
+                if (e.isComposing || e.keyCode === 229) {
+                    return; // Do nothing if IME is active
+                }
+
+                // List Continuation Logic
+                if (e.key === 'Enter') {
+                    const start = editor.selectionStart;
+                    const value = editor.value;
+
+                    // Find current line
+                    const lastNewline = value.lastIndexOf('\n', start - 1);
+                    const currentLineStart = lastNewline + 1;
+                    const currentLine = value.substring(currentLineStart, start);
+
+                    // Check for list pattern
+                    const listMatch = currentLine.match(/^(\s*)([-*]|\d+\.)\s/);
+
+                    if (listMatch) {
+                        e.preventDefault(); // Stop default enter
+
+                        let prefix = listMatch[0];
+
+                        // If line is just the prefix (empty list item), remove it and new line
+                        if (currentLine.trim() === listMatch[0].trim()) {
+                            // Remove the prefix from current line
+                            editor.setRangeText('\n', currentLineStart, start, 'end');
+                            playSound('enter');
+                            updateHighlights();
+                            syncHeight();
+                            return;
+                        }
+
+                        // Auto-increment ordered list
+                        if (listMatch[2].match(/\d+\./)) {
+                            const num = parseInt(listMatch[2]);
+                            prefix = prefix.replace(/\d+/, num + 1);
+                        }
+
+                        // Insert newline + prefix
+                        const insertion = '\n' + prefix;
+                        if (document.queryCommandSupported('insertText')) {
+                            document.execCommand('insertText', false, insertion);
+                        } else {
+                            editor.setRangeText(insertion, start, start, 'end');
+                        }
+                        playSound('enter');
+                        updateHighlights();
+                        syncHeight();
+                        return;
+                    }
+                }
+
+                if (e.key === 'Enter') {
+                    playSound('enter');
+                } else if (e.key === ' ') {
+                    playSound('space');
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                    playSound('delete');
+                } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    // Normal keys (English input)
+                    playSound('click');
+                }
+            });
+
+        </script>
+
+</body>
+
+</html>
+```
