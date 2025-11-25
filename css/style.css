@@ -218,8 +218,8 @@ html {
     margin: 0 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 60px 32px 140px 32px;
-    /* More generous breathing room + toolbar clearance */
+    /* パディングを削除 - #editorと#highlight-layerに設定 */
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -280,8 +280,8 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     z-index: 2;
     resize: none;
     overflow: hidden;
-    /* Match #editor-scroll-area padding to align with highlight layer */
-    padding: 0;
+    /* パディングを設定 - #highlight-layerと同じ */
+    padding: 60px 32px 140px 32px;
     margin: 0;
     box-sizing: border-box;
     width: 100%;
@@ -290,15 +290,15 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 #highlight-layer {
     position: absolute;
-    /* Position will be set by JavaScript to match #editor exactly */
+    /* #editorの上に重ねる - 同じ位置に配置 */
     top: 0;
     left: 0;
     z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
-    /* Match #editor exactly - no padding, same position */
-    padding: 0;
+    /* #editorと同じパディングを設定 */
+    padding: 60px 32px 140px 32px;
     margin: 0;
     box-sizing: border-box;
     /* Font properties are inherited from .editor-layer */
@@ -642,10 +642,14 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments for small screens */
     #editor-scroll-area {
-        padding: 80px 24px 120px 24px;
-        /* Extra breathing room but still within narrow screens */
+        padding: 0;
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
+    }
+    
+    #editor,
+    #highlight-layer {
+        padding: 80px 24px 120px 24px;
     }
 
     .editor-layer {

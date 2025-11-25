@@ -674,22 +674,10 @@ function syncHeight() {
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // CRITICAL: #editorは#editor-scroll-areaのパディング内に配置される
-        // #highlight-layerも同じ位置に配置する必要がある
-        // offsetTop/offsetLeftは親要素（#editor-scroll-area）からの相対位置を返す
-        const topOffset = editor.offsetTop;
-        const leftOffset = editor.offsetLeft;
-        const width = editor.offsetWidth;
-        
-        highlightLayer.style.top = topOffset + 'px';
-        highlightLayer.style.left = leftOffset + 'px';
-        highlightLayer.style.width = width + 'px';
-        
-        // デバッグ用（本番では削除可能）
-        if (window.DEBUG_EDITOR) {
-            console.log('Editor offsetTop:', topOffset, 'offsetLeft:', leftOffset, 'width:', width);
-            console.log('Highlight layer top:', highlightLayer.style.top, 'left:', highlightLayer.style.left);
-        }
+        // #editorと#highlight-layerは同じパディングを持っているので、
+        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
+        // 幅も同じにする
+        highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
         console.error('Error in syncHeight:', error);
     }
@@ -700,11 +688,9 @@ function syncPosition() {
     if (!editor || !highlightLayer || !scrollArea) return;
     
     try {
-        const topOffset = editor.offsetTop;
-        const leftOffset = editor.offsetLeft;
-        
-        highlightLayer.style.top = topOffset + 'px';
-        highlightLayer.style.left = leftOffset + 'px';
+        // #editorと#highlight-layerは同じパディングを持っているので、
+        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
+        // 幅も同じにする
         highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
         console.error('Error in syncPosition:', error);
