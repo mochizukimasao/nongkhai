@@ -1,53 +1,64 @@
 // Initialize editor elements with error checking
-const editor = document.getElementById('editor');
-const highlightLayer = document.getElementById('highlight-layer');
-const scrollArea = document.getElementById('editor-scroll-area');
-const toast = document.getElementById('toast');
+// 注意: これらの変数はDOMContentLoadedイベントの後に使用される必要がある
+let editor, highlightLayer, scrollArea, toast;
+let btnFloatingMenu, btnSidebarNew, btnNew, btnStar;
+let btnUndo, btnRedo, btnH1, btnBold, btnQuote, btnList, btnOrderedList;
+let btnCopy, btnPaste, btnSelectMode;
+let btnUp, btnDown, btnLeft, btnRight;
+let btnTheme, iconThemeSun, iconThemeMoon, btnFont;
+let btnSound, iconSoundOn, iconSoundOff, btnFullscreen;
+let sidebar, sidebarOverlay, btnCloseSidebar, noteList, toolbar;
 
-// Check if elements are available
-if (!editor) console.error('Editor element not found');
-if (!highlightLayer) console.error('Highlight layer element not found');
-if (!scrollArea) console.error('Scroll area element not found');
-if (!toast) console.warn('Toast element not found');
+// DOMContentLoadedイベントで要素を取得
+function initElements() {
+    editor = document.getElementById('editor');
+    highlightLayer = document.getElementById('highlight-layer');
+    scrollArea = document.getElementById('editor-scroll-area');
+    toast = document.getElementById('toast');
 
-// --- Toolbar Buttons ---
-// --- Toolbar Buttons ---
-const btnFloatingMenu = document.getElementById('btn-floating-menu');
-const btnSidebarNew = document.getElementById('btn-sidebar-new');
-// const btnMenu = document.getElementById('btn-menu'); // Removed
-const btnNew = document.getElementById('btn-new');
-const btnStar = document.getElementById('btn-star');
-const btnUndo = document.getElementById('btn-undo');
-const btnRedo = document.getElementById('btn-redo');
-const btnH1 = document.getElementById('btn-h1');
-const btnBold = document.getElementById('btn-bold');
-const btnQuote = document.getElementById('btn-quote');
-const btnList = document.getElementById('btn-list');
-const btnOrderedList = document.getElementById('btn-ordered-list');
-const btnCopy = document.getElementById('btn-copy');
-const btnPaste = document.getElementById('btn-paste');
-const btnSelectMode = document.getElementById('btn-select-mode');
-const btnUp = document.getElementById('btn-up');
-const btnDown = document.getElementById('btn-down');
-const btnLeft = document.getElementById('btn-left');
-const btnRight = document.getElementById('btn-right');
-const btnTheme = document.getElementById('btn-theme');
-const iconThemeSun = document.getElementById('icon-theme-sun');
-const iconThemeMoon = document.getElementById('icon-theme-moon');
-const btnFont = document.getElementById('btn-font'); // New Font Button
-const btnSound = document.getElementById('btn-sound');
-const iconSoundOn = document.getElementById('icon-sound-on');
-const iconSoundOff = document.getElementById('icon-sound-off');
-const btnFullscreen = document.getElementById('btn-fullscreen');
+    // Check if elements are available
+    if (!editor) console.error('Editor element not found');
+    if (!highlightLayer) console.error('Highlight layer element not found');
+    if (!scrollArea) console.error('Scroll area element not found');
+    if (!toast) console.warn('Toast element not found');
 
-// --- Sidebar Elements ---
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
-const btnCloseSidebar = document.getElementById('btn-close-sidebar');
-const noteList = document.getElementById('note-list');
+    // --- Toolbar Buttons ---
+    btnFloatingMenu = document.getElementById('btn-floating-menu');
+    btnSidebarNew = document.getElementById('btn-sidebar-new');
+    btnNew = document.getElementById('btn-new');
+    btnStar = document.getElementById('btn-star');
+    btnUndo = document.getElementById('btn-undo');
+    btnRedo = document.getElementById('btn-redo');
+    btnH1 = document.getElementById('btn-h1');
+    btnBold = document.getElementById('btn-bold');
+    btnQuote = document.getElementById('btn-quote');
+    btnList = document.getElementById('btn-list');
+    btnOrderedList = document.getElementById('btn-ordered-list');
+    btnCopy = document.getElementById('btn-copy');
+    btnPaste = document.getElementById('btn-paste');
+    btnSelectMode = document.getElementById('btn-select-mode');
+    btnUp = document.getElementById('btn-up');
+    btnDown = document.getElementById('btn-down');
+    btnLeft = document.getElementById('btn-left');
+    btnRight = document.getElementById('btn-right');
+    btnTheme = document.getElementById('btn-theme');
+    iconThemeSun = document.getElementById('icon-theme-sun');
+    iconThemeMoon = document.getElementById('icon-theme-moon');
+    btnFont = document.getElementById('btn-font');
+    btnSound = document.getElementById('btn-sound');
+    iconSoundOn = document.getElementById('icon-sound-on');
+    iconSoundOff = document.getElementById('icon-sound-off');
+    btnFullscreen = document.getElementById('btn-fullscreen');
 
-// --- Toolbar Element ---
-const toolbar = document.getElementById('toolbar');
+    // --- Sidebar Elements ---
+    sidebar = document.getElementById('sidebar');
+    sidebarOverlay = document.getElementById('sidebar-overlay');
+    btnCloseSidebar = document.getElementById('btn-close-sidebar');
+    noteList = document.getElementById('note-list');
+
+    // --- Toolbar Element ---
+    toolbar = document.getElementById('toolbar');
+}
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
@@ -734,17 +745,25 @@ function initEditor() {
     });
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEditor);
-} else {
-    // DOM already loaded, but wait for layout
-    setTimeout(initEditor, 0);
+// 要素の初期化とエディタの初期化を順番に実行
+function initAll() {
+    initElements();
+    initEditor();
+    
+    // ツールバーボタンのイベントリスナーを設定
+    bindToolbarActions();
 }
 
-
-// --- Undo/Redo ---
-bindToolbarAction(btnUndo, () => document.execCommand('undo'));
-bindToolbarAction(btnRedo, () => document.execCommand('redo'));
+function bindToolbarActions() {
+    if (!btnUndo || !btnRedo || !btnH1 || !btnBold) {
+        console.warn('Toolbar buttons not ready, retrying...');
+        setTimeout(bindToolbarActions, 100);
+        return;
+    }
+    
+    // --- Undo/Redo ---
+    bindToolbarAction(btnUndo, () => document.execCommand('undo'));
+    bindToolbarAction(btnRedo, () => document.execCommand('redo'));
 
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
@@ -826,6 +845,7 @@ bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
 
 // --- Clipboard Operations ---
 function showToast(message) {
+    if (!toast) return;
     toast.textContent = message;
     toast.style.opacity = '1';
     setTimeout(() => {
@@ -834,6 +854,7 @@ function showToast(message) {
 }
 
 function copyAll() {
+    if (!editor) return;
     navigator.clipboard.writeText(editor.value).then(() => {
         showToast('Copied All!');
     }).catch(err => {
@@ -843,6 +864,7 @@ function copyAll() {
 }
 
 function pastePlain() {
+    if (!editor) return;
     navigator.clipboard.readText().then(text => {
         if (document.queryCommandSupported('insertText')) {
             document.execCommand('insertText', false, text);
@@ -879,7 +901,13 @@ function toggleSelectionMode() {
     }
 }
 
-bindToolbarAction(btnSelectMode, toggleSelectionMode);
+    // --- Navigation & Selection Logic ---
+    bindToolbarAction(btnSelectMode, toggleSelectionMode);
+    bindToolbarAction(btnLeft, () => moveCursor('left'));
+    bindToolbarAction(btnRight, () => moveCursor('right'));
+    bindToolbarAction(btnUp, () => moveCursor('up'));
+    bindToolbarAction(btnDown, () => moveCursor('down'));
+}
 
 function moveCursor(direction) {
     const start = editor.selectionStart;
