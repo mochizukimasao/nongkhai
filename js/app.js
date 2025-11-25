@@ -651,20 +651,33 @@ function syncHeight() {
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // Ensure highlight layer matches editor position and size exactly
-        const editorRect = editor.getBoundingClientRect();
-        const scrollAreaRect = scrollArea.getBoundingClientRect();
-        
-        // Calculate offset from scroll area
-        const topOffset = editorRect.top - scrollAreaRect.top;
-        const leftOffset = editorRect.left - scrollAreaRect.left;
+        // CRITICAL: Ensure highlight layer matches editor position and size exactly
+        // Use offsetTop/offsetLeft to get position relative to scroll area
+        const topOffset = editor.offsetTop;
+        const leftOffset = editor.offsetLeft;
         
         // Position highlight layer to match editor exactly
         highlightLayer.style.top = topOffset + 'px';
         highlightLayer.style.left = leftOffset + 'px';
-        highlightLayer.style.width = editorRect.width + 'px';
+        highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
         console.error('Error in syncHeight:', error);
+    }
+}
+
+// Sync position on scroll and resize
+function syncPosition() {
+    if (!editor || !highlightLayer || !scrollArea) return;
+    
+    try {
+        const topOffset = editor.offsetTop;
+        const leftOffset = editor.offsetLeft;
+        
+        highlightLayer.style.top = topOffset + 'px';
+        highlightLayer.style.left = leftOffset + 'px';
+        highlightLayer.style.width = editor.offsetWidth + 'px';
+    } catch (error) {
+        console.error('Error in syncPosition:', error);
     }
 }
 
@@ -672,22 +685,37 @@ function syncHeight() {
 // If we want overlay, we usually make the container scroll, and textarea + div grow.
 // Let's try the "Textarea grows, Container scrolls" approach.
 
-editor.addEventListener('input', syncHeight);
-window.addEventListener('resize', handleResize);
+editor.addEventListener('input', () => {
+    syncHeight();
+    syncPosition();
+});
+window.addEventListener('resize', () => {
+    handleResize();
+    syncHeight();
+    syncPosition();
+});
+scrollArea.addEventListener('scroll', syncPosition);
 
 // Initial call for editor setup
 // Note: This is separate from main DOMContentLoaded to ensure editor elements are ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        updateHighlights();
-        syncHeight();
-        editor.focus();
-    });
-} else {
-    // DOM already loaded
+function initEditor() {
+    if (!editor || !highlightLayer || !scrollArea) {
+        console.warn('Editor elements not ready, retrying...');
+        setTimeout(initEditor, 100);
+        return;
+    }
+    
     updateHighlights();
     syncHeight();
+    syncPosition();
     editor.focus();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEditor);
+} else {
+    // DOM already loaded, but wait a bit for layout
+    setTimeout(initEditor, 0);
 }
 
 

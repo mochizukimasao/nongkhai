@@ -290,10 +290,9 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 #highlight-layer {
     position: absolute;
-    /* Match #editor position exactly - both are children of #editor-scroll-area */
+    /* Position will be set by JavaScript to match #editor exactly */
     top: 0;
     left: 0;
-    right: 0;
     z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
