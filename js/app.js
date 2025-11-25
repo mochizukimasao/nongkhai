@@ -185,23 +185,29 @@ async function createNote() {
         favorite: 0,
         deleted: null
     });
-    loadNote(id);
+    await loadNote(id);
     showToast('New Note Created');
     playSound('click');
-    if (sidebar.classList.contains('open')) toggleSidebar();
+    if (sidebar && sidebar.classList.contains('open')) toggleSidebar();
 }
 
 async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
-        editor.value = note.text;
-        // If viewing a deleted note, maybe show a warning or disable editing?
-        // For now, allow viewing.
-        updateHighlights();
-        syncHeight();
+        if (editor) {
+            editor.value = note.text;
+            // If viewing a deleted note, maybe show a warning or disable editing?
+            // For now, allow viewing.
+            if (highlightLayer) {
+                updateHighlights();
+            }
+            syncHeight();
+        }
         updateStarState(note.favorite);
-        scrollArea.scrollTop = 0;
+        if (scrollArea) {
+            scrollArea.scrollTop = 0;
+        }
     }
 }
 
@@ -721,16 +727,21 @@ function initEditor() {
 }
 
 // 要素の初期化とエディタの初期化を順番に実行
-function initAll() {
+async function initAll() {
     initElements();
     attachBaseListeners();
     bindUIControls();
     loadSettings();
-    initDB();
+    
+    // エディタリスナーを先に設定（initDB内でloadNoteが呼ばれる前に）
     attachEditorListeners();
     initEditor();
     bindToolbarActions();
     handleResize();
+    
+    // DB初期化は最後に（非同期なので、エディタが準備できてから）
+    // initDB内でloadNote/createNoteが呼ばれるが、その時点でeditorとhighlightLayerは準備済み
+    await initDB();
 }
 
 // --- Markdown Insertion ---
