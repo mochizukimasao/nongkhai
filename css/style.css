@@ -583,11 +583,15 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments */
     #editor-scroll-area {
-        padding: 70px 28px 120px 28px;
-        /* More top space plus wider gutters */
+        padding: 0;
         max-width: 100%;
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
+    }
+    
+    #editor,
+    #highlight-layer {
+        padding: 70px 28px 120px 28px;
     }
 
     .editor-layer {
@@ -597,11 +601,6 @@ body.light-mode #btn-floating-menu:hover {
         overflow-wrap: break-word;
         word-break: break-word;
         max-width: 100%;
-    }
-
-    #highlight-layer {
-        /* No padding - padding is on #editor-scroll-area */
-        padding: 0 !important;
     }
 
     /* Floating menu button - ensure it's visible on mobile */
@@ -658,11 +657,6 @@ body.light-mode #btn-floating-menu:hover {
         overflow-wrap: break-word;
         word-break: break-word;
         max-width: 100%;
-    }
-
-    #highlight-layer {
-        /* No padding - padding is on #editor-scroll-area */
-        padding: 0 !important;
     }
 
     /* Note items - smaller padding */
