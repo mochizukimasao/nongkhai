@@ -556,8 +556,8 @@ body.light-mode #toast {
 }
 
 .md-heading {
-    font-weight: bold;
     display: inline;
+    font-weight: normal;
     text-decoration-line: underline;
     text-decoration-style: solid;
     text-decoration-thickness: 1px;
