@@ -213,13 +213,13 @@ html {
 #editor-scroll-area {
     position: relative;
     width: 100%;
-    max-width: 720px;
+    max-width: 820px;
     height: 100%;
     margin: 0 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 40px 20px 100px 20px;
-    /* Bottom padding for toolbar */
+    padding: 60px 32px 140px 32px;
+    /* More generous breathing room + toolbar clearance */
 }
 
 #editor-scroll-area::-webkit-scrollbar {
@@ -297,7 +297,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     color: #e0e0e0;
     /* Text color */
     /* Match editor-scroll-area padding exactly */
-    padding: 40px 20px 0 20px !important;
+    padding: 60px 32px 0 32px !important;
     box-sizing: border-box;
 }
 
@@ -360,6 +360,8 @@ body.light-mode #editor {
     overflow-y: hidden;
     /* Enhanced scrolling for mobile */
     -webkit-overflow-scrolling: touch;
+    /* Touch action: allow horizontal scrolling and pinch zoom */
+    touch-action: pan-x pinch-zoom;
     /* Improved scrollbar visibility */
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
@@ -417,6 +419,8 @@ body.light-mode #toolbar::-webkit-scrollbar-thumb:hover {
     /* Prevent buttons from shrinking to maintain scrollability */
     flex-shrink: 0;
     flex-grow: 0;
+    /* touch-action は削除 - 親要素（ツールバー）の pan-x に任せる */
+    /* これにより、ボタン上でのスクロールがツールバーのスクロールとして処理される */
 }
 
 .tool-btn:hover {
@@ -567,11 +571,8 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments */
     #editor-scroll-area {
-        padding: 60px 20px 100px 20px;
-        /* Top padding: 60px - avoids overlap with menu button (top: 15px, size ~34px) */
-        /* Left/Right padding: 20px - equal margins for beautiful design */
-        /* Note: Left padding is smaller, but menu button is in fixed position and won't overlap */
-        /* Bottom padding: 100px - for toolbar */
+        padding: 70px 28px 120px 28px;
+        /* More top space plus wider gutters */
         max-width: 100%;
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
@@ -591,7 +592,7 @@ body.light-mode #btn-floating-menu:hover {
         left: 0;
         right: 0;
         /* Match editor-scroll-area padding exactly */
-        padding: 60px 20px 0 20px !important;
+        padding: 70px 28px 0 28px !important;
         box-sizing: border-box;
         overflow-wrap: break-word;
         word-break: break-word;
@@ -635,12 +636,8 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments for small screens */
     #editor-scroll-area {
-        padding: 70px 20px 100px 20px;
-        /* Top padding: 70px - avoids overlap with menu button (top: 10px, size ~38px) */
-        /* Left/Right padding: 20px - equal margins for beautiful design */
-        /* Note: Menu button is in fixed position (left: 10px) and won't overlap with text */
-        /* Bottom padding: 100px - for toolbar */
-        /* Generous padding for beautiful, comfortable design */
+        padding: 80px 24px 120px 24px;
+        /* Extra breathing room but still within narrow screens */
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
     }
@@ -658,7 +655,7 @@ body.light-mode #btn-floating-menu:hover {
         left: 0;
         right: 0;
         /* Match editor-scroll-area padding exactly */
-        padding: 70px 20px 0 20px !important;
+        padding: 80px 24px 0 24px !important;
         box-sizing: border-box;
         overflow-wrap: break-word;
         word-break: break-word;

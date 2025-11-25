@@ -536,14 +536,19 @@ function handleAction(e, action) {
 
 function bindToolbarAction(button, action) {
     if (!button) return;
-    // Use mousedown to prevent default (focus loss) but allow click to trigger action
+    
+    // mousedownでフォーカス維持（デスクトップ用）
     button.addEventListener('mousedown', (e) => {
         e.preventDefault(); // Keep focus on editor
     });
 
-    // Use standard click event - browser handles tap vs scroll logic
+    // 標準クリックイベントのみ使用
+    // ブラウザのネイティブな動作に任せる：
+    // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
+    // - タップのみの場合は click イベントが発火する
+    // - スクロールの場合は click イベントは発火しない
     button.addEventListener('click', (e) => {
-        e.preventDefault(); // Prevent default button behavior (form submit etc)
+        e.preventDefault();
         action();
         playSound('click');
         editor.focus();
