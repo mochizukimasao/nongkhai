@@ -898,7 +898,7 @@ function playSound(type) {
             // Big Pop
             osc.frequency.setValueAtTime(800, t);
             osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
-            gain.gain.setValueAtTime(0.6, t); k
+                        gain.gain.setValueAtTime(0.6, t);
             gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
             osc.start(t);
             osc.stop(t + 0.1);
