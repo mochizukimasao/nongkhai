@@ -802,6 +802,11 @@ function updateHighlights() {
     // Convert tabs to spaces to keep alignment consistent
     text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 
+    // Display-only bullet styling: replace "- " or "* " at line start with a big dot
+    text = text.replace(/^(\s*)[-*]\s+(.*)$/gm, (match, spaces, content) => {
+        return `${spaces}<span class="md-bullet"><span class="md-bullet-dot">&#8226;</span>${content}</span>`;
+    });
+
     // Convert newlines to <br> so the display layer matches the textarea's line breaks exactly.
     // This avoids accumulating vertical drift because each newline becomes one DOM line break.
     text = text.replace(/\n/g, '<br>');
