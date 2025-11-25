@@ -436,6 +436,7 @@ async function updateNoteList() {
         // Action Buttons
         let actionBtns = '';
         const favClass = note.favorite ? 'favorite-active' : '';
+        const showFavoriteToggle = !showTrash;
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
@@ -449,13 +450,16 @@ async function updateNoteList() {
             <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
+        const favoriteIndicator = (!showFavoriteToggle && note.favorite)
+            ? '<span class="note-fav-icon">★</span>'
+            : '';
 
         li.innerHTML = `
         <div style="flex:1; overflow:hidden;">
             <div class="note-title">${title}</div>
             <div class="note-meta">
                 <span>${date}</span>
-                <span class="note-fav-icon">★</span>
+                ${favoriteIndicator}
             </div>
         </div>
         <div class="note-actions">
