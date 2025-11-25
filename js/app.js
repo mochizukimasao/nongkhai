@@ -1,7 +1,14 @@
+// Initialize editor elements with error checking
 const editor = document.getElementById('editor');
 const highlightLayer = document.getElementById('highlight-layer');
 const scrollArea = document.getElementById('editor-scroll-area');
 const toast = document.getElementById('toast');
+
+// Check if elements are available
+if (!editor) console.error('Editor element not found');
+if (!highlightLayer) console.error('Highlight layer element not found');
+if (!scrollArea) console.error('Scroll area element not found');
+if (!toast) console.warn('Toast element not found');
 
 // --- Toolbar Buttons ---
 // --- Toolbar Buttons ---
@@ -535,50 +542,70 @@ function handleAction(e, action) {
 }
 
 function bindToolbarAction(button, action) {
-    if (!button) return;
+    if (!button) {
+        console.warn('bindToolbarAction: button is null or undefined');
+        return;
+    }
     
-    // mousedownでフォーカス維持（デスクトップ用）
-    button.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Keep focus on editor
-    });
+    try {
+        // mousedownでフォーカス維持（デスクトップ用）
+        button.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Keep focus on editor
+        });
 
-    // 標準クリックイベントのみ使用
-    // ブラウザのネイティブな動作に任せる：
-    // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
-    // - タップのみの場合は click イベントが発火する
-    // - スクロールの場合は click イベントは発火しない
-    button.addEventListener('click', (e) => {
-        e.preventDefault();
-        action();
-        playSound('click');
-        editor.focus();
-    });
+        // 標準クリックイベントのみ使用
+        // ブラウザのネイティブな動作に任せる：
+        // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
+        // - タップのみの場合は click イベントが発火する
+        // - スクロールの場合は click イベントは発火しない
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+                action();
+                playSound('click');
+                editor.focus();
+            } catch (error) {
+                console.error('Error in toolbar action:', error);
+            }
+        });
+    } catch (error) {
+        console.error('Error binding toolbar action:', error, button);
+    }
 }
 
 // --- Syntax Highlighting ---
 function updateHighlights() {
-    let text = editor.value;
-
-    // Escape HTML to prevent XSS and rendering issues
-    text = text.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-    // Apply Markdown Styling
-    // Bold: **text** -> **<span class="md-bold">text</span>**
-    // We want to underline ONLY the text inside.
-    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
-
-    // Heading: # text (at start of line)
-    // Support # through ######
-    text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
-
-    // Handle trailing newline for display
-    if (text.endsWith('\n')) {
-        text += '<br>';
+    if (!editor || !highlightLayer) {
+        console.warn('updateHighlights: editor or highlightLayer is not available');
+        return;
     }
+    
+    try {
+        let text = editor.value;
 
-    highlightLayer.innerHTML = text;
+        // Escape HTML to prevent XSS and rendering issues
+        text = text.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Apply Markdown Styling
+        // Bold: **text** -> **<span class="md-bold">text</span>**
+        // We want to underline ONLY the text inside.
+        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+
+        // Heading: # text (at start of line)
+        // Support # through ######
+        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
+
+        // Handle trailing newline for display
+        if (text.endsWith('\n')) {
+            text += '<br>';
+        }
+
+        highlightLayer.innerHTML = text;
+    } catch (error) {
+        console.error('Error in updateHighlights:', error);
+    }
 }
 
 editor.addEventListener('input', updateHighlights);
@@ -605,13 +632,26 @@ editor.addEventListener('input', updateHighlights);
 // If we set textarea height to scrollHeight, it expands.
 
 function syncHeight() {
-    // Reset height to min to get correct scrollHeight
-    editor.style.height = 'auto';
-    highlightLayer.style.height = 'auto';
+    if (!editor || !highlightLayer || !scrollArea) {
+        console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
+        return;
+    }
+    
+    try {
+        // Reset height to min to get correct scrollHeight
+        editor.style.height = 'auto';
+        highlightLayer.style.height = 'auto';
 
-    const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
-    editor.style.height = height + 'px';
-    highlightLayer.style.height = height + 'px';
+        const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
+        editor.style.height = height + 'px';
+        highlightLayer.style.height = height + 'px';
+        
+        // Ensure highlight layer matches editor width
+        const editorRect = editor.getBoundingClientRect();
+        highlightLayer.style.width = editorRect.width + 'px';
+    } catch (error) {
+        console.error('Error in syncHeight:', error);
+    }
 }
 
 // Actually, standard textarea scrolls internally.

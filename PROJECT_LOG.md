@@ -98,6 +98,34 @@ nongkhai/
 
 ## 開発ログ
 
+### [2025-01-XX] index.htmlの古いコード削除とjs/app.jsの読み込み修正
+
+#### 1. 問題の概要
+修正が反映されない原因は、`index.html`に古いコードが残っていたため。インラインスタイルの`touch-action`と古い`touchstart`イベントリスナーが新しい実装を上書きしていた。また、`js/app.js`が読み込まれていなかった。
+
+#### 2. 実施した修正
+
+1. **インラインスタイルの修正** (`index.html`):
+   - `#toolbar`から`touch-action: pan-x;`を削除（`css/style.css`で設定）
+   - `.tool-btn`から`touch-action: manipulation;`を削除（`css/style.css`で設定）
+
+2. **古いJavaScriptコードの削除** (`index.html`):
+   - すべての`touchstart`イベントリスナーを削除
+   - コメントで`js/app.js`の`bindToolbarAction`を使用することを明記
+
+3. **js/app.jsの読み込み追加** (`index.html`):
+   - `</script>`の後に`<script src="js/app.js"></script>`を追加
+
+#### 3. 検証結果
+- **インラインスタイル修正**: ✅ `touch-action`を削除
+- **JavaScriptコード修正**: ✅ 古い`touchstart`イベントを削除
+- **js/app.js読み込み**: ✅ 追加
+
+#### 4. 次のステップ
+- デプロイ後、実機でテストして動作を確認する
+
+---
+
 ### [2025-01-XX] デプロイエラーの修正
 
 #### 1. 問題の概要

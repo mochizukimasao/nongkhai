@@ -280,25 +280,39 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     resize: none;
     overflow: hidden;
     /* Let container scroll */
-    /* Ensure text starts at the same position as highlight-layer */
-    top: 0;
-    left: 0;
+    /* Match highlight-layer padding exactly to ensure cursor alignment */
+    padding: 60px 32px 0 32px;
+    box-sizing: border-box;
+    width: 100%;
+    /* Match highlight-layer font properties */
+    font-size: 17px;
+    line-height: 2.0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 #highlight-layer {
     position: absolute;
     top: 0;
-    /* Start at the same position as editor-scroll-area padding */
     left: 0;
-    /* Start at the same position as editor-scroll-area padding */
     right: 0;
     z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
-    /* Match editor-scroll-area padding exactly */
+    /* Match editor padding exactly */
     padding: 60px 32px 0 32px !important;
     box-sizing: border-box;
+    /* Match editor font and line-height */
+    font-size: 17px;
+    line-height: 2.0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-family: inherit;
 }
 
 /* Light Mode Overrides */

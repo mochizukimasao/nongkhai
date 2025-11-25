@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>OmmWriter Style Editor</title>
+    <link rel="stylesheet" href="css/style.css">
     <style>
         :root {
             /* OmmWriter-inspired palette (Dark Mode Default) */
@@ -268,63 +269,7 @@
             /* Center the editor */
         }
 
-        #editor-scroll-area {
-            width: 100%;
-            max-width: 800px;
-            /* OmmWriter style width */
-            height: 100%;
-            overflow-y: auto;
-            padding: 40px 20px 100px 20px;
-            /* Bottom padding for toolbar */
-            position: relative;
-            /* For absolute children */
-        }
-
-        /* Editor Layers */
-        .editor-layer {
-            width: 100%;
-            min-height: 100%;
-            /* Ensure it fills scroll area */
-            font-size: 17px;
-            /* Slightly smaller */
-            line-height: 2.0;
-            /* Relaxed line height */
-            border: none;
-            outline: none;
-            background: transparent;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: inherit;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        #editor {
-            color: transparent;
-            /* Hide text color for overlay */
-            caret-color: #a8d5e2;
-            /* Custom caret color */
-            position: relative;
-            z-index: 2;
-            resize: none;
-            overflow: hidden;
-            /* Let container scroll */
-        }
-
-        #highlight-layer {
-            position: absolute;
-            top: 40px;
-            /* Match padding */
-            left: 20px;
-            /* Match padding */
-            right: 20px;
-            /* Match padding */
-            z-index: 1;
-            pointer-events: none;
-            color: #e0e0e0;
-            /* Text color */
-        }
+        /* Editor styles are defined in css/style.css */
 
         /* Light Mode Overrides */
         body.light-mode {
