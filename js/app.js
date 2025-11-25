@@ -104,6 +104,9 @@ function toggleFont() {
         showToast('Font: Mincho');
     }
     playSound('click');
+    syncHighlightTypography();
+    syncHeight();
+    updateHighlights();
     saveSettings();
 }
 
@@ -229,10 +232,22 @@ async function saveCurrentNote() {
 
 async function toggleFavorite() {
     if (currentNoteId === null) return;
-    const note = await db.notes.get(currentNoteId);
+    await toggleNoteFavorite(currentNoteId);
+}
+
+async function toggleNoteFavorite(noteId) {
+    if (!noteId) return;
+    const note = await db.notes.get(noteId);
+    if (!note) return;
+    
     const newFav = note.favorite ? 0 : 1;
-    await db.notes.update(currentNoteId, { favorite: newFav });
-    updateStarState(newFav);
+    await db.notes.update(noteId, { favorite: newFav });
+    
+    // 現在のメモの場合、ツールバーの星ボタンも更新
+    if (noteId === currentNoteId) {
+        updateStarState(newFav);
+    }
+    
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
@@ -279,6 +294,8 @@ async function restoreNote(id, event) {
 }
 
 function updateStarState(isFav) {
+    if (!btnStar) return;
+    
     if (isFav) {
         btnStar.classList.add('favorite-active');
     } else {
@@ -292,6 +309,8 @@ function isMobile() {
 }
 
 function handleResize() {
+    if (!sidebar) return;
+    
     // If resizing from mobile to desktop and sidebar is open, keep it open
     // If resizing from desktop to mobile and sidebar is open, close it to prevent layout issues
     if (!isMobile() && sidebar.classList.contains('open')) {
@@ -308,6 +327,8 @@ function handleResize() {
 
 // --- Sidebar Logic ---
 function toggleSidebar() {
+    if (!sidebar || !sidebarOverlay) return;
+    
     const isOpening = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open');
     sidebarOverlay.classList.toggle('visible');
@@ -339,7 +360,9 @@ function toggleSidebar() {
 function toggleFavoritesView() {
     showFavorites = !showFavorites;
     const btn = document.getElementById('btn-toggle-favorites');
-    btn.classList.toggle('active', showFavorites);
+    if (btn) {
+        btn.classList.toggle('active', showFavorites);
+    }
     // Disable trash view when showing favorites
     if (showFavorites) {
         showTrash = false;
@@ -352,7 +375,9 @@ function toggleFavoritesView() {
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
-    btn.classList.toggle('active', showTrash);
+    if (btn) {
+        btn.classList.toggle('active', showTrash);
+    }
     // Disable favorites view when showing trash
     if (showTrash) {
         showFavorites = false;
@@ -363,6 +388,8 @@ function toggleTrashView() {
 }
 
 async function updateNoteList() {
+    if (!noteList || !db) return;
+    
     let notes;
     if (showTrash) {
         // Show deleted notes (deleted is a timestamp)
@@ -408,6 +435,7 @@ async function updateNoteList() {
 
         // Action Buttons
         let actionBtns = '';
+        const favClass = note.favorite ? 'favorite-active' : '';
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
@@ -415,8 +443,9 @@ async function updateNoteList() {
             <button class="note-action-btn delete" title="Delete Permanently">×</button>
         `;
         } else {
-            // Delete (Move to Trash)
+            // Favorite & Delete
             actionBtns = `
+            <button class="note-action-btn favorite ${favClass}" title="${note.favorite ? 'Remove from Favorites' : 'Add to Favorites'}" data-note-id="${note.id}">★</button>
             <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
@@ -444,6 +473,17 @@ async function updateNoteList() {
         });
 
         // Button Events
+        const btnFavorite = li.querySelector('.favorite');
+        if (btnFavorite) {
+            btnFavorite.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const noteId = parseInt(btnFavorite.getAttribute('data-note-id'));
+                if (noteId) {
+                    await toggleNoteFavorite(noteId);
+                }
+            });
+        }
+
         const btnDelete = li.querySelector('.delete');
         if (btnDelete) btnDelete.addEventListener('click', (e) => deleteNote(note.id, e));
 
@@ -459,16 +499,26 @@ async function updateNoteList() {
 
 
 // Favorites Toggle
-document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleFavoritesView();
-});
+const btnToggleFavorites = document.getElementById('btn-toggle-favorites');
+if (btnToggleFavorites) {
+    btnToggleFavorites.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleFavoritesView();
+    });
+} else {
+    console.warn('btn-toggle-favorites not found; favorites toggle disabled');
+}
 
 // Trash Toggle
-document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleTrashView();
-});
+const btnToggleTrash = document.getElementById('btn-toggle-trash');
+if (btnToggleTrash) {
+    btnToggleTrash.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleTrashView();
+    });
+} else {
+    console.warn('btn-toggle-trash not found; trash toggle disabled');
+}
 
 // --- Settings Persistence ---
 function saveSettings() {
@@ -487,40 +537,49 @@ function loadSettings() {
         const settings = JSON.parse(saved);
 
         // Theme
-        if (settings.theme === 'light') {
-            document.body.classList.add('light-mode');
-            iconThemeSun.style.display = 'none';
-            iconThemeMoon.style.display = 'block';
-        } else {
-            document.body.classList.remove('light-mode');
-            iconThemeSun.style.display = 'block';
-            iconThemeMoon.style.display = 'none';
+        if (iconThemeSun && iconThemeMoon) {
+            if (settings.theme === 'light') {
+                document.body.classList.add('light-mode');
+                iconThemeSun.style.display = 'none';
+                iconThemeMoon.style.display = 'block';
+            } else {
+                document.body.classList.remove('light-mode');
+                iconThemeSun.style.display = 'block';
+                iconThemeMoon.style.display = 'none';
+            }
         }
 
         // Font
-        if (settings.font === 'gothic') {
-            document.body.classList.add('font-gothic');
-            btnFont.querySelector('span').style.fontFamily = 'sans-serif';
-        } else {
-            document.body.classList.remove('font-gothic');
-            btnFont.querySelector('span').style.fontFamily = 'serif';
+        if (btnFont) {
+            const span = btnFont.querySelector('span');
+            if (span) {
+                if (settings.font === 'gothic') {
+                    document.body.classList.add('font-gothic');
+                    span.style.fontFamily = 'sans-serif';
+                } else {
+                    document.body.classList.remove('font-gothic');
+                    span.style.fontFamily = 'serif';
+                }
+            }
         }
 
         // Sound
-        if (settings.soundEnabled) {
-            isSoundEnabled = true;
-            currentSoundProfile = settings.soundProfile || 'relax';
-            btnSound.classList.add('active');
-            iconSoundOn.style.display = 'block';
-            iconSoundOff.style.display = 'none';
-            updateSoundIconColor();
-        } else {
-            isSoundEnabled = false;
-            currentSoundProfile = settings.soundProfile || 'relax';
-            btnSound.classList.remove('active');
-            iconSoundOn.style.display = 'none';
-            iconSoundOff.style.display = 'block';
-            btnSound.style.color = '';
+        if (btnSound && iconSoundOn && iconSoundOff) {
+            if (settings.soundEnabled) {
+                isSoundEnabled = true;
+                currentSoundProfile = settings.soundProfile || 'relax';
+                btnSound.classList.add('active');
+                iconSoundOn.style.display = 'block';
+                iconSoundOff.style.display = 'none';
+                updateSoundIconColor();
+            } else {
+                isSoundEnabled = false;
+                currentSoundProfile = settings.soundProfile || 'relax';
+                btnSound.classList.remove('active');
+                iconSoundOn.style.display = 'none';
+                iconSoundOff.style.display = 'block';
+                btnSound.style.color = '';
+            }
         }
     }
 }
@@ -533,7 +592,9 @@ function handleAction(e, action) {
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
-    editor.focus(); // Ensure focus
+    if (editor) {
+        editor.focus(); // Ensure focus
+    }
 }
 
 function bindToolbarAction(button, action) {
@@ -615,10 +676,15 @@ function updateHighlights() {
     // Support # through ######
     text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
 
-    // Handle trailing newline for display
-    if (text.endsWith('\n')) {
-        text += '<br>';
-    }
+    // Normalize line endings first
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // Convert tabs to spaces to keep alignment consistent
+    text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+
+    // Convert newlines to <br> so the display layer matches the textarea's line breaks exactly.
+    // This avoids accumulating vertical drift because each newline becomes one DOM line break.
+    text = text.replace(/\n/g, '<br>');
 
     highlightLayer.innerHTML = text;
     } catch (error) {
@@ -647,6 +713,37 @@ function updateHighlights() {
 // BUT here we have a scrollable container #editor-scroll-area.
 // If we set textarea height to scrollHeight, it expands.
 
+function syncHighlightTypography() {
+    if (!editor || !highlightLayer) {
+        return;
+    }
+    try {
+        const computed = window.getComputedStyle(editor);
+        const props = [
+            'fontFamily',
+            'fontSize',
+            'fontWeight',
+            'fontStyle',
+            'fontVariant',
+            'lineHeight',
+            'letterSpacing',
+            'wordSpacing',
+            'textTransform',
+            'textIndent',
+            'textAlign',
+            'tabSize',
+            'MozTabSize'
+        ];
+        props.forEach(prop => {
+            if (computed[prop]) {
+                highlightLayer.style[prop] = computed[prop];
+            }
+        });
+    } catch (error) {
+        console.error('Error syncing highlight typography:', error);
+    }
+}
+
 function syncHeight() {
     if (!editor || !highlightLayer || !scrollArea) {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
@@ -654,6 +751,7 @@ function syncHeight() {
     }
     
     try {
+        syncHighlightTypography();
         // Reset height to get correct scrollHeight
     editor.style.height = 'auto';
     highlightLayer.style.height = 'auto';
@@ -746,6 +844,8 @@ async function initAll() {
 
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
+    if (!editor) return;
+    
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const text = editor.value;
@@ -860,6 +960,8 @@ function pastePlain() {
 // --- Navigation & Selection Logic ---
 function toggleSelectionMode() {
     const btnSelectMode = document.getElementById('btn-select-mode');
+    if (!btnSelectMode || !editor) return;
+    
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
         btnSelectMode.classList.add('select-mode-active');
@@ -951,6 +1053,8 @@ function bindToolbarActions() {
 }
 
 function moveCursor(direction) {
+    if (!editor) return;
+    
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const value = editor.value;
@@ -1165,6 +1269,8 @@ function playSound(type) {
 }
 
 function updateSoundIconColor() {
+    if (!btnSound) return;
+    
     if (!isSoundEnabled) {
         btnSound.style.color = ''; // Reset
         return;
@@ -1186,6 +1292,8 @@ function updateSoundIconColor() {
 }
 
 function toggleSound() {
+    if (!btnSound || !iconSoundOn || !iconSoundOff) return;
+    
     if (!isSoundEnabled) {
         // Turn On
         isSoundEnabled = true;
@@ -1253,12 +1361,14 @@ function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
 
-    if (isLight) {
-        iconThemeSun.style.display = 'none';
-        iconThemeMoon.style.display = 'block';
-    } else {
-        iconThemeSun.style.display = 'block';
-        iconThemeMoon.style.display = 'none';
+    if (iconThemeSun && iconThemeMoon) {
+        if (isLight) {
+            iconThemeSun.style.display = 'none';
+            iconThemeMoon.style.display = 'block';
+        } else {
+            iconThemeSun.style.display = 'block';
+            iconThemeMoon.style.display = 'none';
+        }
     }
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
@@ -1295,6 +1405,8 @@ function handleEditorAutoSaveInput(e) {
 }
 
 function handleEditorKeydown(e) {
+    if (!editor) return;
+    
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active

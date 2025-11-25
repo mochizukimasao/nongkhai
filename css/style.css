@@ -149,6 +149,42 @@ html {
     background-color: rgba(68, 255, 68, 0.1);
 }
 
+.note-action-btn.favorite {
+    color: #666;
+}
+
+.note-action-btn.favorite:hover {
+    color: #ffd700;
+    background-color: rgba(255, 215, 0, 0.1);
+}
+
+.note-action-btn.favorite.favorite-active {
+    color: #ffd700;
+}
+
+.note-action-btn.favorite.favorite-active:hover {
+    color: #ffed4e;
+    background-color: rgba(255, 215, 0, 0.2);
+}
+
+body.light-mode .note-action-btn.favorite {
+    color: #999;
+}
+
+body.light-mode .note-action-btn.favorite:hover {
+    color: #ffb300;
+    background-color: rgba(255, 179, 0, 0.1);
+}
+
+body.light-mode .note-action-btn.favorite.favorite-active {
+    color: #ffb300;
+}
+
+body.light-mode .note-action-btn.favorite.favorite-active:hover {
+    color: #ffc933;
+    background-color: rgba(255, 179, 0, 0.2);
+}
+
 .note-item.active {
     background-color: #2a4050;
     /* Active note highlight */
@@ -253,7 +289,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     width: 100%;
     min-height: 100%;
     /* Ensure it fills scroll area */
-    font-size: 17px;
+    font-size: 16px;
     /* Slightly smaller */
     line-height: 2.0;
     /* Relaxed line height */
@@ -526,8 +562,8 @@ body.light-mode #toast {
     width: 100%;
 }
 
-/* Font Styles */
-.font-gothic #highlight-layer {
+/* Font Styles - keep editor and highlight perfectly aligned */
+.font-gothic .editor-layer {
     font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     line-height: 1.8;
     /* Slightly tighter for Gothic */
@@ -595,7 +631,7 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     .editor-layer {
-        font-size: 16px;
+        font-size: 15px;
         /* Slightly smaller font for mobile */
         line-height: 1.9;
         overflow-wrap: break-word;
@@ -652,7 +688,7 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     .editor-layer {
-        font-size: 16px;
+        font-size: 15px;
         line-height: 1.8;
         overflow-wrap: break-word;
         word-break: break-word;
