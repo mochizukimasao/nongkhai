@@ -289,34 +289,8 @@
             const toast = document.getElementById('toast');
 
             // --- Toolbar Buttons ---
-            // --- Toolbar Buttons ---
-            const btnFloatingMenu = document.getElementById('btn-floating-menu');
-            const btnSidebarNew = document.getElementById('btn-sidebar-new');
-            // const btnMenu = document.getElementById('btn-menu'); // Removed
-            const btnNew = document.getElementById('btn-new');
-            const btnStar = document.getElementById('btn-star');
-            const btnUndo = document.getElementById('btn-undo');
-            const btnRedo = document.getElementById('btn-redo');
-            const btnH1 = document.getElementById('btn-h1');
-            const btnBold = document.getElementById('btn-bold');
-            const btnQuote = document.getElementById('btn-quote');
-            const btnList = document.getElementById('btn-list');
-            const btnOrderedList = document.getElementById('btn-ordered-list');
-            const btnCopy = document.getElementById('btn-copy');
-            const btnPaste = document.getElementById('btn-paste');
-            const btnSelectMode = document.getElementById('btn-select-mode');
-            const btnUp = document.getElementById('btn-up');
-            const btnDown = document.getElementById('btn-down');
-            const btnLeft = document.getElementById('btn-left');
-            const btnRight = document.getElementById('btn-right');
-            const btnTheme = document.getElementById('btn-theme');
-            const iconThemeSun = document.getElementById('icon-theme-sun');
-            const iconThemeMoon = document.getElementById('icon-theme-moon');
-            const btnFont = document.getElementById('btn-font'); // New Font Button
-            const btnSound = document.getElementById('btn-sound');
-            const iconSoundOn = document.getElementById('icon-sound-on');
-            const iconSoundOff = document.getElementById('icon-sound-off');
-            const btnFullscreen = document.getElementById('btn-fullscreen');
+            // ボタン変数は js/app.js で定義される
+            // ここでは直接 getElementById を使用するか、js/app.js の変数を使用
 
             // --- Sidebar Elements ---
             const sidebar = document.getElementById('sidebar');
@@ -339,6 +313,7 @@
             function toggleFont() {
                 document.body.classList.toggle('font-gothic');
                 const isGothic = document.body.classList.contains('font-gothic');
+                const btnFont = document.getElementById('btn-font');
                 const span = btnFont.querySelector('span');
 
                 if (isGothic) {
@@ -352,7 +327,7 @@
                 saveSettings();
             }
 
-            btnFont.addEventListener('click', (e) => {
+            document.getElementById('btn-font').addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleFont();
                 editor.focus();
@@ -511,6 +486,7 @@
             }
 
             function updateStarState(isFav) {
+                const btnStar = document.getElementById('btn-star');
                 if (isFav) {
                     btnStar.classList.add('favorite-active');
                 } else {
@@ -616,25 +592,22 @@
 
 
 
-            btnFloatingMenu.addEventListener('click', (e) => {
+            document.getElementById('btn-floating-menu').addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleSidebar();
             });
-            // btnMenu.addEventListener('click', ...); // Removed
 
-            btnSidebarNew.addEventListener('click', (e) => {
+            document.getElementById('btn-sidebar-new').addEventListener('click', (e) => {
                 e.preventDefault();
                 createNote();
-                // Keep sidebar open? Yes, usually.
-                // editor.focus(); // Focus editor?
             });
 
-            btnNew.addEventListener('click', (e) => {
+            document.getElementById('btn-new').addEventListener('click', (e) => {
                 e.preventDefault();
                 createNote();
                 editor.focus();
             });
-            btnStar.addEventListener('click', (e) => {
+            document.getElementById('btn-star').addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleFavorite();
             });
@@ -679,6 +652,7 @@
                     }
 
                     // Font
+                    const btnFont = document.getElementById('btn-font');
                     if (settings.font === 'gothic') {
                         document.body.classList.add('font-gothic');
                         btnFont.querySelector('span').style.fontFamily = 'sans-serif';
@@ -688,6 +662,9 @@
                     }
 
                     // Sound
+                    const btnSound = document.getElementById('btn-sound');
+                    const iconSoundOn = document.getElementById('icon-sound-on');
+                    const iconSoundOff = document.getElementById('icon-sound-off');
                     if (settings.soundEnabled) {
                         isSoundEnabled = true;
                         currentSoundProfile = settings.soundProfile || 'relax';
@@ -914,6 +891,7 @@
 
             // --- Navigation & Selection Logic ---
             function toggleSelectionMode() {
+                const btnSelectMode = document.getElementById('btn-select-mode');
                 isSelectionMode = !isSelectionMode;
                 if (isSelectionMode) {
                     btnSelectMode.classList.add('select-mode-active');
@@ -1134,6 +1112,7 @@
             }
 
             function updateSoundIconColor() {
+                const btnSound = document.getElementById('btn-sound');
                 if (!isSoundEnabled) {
                     btnSound.style.color = ''; // Reset
                     return;
@@ -1155,6 +1134,9 @@
             }
 
             function toggleSound() {
+                const btnSound = document.getElementById('btn-sound');
+                const iconSoundOn = document.getElementById('icon-sound-on');
+                const iconSoundOff = document.getElementById('icon-sound-off');
                 if (!isSoundEnabled) {
                     // Turn On
                     isSoundEnabled = true;
@@ -1189,7 +1171,7 @@
                 saveSettings();
             }
 
-            btnSound.addEventListener('click', (e) => { e.preventDefault(); toggleSound(); });
+            document.getElementById('btn-sound').addEventListener('click', (e) => { e.preventDefault(); toggleSound(); });
             // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
 
@@ -1210,13 +1192,15 @@
                 }
             }
 
-            btnFullscreen.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); editor.focus(); });
+            document.getElementById('btn-fullscreen').addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); editor.focus(); });
             // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
             // --- Theme Logic ---
             function toggleTheme() {
                 document.body.classList.toggle('light-mode');
                 const isLight = document.body.classList.contains('light-mode');
+                const iconThemeSun = document.getElementById('icon-theme-sun');
+                const iconThemeMoon = document.getElementById('icon-theme-moon');
 
                 if (isLight) {
                     iconThemeSun.style.display = 'none';
@@ -1230,7 +1214,7 @@
                 saveSettings();
             }
 
-            btnTheme.addEventListener('click', (e) => { e.preventDefault(); toggleTheme(); editor.focus(); });
+            document.getElementById('btn-theme').addEventListener('click', (e) => { e.preventDefault(); toggleTheme(); editor.focus(); });
             // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
 
