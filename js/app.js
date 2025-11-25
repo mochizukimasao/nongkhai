@@ -642,53 +642,64 @@ function saveSettings() {
 
 function loadSettings() {
     const saved = localStorage.getItem('editorSettings');
+    let settings = null;
+    
     if (saved) {
-        const settings = JSON.parse(saved);
+        settings = JSON.parse(saved);
+    } else {
+        // 初回起動時はライトモードをデフォルトにする
+        settings = {
+            theme: 'light',
+            font: 'serif',
+            soundEnabled: false,
+            soundProfile: 'relax'
+        };
+        localStorage.setItem('editorSettings', JSON.stringify(settings));
+    }
 
-        // Theme
-        if (iconThemeSun && iconThemeMoon) {
-            if (settings.theme === 'light') {
-                document.body.classList.add('light-mode');
-                iconThemeSun.style.display = 'none';
-                iconThemeMoon.style.display = 'block';
+    // Theme
+    if (iconThemeSun && iconThemeMoon) {
+        if (settings.theme === 'light') {
+            document.body.classList.add('light-mode');
+            iconThemeSun.style.display = 'none';
+            iconThemeMoon.style.display = 'block';
+        } else {
+            document.body.classList.remove('light-mode');
+            iconThemeSun.style.display = 'block';
+            iconThemeMoon.style.display = 'none';
+        }
+    }
+
+    // Font
+    if (btnFont) {
+        const span = btnFont.querySelector('span');
+        if (span) {
+            if (settings.font === 'gothic') {
+                document.body.classList.add('font-gothic');
+                span.style.fontFamily = 'sans-serif';
             } else {
-                document.body.classList.remove('light-mode');
-                iconThemeSun.style.display = 'block';
-                iconThemeMoon.style.display = 'none';
+                document.body.classList.remove('font-gothic');
+                span.style.fontFamily = 'serif';
             }
         }
+    }
 
-        // Font
-        if (btnFont) {
-            const span = btnFont.querySelector('span');
-            if (span) {
-                if (settings.font === 'gothic') {
-                    document.body.classList.add('font-gothic');
-                    span.style.fontFamily = 'sans-serif';
-                } else {
-                    document.body.classList.remove('font-gothic');
-                    span.style.fontFamily = 'serif';
-                }
-            }
-        }
-
-        // Sound
-        if (btnSound && iconSoundOn && iconSoundOff) {
-            if (settings.soundEnabled) {
-                isSoundEnabled = true;
-                currentSoundProfile = settings.soundProfile || 'relax';
-                btnSound.classList.add('active');
-                iconSoundOn.style.display = 'block';
-                iconSoundOff.style.display = 'none';
-                updateSoundIconColor();
-            } else {
-                isSoundEnabled = false;
-                currentSoundProfile = settings.soundProfile || 'relax';
-                btnSound.classList.remove('active');
-                iconSoundOn.style.display = 'none';
-                iconSoundOff.style.display = 'block';
-                btnSound.style.color = '';
-            }
+    // Sound
+    if (btnSound && iconSoundOn && iconSoundOff) {
+        if (settings.soundEnabled) {
+            isSoundEnabled = true;
+            currentSoundProfile = settings.soundProfile || 'relax';
+            btnSound.classList.add('active');
+            iconSoundOn.style.display = 'block';
+            iconSoundOff.style.display = 'none';
+            updateSoundIconColor();
+        } else {
+            isSoundEnabled = false;
+            currentSoundProfile = settings.soundProfile || 'relax';
+            btnSound.classList.remove('active');
+            iconSoundOn.style.display = 'none';
+            iconSoundOff.style.display = 'block';
+            btnSound.style.color = '';
         }
     }
 }

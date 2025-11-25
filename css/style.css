@@ -19,7 +19,7 @@
 
     /* Typography */
     --font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif;
-    --font-size: 17px;
+    --font-size: 18px;
     --line-height: 1.8;
 }
 
@@ -289,7 +289,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     width: 100%;
     min-height: 100%;
     /* Ensure it fills scroll area */
-    font-size: 16px;
+    font-size: 17px;
     /* Slightly smaller */
     line-height: 2.0;
     /* Relaxed line height */
@@ -633,7 +633,7 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     .editor-layer {
-        font-size: 15px;
+        font-size: 16px;
         /* Slightly smaller font for mobile */
         line-height: 1.9;
         overflow-wrap: break-word;
@@ -690,7 +690,7 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     .editor-layer {
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.8;
         overflow-wrap: break-word;
         word-break: break-word;
