@@ -39,6 +39,9 @@ const sidebarOverlay = document.getElementById('sidebar-overlay');
 const btnCloseSidebar = document.getElementById('btn-close-sidebar');
 const noteList = document.getElementById('note-list');
 
+// --- Toolbar Element ---
+const toolbar = document.getElementById('toolbar');
+
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
 scrollArea.addEventListener('scroll', () => {
@@ -87,6 +90,59 @@ const soundProfiles = ['cute', 'relax', 'bubble'];
 let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
+
+// --- Touch/Scroll Detection for Toolbar ---
+let toolbarTouchStartX = 0;
+let toolbarTouchStartY = 0;
+let toolbarTouchStartTime = 0;
+let isToolbarScrollGesture = false;
+let toolbarScrollTimeout = null;
+
+// Toolbar scroll detection - prevent button clicks during scrolling
+if (toolbar) {
+    toolbar.addEventListener('touchstart', (e) => {
+        toolbarTouchStartX = e.touches[0].clientX;
+        toolbarTouchStartY = e.touches[0].clientY;
+        toolbarTouchStartTime = Date.now();
+        isToolbarScrollGesture = false;
+    }, { passive: true });
+
+    toolbar.addEventListener('touchmove', (e) => {
+        if (toolbarTouchStartX === 0) return;
+        const deltaX = Math.abs(e.touches[0].clientX - toolbarTouchStartX);
+        const deltaY = Math.abs(e.touches[0].clientY - toolbarTouchStartY);
+        
+        // If horizontal movement is greater than vertical, it's a scroll gesture
+        // Lower threshold for more reliable detection
+        if (deltaX > 3 && deltaX > deltaY * 1.5) {
+            isToolbarScrollGesture = true;
+            // Keep flag active for longer during active scrolling
+            clearTimeout(toolbarScrollTimeout);
+        }
+    }, { passive: true });
+
+    toolbar.addEventListener('touchend', () => {
+        // Reset after a short delay to allow button clicks after scrolling
+        clearTimeout(toolbarScrollTimeout);
+        toolbarScrollTimeout = setTimeout(() => {
+            isToolbarScrollGesture = false;
+            toolbarTouchStartX = 0;
+            toolbarTouchStartY = 0;
+        }, 150);
+    }, { passive: true });
+
+    // Also detect scroll events - more reliable detection
+    let scrollTimeout = null;
+    toolbar.addEventListener('scroll', () => {
+        isToolbarScrollGesture = true;
+        clearTimeout(scrollTimeout);
+        clearTimeout(toolbarScrollTimeout);
+        // Keep scroll gesture flag active during scrolling
+        scrollTimeout = setTimeout(() => {
+            isToolbarScrollGesture = false;
+        }, 300); // Longer timeout for scroll events
+    }, { passive: true });
+}
 
 // --- DB State ---
 let db;
@@ -521,6 +577,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // --- Helper: Prevent Default & Play Sound ---
 function handleAction(e, action) {
+    // Don't prevent default if toolbar is scrolling (allow scroll to work)
+    if (e.type === 'touchstart' && isToolbarScrollGesture) {
+        // If scrolling, don't execute the action
+        return;
+    }
+    
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
