@@ -70,17 +70,14 @@ function toggleFont() {
     saveSettings();
 }
 
-btnFont.addEventListener('click', (e) => {
+const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
     editor.focus();
-});
-btnFont.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    toggleFont();
-}, {
-    passive: false
-});
+};
+
+btnFont.addEventListener('click', handleFontButton);
+attachTouchAction(btnFont, handleFontButton);
 
 
 // --- State ---
@@ -111,7 +108,7 @@ if (toolbar) {
         if (toolbarTouchStartX === 0) return;
         const deltaX = Math.abs(e.touches[0].clientX - toolbarTouchStartX);
         const deltaY = Math.abs(e.touches[0].clientY - toolbarTouchStartY);
-        
+
         // If horizontal movement is greater than vertical, it's a scroll gesture
         // Lower threshold for more reliable detection
         if (deltaX > 3 && deltaX > deltaY * 1.5) {
@@ -129,6 +126,13 @@ if (toolbar) {
             toolbarTouchStartX = 0;
             toolbarTouchStartY = 0;
         }, 150);
+    }, { passive: true });
+
+    toolbar.addEventListener('touchcancel', () => {
+        isToolbarScrollGesture = false;
+        toolbarTouchStartX = 0;
+        toolbarTouchStartY = 0;
+        clearTimeout(toolbarScrollTimeout);
     }, { passive: true });
 
     // Also detect scroll events - more reliable detection
@@ -310,7 +314,7 @@ function handleResize() {
         // Mobile: sidebar is overlay, keep current state
         // No action needed
     }
-    
+
     // Sync height on resize
     syncHeight();
 }
@@ -320,7 +324,7 @@ function toggleSidebar() {
     const isOpening = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open');
     sidebarOverlay.classList.toggle('visible');
-    
+
     // Hide/show floating menu button when sidebar opens/closes
     if (sidebar.classList.contains('open')) {
         document.body.classList.add('sidebar-open');
@@ -567,26 +571,72 @@ function loadSettings() {
 window.addEventListener('DOMContentLoaded', () => {
     loadSettings(); // Load settings first
     initDB();
-    
+
     // Initialize mobile/responsive behavior
     handleResize();
-    
+
     editor.focus();
 });
 
 
 // --- Helper: Prevent Default & Play Sound ---
 function handleAction(e, action) {
-    // Don't prevent default if toolbar is scrolling (allow scroll to work)
-    if (e.type === 'touchstart' && isToolbarScrollGesture) {
-        // If scrolling, don't execute the action
-        return;
+    // Don't trigger button actions while scrolling the toolbar
+    // Safety check: if scroll gesture started more than 500ms ago, ignore it (stuck flag protection)
+    if (e.type.startsWith('touch') && isToolbarScrollGesture) {
+        const now = Date.now();
+        if (now - toolbarTouchStartTime < 500) {
+            return;
+        }
+        // If > 500ms, assume stuck flag and proceed
+        isToolbarScrollGesture = false;
     }
-    
+
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
     editor.focus(); // Ensure focus
+}
+
+function attachTouchAction(element, handler) {
+    if (!element) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let moved = false;
+
+    element.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        moved = false;
+    }, { passive: true });
+
+    element.addEventListener('touchmove', (e) => {
+        if (moved || !e.touches || e.touches.length === 0) return;
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchStartX);
+        const deltaY = Math.abs(touch.clientY - touchStartY);
+        if (deltaX > 6 || deltaY > 6) {
+            moved = true;
+        }
+    }, { passive: true });
+
+    element.addEventListener('touchend', (e) => {
+        if (moved) return;
+        handler(e);
+    }, { passive: false });
+
+    element.addEventListener('touchcancel', () => {
+        moved = true;
+    }, { passive: true });
+}
+
+function bindToolbarAction(button, action) {
+    if (!button) return;
+    button.addEventListener('mousedown', (e) => handleAction(e, action));
+    attachTouchAction(button, (e) => handleAction(e, action));
 }
 
 // --- Syntax Highlighting ---
@@ -672,11 +722,8 @@ if (document.readyState === 'loading') {
 
 
 // --- Undo/Redo ---
-btnUndo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('undo')), { passive: false });
-btnUndo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('undo')));
-
-btnRedo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('redo')), { passive: false });
-btnRedo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('redo')));
+bindToolbarAction(btnUndo, () => document.execCommand('undo'));
+bindToolbarAction(btnRedo, () => document.execCommand('redo'));
 
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
@@ -750,20 +797,11 @@ function insertMarkdown(type) {
     syncHeight();
 }
 
-btnH1.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('h1')), { passive: false });
-btnH1.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('h1')));
-
-btnBold.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('bold')), { passive: false });
-btnBold.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('bold')));
-
-btnQuote.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('quote')), { passive: false });
-btnQuote.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('quote')));
-
-btnList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('list')), { passive: false });
-btnList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('list')));
-
-btnOrderedList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('ordered-list')), { passive: false });
-btnOrderedList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('ordered-list')));
+bindToolbarAction(btnH1, () => insertMarkdown('h1'));
+bindToolbarAction(btnBold, () => insertMarkdown('bold'));
+bindToolbarAction(btnQuote, () => insertMarkdown('quote'));
+bindToolbarAction(btnList, () => insertMarkdown('list'));
+bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
 
 // --- Clipboard Operations ---
 function showToast(message) {
@@ -801,11 +839,9 @@ function pastePlain() {
     });
 }
 
-btnCopy.addEventListener('touchstart', (e) => handleAction(e, copyAll), { passive: false });
-btnCopy.addEventListener('mousedown', (e) => handleAction(e, copyAll));
+bindToolbarAction(btnCopy, copyAll);
 
-btnPaste.addEventListener('touchstart', (e) => handleAction(e, pastePlain), { passive: false });
-btnPaste.addEventListener('mousedown', (e) => handleAction(e, pastePlain));
+bindToolbarAction(btnPaste, pastePlain);
 
 
 // --- Navigation & Selection Logic ---
@@ -822,8 +858,7 @@ function toggleSelectionMode() {
     }
 }
 
-btnSelectMode.addEventListener('touchstart', (e) => handleAction(e, toggleSelectionMode), { passive: false });
-btnSelectMode.addEventListener('mousedown', (e) => handleAction(e, toggleSelectionMode));
+bindToolbarAction(btnSelectMode, toggleSelectionMode);
 
 function moveCursor(direction) {
     const start = editor.selectionStart;
@@ -870,14 +905,10 @@ function moveCursor(direction) {
     }
 }
 
-btnLeft.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('left')), { passive: false });
-btnLeft.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('left')));
-btnRight.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('right')), { passive: false });
-btnRight.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('right')));
-btnUp.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('up')), { passive: false });
-btnUp.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('up')));
-btnDown.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('down')), { passive: false });
-btnDown.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('down')));
+bindToolbarAction(btnLeft, () => moveCursor('left'));
+bindToolbarAction(btnRight, () => moveCursor('right'));
+bindToolbarAction(btnUp, () => moveCursor('up'));
+bindToolbarAction(btnDown, () => moveCursor('down'));
 
 
 // --- State ---
@@ -998,7 +1029,7 @@ function playSound(type) {
             // Big Pop
             osc.frequency.setValueAtTime(800, t);
             osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
-                        gain.gain.setValueAtTime(0.6, t);
+            gain.gain.setValueAtTime(0.6, t);
             gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
             osc.start(t);
             osc.stop(t + 0.1);
@@ -1035,6 +1066,12 @@ function playSound(type) {
     }
 
     gain.connect(audioCtx.destination);
+
+    // Cleanup nodes after playback
+    osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+    };
 }
 
 function updateSoundIconColor() {
@@ -1093,8 +1130,9 @@ function toggleSound() {
     saveSettings();
 }
 
-btnSound.addEventListener('click', (e) => { e.preventDefault(); toggleSound(); });
-btnSound.addEventListener('touchstart', (e) => { e.preventDefault(); toggleSound(); }, { passive: false });
+const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
+btnSound.addEventListener('click', handleSoundButton);
+attachTouchAction(btnSound, handleSoundButton);
 
 
 // --- Fullscreen Logic ---
@@ -1114,8 +1152,13 @@ function toggleFullscreen() {
     }
 }
 
-btnFullscreen.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); editor.focus(); });
-btnFullscreen.addEventListener('touchstart', (e) => { e.preventDefault(); toggleFullscreen(); }, { passive: false });
+const handleFullscreenButton = (e) => {
+    e.preventDefault();
+    toggleFullscreen();
+    editor.focus();
+};
+btnFullscreen.addEventListener('click', handleFullscreenButton);
+attachTouchAction(btnFullscreen, handleFullscreenButton);
 
 // --- Theme Logic ---
 function toggleTheme() {
@@ -1134,8 +1177,13 @@ function toggleTheme() {
     saveSettings();
 }
 
-btnTheme.addEventListener('click', (e) => { e.preventDefault(); toggleTheme(); editor.focus(); });
-btnTheme.addEventListener('touchstart', (e) => { e.preventDefault(); toggleTheme(); }, { passive: false });
+const handleThemeButton = (e) => {
+    e.preventDefault();
+    toggleTheme();
+    editor.focus();
+};
+btnTheme.addEventListener('click', handleThemeButton);
+attachTouchAction(btnTheme, handleThemeButton);
 
 
 // --- Typing Event & List Continuation ---
