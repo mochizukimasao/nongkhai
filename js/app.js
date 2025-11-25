@@ -674,15 +674,22 @@ function syncHeight() {
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // CRITICAL: Ensure highlight layer matches editor position and size exactly
-        // Use offsetTop/offsetLeft to get position relative to scroll area
+        // CRITICAL: #editorは#editor-scroll-areaのパディング内に配置される
+        // #highlight-layerも同じ位置に配置する必要がある
+        // offsetTop/offsetLeftは親要素（#editor-scroll-area）からの相対位置を返す
         const topOffset = editor.offsetTop;
         const leftOffset = editor.offsetLeft;
+        const width = editor.offsetWidth;
         
-        // Position highlight layer to match editor exactly
         highlightLayer.style.top = topOffset + 'px';
         highlightLayer.style.left = leftOffset + 'px';
-        highlightLayer.style.width = editor.offsetWidth + 'px';
+        highlightLayer.style.width = width + 'px';
+        
+        // デバッグ用（本番では削除可能）
+        if (window.DEBUG_EDITOR) {
+            console.log('Editor offsetTop:', topOffset, 'offsetLeft:', leftOffset, 'width:', width);
+            console.log('Highlight layer top:', highlightLayer.style.top, 'left:', highlightLayer.style.left);
+        }
     } catch (error) {
         console.error('Error in syncHeight:', error);
     }
@@ -728,16 +735,22 @@ function initEditor() {
         return;
     }
     
-    updateHighlights();
-    syncHeight();
-    syncPosition();
-    editor.focus();
+    // レイアウトが完了するまで待つ
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // 2回のrequestAnimationFrameで確実にレイアウトが完了する
+            updateHighlights();
+            syncHeight();
+            syncPosition();
+            editor.focus();
+        });
+    });
 }
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initEditor);
 } else {
-    // DOM already loaded, but wait a bit for layout
+    // DOM already loaded, but wait for layout
     setTimeout(initEditor, 0);
 }
 
