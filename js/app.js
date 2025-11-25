@@ -560,14 +560,37 @@ function bindToolbarAction(button, action) {
         // - スクロールの場合は click イベントは発火しない
         button.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             try {
                 action();
-                playSound('click');
-                editor.focus();
+                if (typeof playSound === 'function') {
+                    playSound('click');
+                }
+                if (editor) {
+                    editor.focus();
+                }
             } catch (error) {
-                console.error('Error in toolbar action:', error);
+                console.error('Error in toolbar action:', error, button);
             }
         });
+        
+        // タッチデバイス用にtouchendも追加
+        button.addEventListener('touchend', (e) => {
+            // スクロールと区別するため、短いタッチのみ処理
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                action();
+                if (typeof playSound === 'function') {
+                    playSound('click');
+                }
+                if (editor) {
+                    editor.focus();
+                }
+            } catch (error) {
+                console.error('Error in toolbar action (touch):', error, button);
+            }
+        }, { passive: false });
     } catch (error) {
         console.error('Error binding toolbar action:', error, button);
     }
