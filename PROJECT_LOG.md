@@ -419,6 +419,25 @@ function bindToolbarAction(button, action) {
 
 **`main`ブランチにpushするたびに自動的にデプロイされます。**
 
+### デプロイ状況の確認方法
+
+1. **Vercelのダッシュボードで確認**:
+   - [Vercel Dashboard](https://vercel.com/dashboard)にアクセス
+   - プロジェクト「nongkhai」を開く
+   - 「Deployments」タブで最新のデプロイ状況を確認
+   - 最新のコミットハッシュが表示されているか確認
+
+2. **GitHub Actionsで確認**（オプション）:
+   - GitHubリポジトリの「Actions」タブを開く
+   - ワークフローの実行状況を確認（現在は無効化されています）
+
+3. **最新のコミットを確認**:
+   ```bash
+   git log --oneline -1
+   ```
+   - 最新のコミットハッシュを確認
+   - Vercelのダッシュボードで同じコミットハッシュがデプロイされているか確認
+
 ### 方法1: Vercelの自動デプロイ機能（推奨・最も簡単）
 
 VercelはGitHubリポジトリと連携している場合、自動的にデプロイされます。

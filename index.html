@@ -383,9 +383,8 @@
             z-index: 100;
             overflow-x: auto;
             /* Allow scroll on small screens */
-            /* Allow scroll on small screens */
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x;
+            /* touch-action は css/style.css で設定 */
         }
 
         body.light-mode #toolbar {
@@ -406,10 +405,8 @@
             transition: all 0.2s ease;
             min-width: 36px;
             /* Smaller buttons */
-            min-width: 36px;
-            /* Smaller buttons */
             height: 36px;
-            touch-action: manipulation;
+            /* touch-action は css/style.css で設定 */
         }
 
         .tool-btn:hover {
@@ -839,12 +836,7 @@
                 toggleFont();
                 editor.focus();
             });
-            btnFont.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                toggleFont();
-            }, {
-                passive: false
-            });
+            // btnFont の touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
 
             // --- State ---
@@ -1284,11 +1276,7 @@
 
 
             // --- Undo/Redo ---
-            btnUndo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('undo')), { passive: false });
-            btnUndo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('undo')));
-
-            btnRedo.addEventListener('touchstart', (e) => handleAction(e, () => document.execCommand('redo')), { passive: false });
-            btnRedo.addEventListener('mousedown', (e) => handleAction(e, () => document.execCommand('redo')));
+            // イベントリスナーは js/app.js の bindToolbarAction で処理
 
             // --- Markdown Insertion ---
             function insertMarkdown(type) {
@@ -1362,20 +1350,7 @@
                 syncHeight();
             }
 
-            btnH1.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('h1')), { passive: false });
-            btnH1.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('h1')));
-
-            btnBold.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('bold')), { passive: false });
-            btnBold.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('bold')));
-
-            btnQuote.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('quote')), { passive: false });
-            btnQuote.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('quote')));
-
-            btnList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('list')), { passive: false });
-            btnList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('list')));
-
-            btnOrderedList.addEventListener('touchstart', (e) => handleAction(e, () => insertMarkdown('ordered-list')), { passive: false });
-            btnOrderedList.addEventListener('mousedown', (e) => handleAction(e, () => insertMarkdown('ordered-list')));
+            // マークダウンボタンのイベントリスナーは js/app.js の bindToolbarAction で処理
 
             // --- Clipboard Operations ---
             function showToast(message) {
@@ -1413,11 +1388,7 @@
                 });
             }
 
-            btnCopy.addEventListener('touchstart', (e) => handleAction(e, copyAll), { passive: false });
-            btnCopy.addEventListener('mousedown', (e) => handleAction(e, copyAll));
-
-            btnPaste.addEventListener('touchstart', (e) => handleAction(e, pastePlain), { passive: false });
-            btnPaste.addEventListener('mousedown', (e) => handleAction(e, pastePlain));
+            // クリップボードボタンのイベントリスナーは js/app.js の bindToolbarAction で処理
 
 
             // --- Navigation & Selection Logic ---
@@ -1434,8 +1405,7 @@
                 }
             }
 
-            btnSelectMode.addEventListener('touchstart', (e) => handleAction(e, toggleSelectionMode), { passive: false });
-            btnSelectMode.addEventListener('mousedown', (e) => handleAction(e, toggleSelectionMode));
+            // 選択モードボタンのイベントリスナーは js/app.js の bindToolbarAction で処理
 
             function moveCursor(direction) {
                 const start = editor.selectionStart;
@@ -1482,14 +1452,7 @@
                 }
             }
 
-            btnLeft.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('left')), { passive: false });
-            btnLeft.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('left')));
-            btnRight.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('right')), { passive: false });
-            btnRight.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('right')));
-            btnUp.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('up')), { passive: false });
-            btnUp.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('up')));
-            btnDown.addEventListener('touchstart', (e) => handleAction(e, () => moveCursor('down')), { passive: false });
-            btnDown.addEventListener('mousedown', (e) => handleAction(e, () => moveCursor('down')));
+            // カーソル移動ボタンのイベントリスナーは js/app.js の bindToolbarAction で処理
 
 
             // --- State ---
@@ -1706,7 +1669,7 @@
             }
 
             btnSound.addEventListener('click', (e) => { e.preventDefault(); toggleSound(); });
-            btnSound.addEventListener('touchstart', (e) => { e.preventDefault(); toggleSound(); }, { passive: false });
+            // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
 
             // --- Fullscreen Logic ---
@@ -1727,7 +1690,7 @@
             }
 
             btnFullscreen.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); editor.focus(); });
-            btnFullscreen.addEventListener('touchstart', (e) => { e.preventDefault(); toggleFullscreen(); }, { passive: false });
+            // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
             // --- Theme Logic ---
             function toggleTheme() {
@@ -1747,7 +1710,7 @@
             }
 
             btnTheme.addEventListener('click', (e) => { e.preventDefault(); toggleTheme(); editor.focus(); });
-            btnTheme.addEventListener('touchstart', (e) => { e.preventDefault(); toggleTheme(); }, { passive: false });
+            // touchstart イベントは削除 - ブラウザのネイティブな動作に任せる
 
 
             // --- Typing Event & List Continuation ---
@@ -1837,7 +1800,7 @@
             });
 
         </script>
-
+        <script src="js/app.js"></script>
 </body>
 
 </html>```
