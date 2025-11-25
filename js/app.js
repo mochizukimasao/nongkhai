@@ -92,6 +92,7 @@ let audioCtx = null;
 let db;
 let currentNoteId = null;
 let showTrash = false; // Toggle state for sidebar
+let showFavorites = false; // Toggle state for favorites filter
 
 // --- Initialize DB ---
 async function initDB() {
@@ -277,8 +278,8 @@ function toggleSidebar() {
         updateNoteList();
     } else {
         document.body.classList.remove('sidebar-open');
-        // Restore button visibility (only on mobile)
-        if (btnFloatingMenu && isMobile()) {
+        // Restore button visibility - always restore, CSS will handle mobile/desktop display
+        if (btnFloatingMenu) {
             btnFloatingMenu.style.display = '';
             btnFloatingMenu.style.visibility = '';
             btnFloatingMenu.style.opacity = '';
@@ -288,10 +289,29 @@ function toggleSidebar() {
     playSound('click');
 }
 
+function toggleFavoritesView() {
+    showFavorites = !showFavorites;
+    const btn = document.getElementById('btn-toggle-favorites');
+    btn.classList.toggle('active', showFavorites);
+    // Disable trash view when showing favorites
+    if (showFavorites) {
+        showTrash = false;
+        const trashBtn = document.getElementById('btn-toggle-trash');
+        if (trashBtn) trashBtn.classList.remove('active');
+    }
+    updateNoteList();
+}
+
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
     btn.classList.toggle('active', showTrash);
+    // Disable favorites view when showing trash
+    if (showTrash) {
+        showFavorites = false;
+        const favBtn = document.getElementById('btn-toggle-favorites');
+        if (favBtn) favBtn.classList.remove('active');
+    }
     updateNoteList();
 }
 
@@ -303,6 +323,12 @@ async function updateNoteList() {
             .filter(n => !!n.deleted)
             .reverse()
             .sortBy('deleted');
+    } else if (showFavorites) {
+        // Show favorite notes only (active notes with favorite flag)
+        notes = await db.notes
+            .filter(n => !n.deleted && n.favorite)
+            .reverse()
+            .sortBy('updated');
     } else {
         // Show active notes (deleted is null or undefined)
         notes = await db.notes
@@ -314,7 +340,13 @@ async function updateNoteList() {
     noteList.innerHTML = '';
 
     if (notes.length === 0) {
-        noteList.innerHTML = `<li style="padding:20px; color:#666; text-align:center;">${showTrash ? 'Trash is empty' : 'No notes'}</li>`;
+        let message = 'No notes';
+        if (showTrash) {
+            message = 'Trash is empty';
+        } else if (showFavorites) {
+            message = 'No favorites';
+        }
+        noteList.innerHTML = `<li style="padding:20px; color:#666; text-align:center;">${message}</li>`;
         return;
     }
 
@@ -400,6 +432,12 @@ btnNew.addEventListener('click', (e) => {
 btnStar.addEventListener('click', (e) => {
     e.preventDefault();
     toggleFavorite();
+});
+
+// Favorites Toggle
+document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFavoritesView();
 });
 
 // Trash Toggle
