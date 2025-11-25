@@ -1,14 +1,21 @@
+# Vercelの自動デプロイ機能を使用するため、このワークフローは無効化されています
+# VercelはGitHubリポジトリと連携している場合、自動的にデプロイされます
+# GitHub Secretsの設定が不要で、より簡単です
+
+# もしGitHub Actionsを使いたい場合は、以下のシークレットを設定してください:
+# - VERCEL_TOKEN
+# - VERCEL_ORG_ID
+# - VERCEL_PROJECT_ID
+
 name: Deploy to Vercel
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # 手動実行も可能
+  workflow_dispatch: # 手動実行のみ（自動デプロイはVercelが行う）
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: false # デフォルトで無効化（Vercelの自動デプロイを使用）
     
     steps:
       - name: Checkout code
