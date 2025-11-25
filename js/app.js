@@ -716,6 +716,7 @@ function syncPosition() {
 // Let's try the "Textarea grows, Container scrolls" approach.
 
 editor.addEventListener('input', () => {
+    updateHighlights();
     syncHeight();
     syncPosition();
 });
