@@ -360,14 +360,11 @@ body.light-mode #editor {
     overflow-y: hidden;
     /* Enhanced scrolling for mobile */
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    overscroll-behavior-x: contain;
-    /* Prevent scroll chaining */
-    touch-action: pan-x;
-    /* Only allow horizontal panning */
     /* Improved scrollbar visibility */
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    /* Prevent flex items from shrinking */
+    flex-wrap: nowrap;
 }
 
 /* Custom scrollbar for toolbar (WebKit browsers) */
@@ -468,6 +465,7 @@ body.light-mode .tool-btn.active {
     background-color: rgba(255, 255, 255, 0.2);
     margin: 0 4px;
     flex-shrink: 0;
+    flex-grow: 0;
 }
 
 body.light-mode .separator {
@@ -698,12 +696,8 @@ body.light-mode #btn-floating-menu:hover {
         gap: 1px;
         /* Enhanced scrolling for mobile */
         -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-        overscroll-behavior-x: contain;
-        touch-action: pan-x;
         /* Ensure flex items don't shrink and maintain scrollability */
         flex-wrap: nowrap;
-        min-width: max-content;
     }
 
     .tool-btn {
