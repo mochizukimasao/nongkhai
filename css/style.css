@@ -556,10 +556,12 @@ body.light-mode #toast {
 }
 
 .md-heading {
-    border-bottom: 1px solid currentColor;
     font-weight: bold;
-    display: inline-block;
-    width: 100%;
+    display: inline;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
 }
 
 /* Font Styles - keep editor and highlight perfectly aligned */
@@ -754,4 +756,41 @@ body.light-mode #btn-floating-menu:hover {
     body.sidebar-open {
         overflow: hidden;
     }
+}
+
+/* Auth Section Styles */
+#auth-section {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+#auth-login button,
+#auth-status button {
+    border: 1px solid var(--button-text);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#auth-login button:hover,
+#auth-status button:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-text-active);
+}
+
+#user-avatar {
+    flex-shrink: 0;
+}
+
+#sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#sync-indicator {
+    font-size: 8px;
+    transition: color 0.3s ease;
+}
+
+body.light-mode #auth-section {
+    background-color: rgba(255, 255, 255, 0.2);
 }

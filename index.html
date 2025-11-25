@@ -87,6 +87,11 @@
         /* Editor styles are defined in css/style.css */
     </style>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
 </head>
 
 <body>
@@ -129,6 +134,33 @@
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                     </svg>
                 </button>
+            </div>
+            <!-- Auth Section -->
+            <div id="auth-section" style="padding: 15px; border-bottom: 1px solid #333;">
+                <div id="auth-status" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <div id="user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background-color: #4a90e2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;"></div>
+                        <div style="flex: 1; overflow: hidden;">
+                            <div id="user-name" style="font-size: 14px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                            <div id="user-email" style="font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                        </div>
+                    </div>
+                    <div id="sync-status" style="font-size: 12px; color: #888; margin-bottom: 10px;">
+                        <span id="sync-indicator">●</span> <span id="sync-text">同期中...</span>
+                    </div>
+                    <button id="btn-logout" class="tool-btn" style="width: 100%; padding: 8px; font-size: 14px;">ログアウト</button>
+                </div>
+                <div id="auth-login" style="display: block;">
+                    <button id="btn-login-google" class="tool-btn" style="width: 100%; padding: 10px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 18 18">
+                            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+                            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                            <path fill="#FBBC05" d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.712 0-.595.102-1.172.282-1.712V4.956H.957C.348 6.175 0 7.55 0 9c0 1.45.348 2.825.957 4.044l3.007-2.332z"/>
+                            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.956L3.964 7.288C4.672 5.163 6.656 3.58 9 3.58z"/>
+                        </svg>
+                        Googleでログイン
+                    </button>
+                </div>
             </div>
             <ul id="note-list">
                 <!-- Notes will be injected here -->
@@ -288,6 +320,7 @@
         </div>
 
 
+        <script src="js/sync.js"></script>
         <script src="js/app.js"></script>
 </body>
 

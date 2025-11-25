@@ -134,6 +134,7 @@ let audioCtx = null;
 
 // --- DB State ---
 let db;
+window.db = null; // グローバルスコープでsync.jsからアクセス可能にする
 let currentNoteId = null;
 let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
@@ -141,13 +142,34 @@ let showFavorites = false; // Toggle state for favorites filter
 // --- Initialize DB ---
 async function initDB() {
     db = new Dexie("SimpleEditorDB");
-    db.version(2).stores({
-        notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
+    window.db = db; // グローバルスコープに設定
+    db.version(3).stores({
+        notes: '++id, text, created, updated, favorite, deleted, firestoreId, syncedAt' // Added firestoreId and syncedAt for sync
     }).upgrade(tx => {
-        // Upgrade existing notes to have deleted: null
-        return tx.notes.toCollection().modify(note => {
-            note.deleted = null;
-        });
+        if (tx.version === 2) {
+            // Upgrade from version 2: add firestoreId and syncedAt fields
+            return tx.notes.toCollection().modify(note => {
+                if (!note.hasOwnProperty('firestoreId')) {
+                    note.firestoreId = null;
+                }
+                if (!note.hasOwnProperty('syncedAt')) {
+                    note.syncedAt = null;
+                }
+            });
+        } else if (tx.version === 1) {
+            // Upgrade from version 1: add deleted, firestoreId, and syncedAt fields
+            return tx.notes.toCollection().modify(note => {
+                if (!note.hasOwnProperty('deleted')) {
+                    note.deleted = null;
+                }
+                if (!note.hasOwnProperty('firestoreId')) {
+                    note.firestoreId = null;
+                }
+                if (!note.hasOwnProperty('syncedAt')) {
+                    note.syncedAt = null;
+                }
+            });
+        }
     });
 
     // Cleanup old trash
@@ -186,12 +208,28 @@ async function createNote() {
         created: Date.now(),
         updated: Date.now(),
         favorite: 0,
-        deleted: null
+        deleted: null,
+        firestoreId: null,
+        syncedAt: null
     });
     await loadNote(id);
     showToast('New Note Created');
     playSound('click');
     if (sidebar && sidebar.classList.contains('open')) toggleSidebar();
+    
+    // Firestoreに同期（非同期で実行、エラーは無視）
+    try {
+        if (window.syncManager && window.syncManager.isAuthenticated()) {
+            const note = await db.notes.get(id);
+            if (note) {
+                window.syncManager.syncNoteToFirestore(id, note).catch(err => {
+                    console.warn('Sync failed (will retry later):', err);
+                });
+            }
+        }
+    } catch (error) {
+        console.warn('Sync error:', error);
+    }
 }
 
 async function loadNote(id) {
@@ -224,6 +262,20 @@ async function saveCurrentNote() {
             updated: Date.now()
         });
         updateNoteList();
+        
+        // Firestoreに同期（非同期で実行、エラーは無視）
+        try {
+            if (window.syncManager && window.syncManager.isAuthenticated()) {
+                const note = await db.notes.get(currentNoteId);
+                if (note) {
+                    window.syncManager.syncNoteToFirestore(currentNoteId, note).catch(err => {
+                        console.warn('Sync failed (will retry later):', err);
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Sync error:', error);
+        }
     } catch (e) {
         console.error("Save failed", e);
         showToast("Save Failed!");
@@ -241,7 +293,7 @@ async function toggleNoteFavorite(noteId) {
     if (!note) return;
     
     const newFav = note.favorite ? 0 : 1;
-    await db.notes.update(noteId, { favorite: newFav });
+    await db.notes.update(noteId, { favorite: newFav, updated: Date.now() });
     
     // 現在のメモの場合、ツールバーの星ボタンも更新
     if (noteId === currentNoteId) {
@@ -251,6 +303,20 @@ async function toggleNoteFavorite(noteId) {
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
+    
+    // Firestoreに同期（非同期で実行、エラーは無視）
+    try {
+        if (window.syncManager && window.syncManager.isAuthenticated()) {
+            const updatedNote = await db.notes.get(noteId);
+            if (updatedNote) {
+                window.syncManager.syncNoteToFirestore(noteId, updatedNote).catch(err => {
+                    console.warn('Sync failed (will retry later):', err);
+                });
+            }
+        }
+    } catch (error) {
+        console.warn('Sync error:', error);
+    }
 }
 
 async function deleteNote(id, event) {
@@ -263,6 +329,20 @@ async function deleteNote(id, event) {
         // Move to Trash
         await db.notes.update(id, { deleted: Date.now() });
         showToast('Moved to Trash');
+        
+        // Firestoreに同期（非同期で実行、エラーは無視）
+        try {
+            if (window.syncManager && window.syncManager.isAuthenticated()) {
+                const updatedNote = await db.notes.get(id);
+                if (updatedNote) {
+                    window.syncManager.syncNoteToFirestore(id, updatedNote).catch(err => {
+                        console.warn('Sync failed (will retry later):', err);
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Sync error:', error);
+        }
     } else {
         // Restore or Permanently Delete? 
         // Let's implement Restore for now if clicking delete in trash
@@ -273,6 +353,17 @@ async function deleteNote(id, event) {
         // "ゴミ箱に入れて...自動的に削除" implies temporary storage.
         // Let's assume clicking delete in trash = Permanent Delete for manual cleanup
         if (confirm('Delete permanently?')) {
+            // Firestoreからも削除
+            try {
+                if (window.syncManager && window.syncManager.isAuthenticated() && note.firestoreId) {
+                    window.syncManager.deleteNoteFromFirestore(note.firestoreId).catch(err => {
+                        console.warn('Firestore delete failed:', err);
+                    });
+                }
+            } catch (error) {
+                console.warn('Sync error:', error);
+            }
+            
             await db.notes.delete(id);
             showToast('Deleted Permanently');
             if (currentNoteId === id) {
@@ -287,10 +378,24 @@ async function deleteNote(id, event) {
 
 async function restoreNote(id, event) {
     if (event) event.stopPropagation();
-    await db.notes.update(id, { deleted: null });
+    await db.notes.update(id, { deleted: null, updated: Date.now() });
     showToast('Restored from Trash');
     updateNoteList();
     playSound('click');
+    
+    // Firestoreに同期（非同期で実行、エラーは無視）
+    try {
+        if (window.syncManager && window.syncManager.isAuthenticated()) {
+            const note = await db.notes.get(id);
+            if (note) {
+                window.syncManager.syncNoteToFirestore(id, note).catch(err => {
+                    console.warn('Sync failed (will retry later):', err);
+                });
+            }
+        }
+    } catch (error) {
+        console.warn('Sync error:', error);
+    }
 }
 
 function updateStarState(isFav) {
@@ -840,6 +945,15 @@ async function initAll() {
     initEditor();
     bindToolbarActions();
     handleResize();
+    
+    // 認証を初期化（Firebaseが利用可能な場合のみ、エラーは無視）
+    try {
+        if (typeof initAuth === 'function') {
+            initAuth();
+        }
+    } catch (error) {
+        console.warn('Auth initialization failed:', error);
+    }
     
     // DB初期化は最後に（非同期なので、エディタが準備できてから）
     // initDB内でloadNote/createNoteが呼ばれるが、その時点でeditorとhighlightLayerは準備済み
@@ -1489,4 +1603,172 @@ function attachEditorListeners() {
     editor.addEventListener('input', handleEditorAutoSaveInput);
     editor.addEventListener('keydown', handleEditorKeydown);
     editorListenersAttached = true;
+}
+
+// --- Firebase Authentication ---
+function initAuth() {
+    // Firebaseが利用可能かチェック
+    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
+        console.warn('Firebase Auth not available');
+        return;
+    }
+    
+    try {
+        // 認証状態の変更を監視
+        window.firebaseAuth.onAuthStateChanged(async (user) => {
+            try {
+                if (user) {
+                    // ログイン済み
+                    updateAuthUI(user);
+                    
+                    // 同期状態のリスナーを設定
+                    if (window.syncManager) {
+                        window.syncManager.onSyncStatusChange(updateSyncStatusUI);
+                        
+                        // Firestoreリスナーを設定
+                        window.syncManager.setupFirestoreListener();
+                        
+                        // 初回同期
+                        await window.syncManager.syncFromFirestore();
+                    }
+                } else {
+                    // ログアウト済み
+                    updateAuthUI(null);
+                    
+                    // 同期を停止
+                    if (window.syncManager) {
+                        window.syncManager.stopSync();
+                    }
+                }
+            } catch (error) {
+                console.error('Auth state change error:', error);
+            }
+        });
+        
+        // ログインボタンのイベントリスナー
+        const btnLoginGoogle = document.getElementById('btn-login-google');
+        if (btnLoginGoogle) {
+            btnLoginGoogle.addEventListener('click', handleGoogleLogin);
+        }
+        
+        // ログアウトボタンのイベントリスナー
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', handleLogout);
+        }
+    } catch (error) {
+        console.error('Auth initialization error:', error);
+    }
+}
+
+async function handleGoogleLogin() {
+    // Firebaseが利用可能かチェック
+    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
+        showToast('Firebaseが設定されていません');
+        return;
+    }
+    
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        showToast('ログイン中...');
+        await window.firebaseAuth.signInWithPopup(provider);
+        showToast('ログインしました');
+        playSound('click');
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('ログインに失敗しました: ' + error.message);
+    }
+}
+
+async function handleLogout() {
+    if (!window.firebaseAuth) return;
+    
+    try {
+        // 同期を停止
+        if (window.syncManager) {
+            window.syncManager.stopSync();
+        }
+        
+        await window.firebaseAuth.signOut();
+        showToast('ログアウトしました');
+        playSound('click');
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('ログアウトに失敗しました');
+    }
+}
+
+function updateAuthUI(user) {
+    const authStatus = document.getElementById('auth-status');
+    const authLogin = document.getElementById('auth-login');
+    
+    if (!authStatus || !authLogin) return;
+    
+    try {
+        if (user) {
+            // ログイン済みUIを表示
+            authLogin.style.display = 'none';
+            authStatus.style.display = 'block';
+            
+            // ユーザー情報を表示
+            const userName = document.getElementById('user-name');
+            const userEmail = document.getElementById('user-email');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (userName) userName.textContent = user.displayName || 'ユーザー';
+            if (userEmail) userEmail.textContent = user.email || '';
+            if (userAvatar) {
+                if (user.photoURL) {
+                    userAvatar.style.backgroundImage = `url(${user.photoURL})`;
+                    userAvatar.style.backgroundSize = 'cover';
+                    userAvatar.textContent = '';
+                } else {
+                    userAvatar.style.backgroundImage = '';
+                    userAvatar.textContent = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+                }
+            }
+        } else {
+            // ログインUIを表示
+            authStatus.style.display = 'none';
+            authLogin.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Update auth UI error:', error);
+    }
+}
+
+function updateSyncStatusUI(status, message) {
+    const syncIndicator = document.getElementById('sync-indicator');
+    const syncText = document.getElementById('sync-text');
+    
+    if (!syncIndicator || !syncText) return;
+    
+    try {
+        syncText.textContent = message || '';
+        
+        // ステータスに応じてインジケーターの色を変更
+        switch (status) {
+            case 'syncing':
+                syncIndicator.style.color = '#4a90e2'; // Blue
+                syncIndicator.textContent = '●';
+                break;
+            case 'synced':
+                syncIndicator.style.color = '#34c759'; // Green
+                syncIndicator.textContent = '●';
+                break;
+            case 'error':
+                syncIndicator.style.color = '#ff3b30'; // Red
+                syncIndicator.textContent = '●';
+                break;
+            case 'disconnected':
+                syncIndicator.style.color = '#888'; // Gray
+                syncIndicator.textContent = '○';
+                break;
+            default:
+                syncIndicator.style.color = '#888';
+                syncIndicator.textContent = '○';
+        }
+    } catch (error) {
+        console.error('Update sync status UI error:', error);
+    }
 }

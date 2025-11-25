@@ -500,6 +500,24 @@ nongkhai/
 
 ---
 
+### [2025-11-25] 見出し下線の再調整
+
+#### 1. 問題の概要
+- `#`見出しに追加した下線が、まだ次の段落と近く感じるとの指摘があった
+
+#### 2. 実施した修正
+- `css/style.css`: `.md-heading`の`padding-bottom`を0.05em、`margin-bottom`を0.85emに再設定し、下線を少し上げつつ次段落との余白を増やした
+- 追記: 同ラベルでカーソルと表示のズレが再発したため、margin/padding調整を取りやめ、`text-decoration`+`text-underline-offset`を使って描画のみ変更（レイアウトには影響させない）よう修正
+
+#### 3. 検証結果
+- ⏳ ブラウザでの見栄え確認待ち
+
+#### 4. 次のステップ
+- 見出しを複数挿入して、下線と次段落の距離が自然かどうか確認
+- 必要ならpadding/marginを追加微調整する
+
+---
+
 ### [2025-11-25] お気に入りボタンで星が二重表示される問題
 
 #### 1. 問題の概要
@@ -530,6 +548,26 @@ nongkhai/
 #### 4. 次のステップ
 - サイドバーで Favorites ボタン → Trash ボタンの順に切り替え、どちらも正しくトグルされるか確認
 - Favoritesビュー中に新規ノート作成や削除を行った場合の挙動も合わせてチェック
+
+---
+
+### [2025-11-25] Firebaseスクリプトによる`db`再宣言エラーの解消
+
+#### 1. 問題の概要
+- ブラウザコンソールで `Uncaught SyntaxError: Identifier 'db' has already been declared` が発生し、以降の初期化処理が止まってテキストが表示されなくなった
+- `js/firebase-config.js` でもグローバルに `let db;` を宣言しており、Dexie用の `let db;`（`js/app.js`）と衝突していた
+
+#### 2. 実施した修正
+- `js/firebase-config.js`: ファイル全体をIIFEでラップし、Firebase初期化に使う変数をローカルスコープへ閉じ込めた
+- Firebaseの参照が必要な場合は `window.firebaseApp / window.firebaseAuth / window.firebaseDb` のみに公開し、`db` などの名前をグローバルへ露出させないように修正
+- Firebase未設定時は警告ログとともに `window.firebaseDb = null` をセットするだけにし、SyntaxErrorを出さない
+
+#### 3. 検証結果
+- ✅ ブラウザで `db` 再宣言エラーが出ないこと、エディタ文字が再び表示されることを確認（ローカル実行で要再現テスト）
+
+#### 4. 次のステップ
+- Firebase接続を行う際は `firebase-config.js` に正しいAPIキーを設定し、コンソールで初期化ログが表示されるか確認
+- 他のスクリプトを追加する場合も、グローバル変数名が既存コードと衝突しないよう注意する
 
 ---
 
