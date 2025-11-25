@@ -646,9 +646,20 @@ function syncHeight() {
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // Ensure highlight layer matches editor width
+        // Ensure highlight layer matches editor width and padding exactly
         const editorRect = editor.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(editor);
+        const editorPadding = {
+            top: parseInt(computedStyle.paddingTop) || 60,
+            left: parseInt(computedStyle.paddingLeft) || 32,
+            right: parseInt(computedStyle.paddingRight) || 32
+        };
+        
+        // Match width exactly (accounting for padding)
         highlightLayer.style.width = editorRect.width + 'px';
+        
+        // Ensure padding matches exactly
+        highlightLayer.style.padding = `${editorPadding.top}px ${editorPadding.right}px 0 ${editorPadding.left}px`;
     } catch (error) {
         console.error('Error in syncHeight:', error);
     }

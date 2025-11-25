@@ -98,6 +98,41 @@ nongkhai/
 
 ## 開発ログ
 
+### [2025-01-XX] エディタのカーソル位置ずれとツールバー反応不良の修正
+
+#### 1. 問題の概要
+スクロールは改善したが、新しい問題が発生：
+1. 文字を右端まで折り返すと、カーソルの位置がずれて、文字が正しく表示されなくなる
+2. ツールバー関係も反応がなくなる
+
+#### 2. 実施した修正
+
+1. **`#editor`と`#highlight-layer`の位置を完全に一致** (`css/style.css`):
+   - `#editor`にパディングを追加（`#highlight-layer`と同じ）
+   - フォントプロパティを一致させる（`font-size`, `line-height`, `white-space`, `word-wrap`など）
+
+2. **`syncHeight`関数の改善** (`js/app.js`):
+   - `#editor`と`#highlight-layer`の幅とパディングを完全に一致させる
+   - エラーチェックを追加
+
+3. **エラーチェックの追加** (`js/app.js`):
+   - `bindToolbarAction`にエラーハンドリングを追加
+   - `updateHighlights`にエラーハンドリングを追加
+   - 要素の存在確認を追加
+
+4. **`css/style.css`の読み込み追加** (`index.html`):
+   - `<link rel="stylesheet" href="css/style.css">`を追加
+
+#### 3. 検証結果
+- **CSS修正**: ✅ `#editor`と`#highlight-layer`の位置を一致
+- **エラーチェック**: ✅ 追加
+- **実機テスト**: ⏳ デプロイ後、実機でテストが必要
+
+#### 4. 次のステップ
+- デプロイ後、実機でテストして、カーソル位置のずれとツールバーの反応を確認する
+
+---
+
 ### [2025-01-XX] index.htmlの古いコード削除とjs/app.jsの読み込み修正
 
 #### 1. 問題の概要
