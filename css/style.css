@@ -220,6 +220,7 @@ html {
     overflow-x: hidden;
     padding: 60px 32px 140px 32px;
     /* More generous breathing room + toolbar clearance */
+    box-sizing: border-box;
 }
 
 #editor-scroll-area::-webkit-scrollbar {
@@ -279,18 +280,12 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     z-index: 2;
     resize: none;
     overflow: hidden;
-    /* Let container scroll */
-    /* Match highlight-layer padding exactly to ensure cursor alignment */
-    padding: 60px 32px 0 32px;
+    /* No padding - padding is on #editor-scroll-area */
+    padding: 0;
+    margin: 0;
     box-sizing: border-box;
     width: 100%;
-    /* Match highlight-layer font properties */
-    font-size: 17px;
-    line-height: 2.0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    /* Font properties are inherited from .editor-layer */
 }
 
 #highlight-layer {
@@ -302,17 +297,12 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
-    /* Match editor padding exactly */
-    padding: 60px 32px 0 32px !important;
+    /* No padding - padding is on #editor-scroll-area, match editor exactly */
+    padding: 0;
+    margin: 0;
     box-sizing: border-box;
-    /* Match editor font and line-height */
-    font-size: 17px;
-    line-height: 2.0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    font-family: inherit;
+    /* Font properties are inherited from .editor-layer */
+    width: 100%;
 }
 
 /* Light Mode Overrides */
@@ -602,14 +592,8 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     #highlight-layer {
-        top: 0;
-        left: 0;
-        right: 0;
-        /* Match editor-scroll-area padding exactly */
-        padding: 70px 28px 0 28px !important;
-        box-sizing: border-box;
-        overflow-wrap: break-word;
-        word-break: break-word;
+        /* No padding - padding is on #editor-scroll-area */
+        padding: 0 !important;
     }
 
     /* Floating menu button - ensure it's visible on mobile */
@@ -665,14 +649,8 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     #highlight-layer {
-        top: 0;
-        left: 0;
-        right: 0;
-        /* Match editor-scroll-area padding exactly */
-        padding: 80px 24px 0 24px !important;
-        box-sizing: border-box;
-        overflow-wrap: break-word;
-        word-break: break-word;
+        /* No padding - padding is on #editor-scroll-area */
+        padding: 0 !important;
     }
 
     /* Note items - smaller padding */

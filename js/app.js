@@ -638,28 +638,22 @@ function syncHeight() {
     }
     
     try {
-        // Reset height to min to get correct scrollHeight
+        // Reset height to get correct scrollHeight
         editor.style.height = 'auto';
         highlightLayer.style.height = 'auto';
 
-        const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
+        // Calculate height - ensure it's at least the scroll area height
+        const scrollAreaHeight = scrollArea.clientHeight;
+        const editorScrollHeight = editor.scrollHeight;
+        const height = Math.max(editorScrollHeight, scrollAreaHeight);
+        
+        // Set heights
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // Ensure highlight layer matches editor width and padding exactly
+        // Ensure highlight layer matches editor width exactly
         const editorRect = editor.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(editor);
-        const editorPadding = {
-            top: parseInt(computedStyle.paddingTop) || 60,
-            left: parseInt(computedStyle.paddingLeft) || 32,
-            right: parseInt(computedStyle.paddingRight) || 32
-        };
-        
-        // Match width exactly (accounting for padding)
         highlightLayer.style.width = editorRect.width + 'px';
-        
-        // Ensure padding matches exactly
-        highlightLayer.style.padding = `${editorPadding.top}px ${editorPadding.right}px 0 ${editorPadding.left}px`;
     } catch (error) {
         console.error('Error in syncHeight:', error);
     }
