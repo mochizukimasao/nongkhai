@@ -261,6 +261,9 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     background: transparent;
     white-space: pre-wrap;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
     font-family: inherit;
     margin: 0;
     padding: 0;
@@ -277,20 +280,25 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     resize: none;
     overflow: hidden;
     /* Let container scroll */
+    /* Ensure text starts at the same position as highlight-layer */
+    top: 0;
+    left: 0;
 }
 
 #highlight-layer {
     position: absolute;
-    top: 40px;
-    /* Match padding */
-    left: 20px;
-    /* Match padding */
-    right: 20px;
-    /* Match padding */
+    top: 0;
+    /* Start at the same position as editor-scroll-area padding */
+    left: 0;
+    /* Start at the same position as editor-scroll-area padding */
+    right: 0;
     z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
+    /* Match editor-scroll-area padding exactly */
+    padding: 40px 20px 0 20px !important;
+    box-sizing: border-box;
 }
 
 /* Light Mode Overrides */
@@ -521,27 +529,34 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments */
     #editor-scroll-area {
-        padding: 60px 20px 100px 55px;
+        padding: 60px 20px 100px 20px;
         /* Top padding: 60px - avoids overlap with menu button (top: 15px, size ~34px) */
-        /* Right padding: 20px - comfortable margin */
-        /* Left padding: 55px - ensures no overlap with menu button (left: 20px, size ~34px) + beautiful spacing */
+        /* Left/Right padding: 20px - equal margins for beautiful design */
+        /* Note: Left padding is smaller, but menu button is in fixed position and won't overlap */
         /* Bottom padding: 100px - for toolbar */
         max-width: 100%;
+        overflow-x: hidden;
+        /* Prevent horizontal scrolling */
     }
 
     .editor-layer {
         font-size: 16px;
         /* Slightly smaller font for mobile */
         line-height: 1.9;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        max-width: 100%;
     }
 
     #highlight-layer {
-        top: 60px;
-        /* Match editor-scroll-area top padding */
-        left: 55px;
-        /* Match editor-scroll-area left padding */
-        right: 20px;
-        /* Match editor-scroll-area right padding */
+        top: 0;
+        left: 0;
+        right: 0;
+        /* Match editor-scroll-area padding exactly */
+        padding: 60px 20px 0 20px !important;
+        box-sizing: border-box;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     /* Floating menu button - ensure it's visible on mobile */
@@ -582,26 +597,33 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments for small screens */
     #editor-scroll-area {
-        padding: 70px 60px 100px 20px;
+        padding: 70px 20px 100px 20px;
         /* Top padding: 70px - avoids overlap with menu button (top: 10px, size ~38px) */
-        /* Right padding: 20px - comfortable margin */
-        /* Left padding: 60px - ensures no overlap with menu button (left: 10px, size ~38px) + beautiful spacing */
+        /* Left/Right padding: 20px - equal margins for beautiful design */
+        /* Note: Menu button is in fixed position (left: 10px) and won't overlap with text */
         /* Bottom padding: 100px - for toolbar */
         /* Generous padding for beautiful, comfortable design */
+        overflow-x: hidden;
+        /* Prevent horizontal scrolling */
     }
 
     .editor-layer {
         font-size: 16px;
         line-height: 1.8;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        max-width: 100%;
     }
 
     #highlight-layer {
-        top: 70px;
-        /* Match editor-scroll-area top padding */
-        left: 60px;
-        /* Match editor-scroll-area left padding */
-        right: 20px;
-        /* Match editor-scroll-area right padding */
+        top: 0;
+        left: 0;
+        right: 0;
+        /* Match editor-scroll-area padding exactly */
+        padding: 70px 20px 0 20px !important;
+        box-sizing: border-box;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     /* Note items - smaller padding */
