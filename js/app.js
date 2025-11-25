@@ -77,7 +77,7 @@ const handleFontButton = (e) => {
 };
 
 btnFont.addEventListener('click', handleFontButton);
-attachTouchAction(btnFont, handleFontButton);
+// attachTouchAction removed - relying on native click
 
 
 // --- State ---
@@ -534,48 +534,20 @@ function handleAction(e, action) {
     editor.focus(); // Ensure focus
 }
 
-function attachTouchAction(element, handler) {
-    if (!element) return;
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let moved = false;
-
-    element.addEventListener('touchstart', (e) => {
-        if (!e.touches || e.touches.length === 0) return;
-        const touch = e.touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        moved = false;
-    }, { passive: true });
-
-    element.addEventListener('touchmove', (e) => {
-        if (moved || !e.touches || e.touches.length === 0) return;
-        const touch = e.touches[0];
-        const deltaX = Math.abs(touch.clientX - touchStartX);
-        const deltaY = Math.abs(touch.clientY - touchStartY);
-        // If moved more than 10px, consider it a scroll/drag, not a tap
-        if (deltaX > 10 || deltaY > 10) {
-            moved = true;
-        }
-    }, { passive: true });
-
-    element.addEventListener('touchend', (e) => {
-        if (moved) return;
-        // Prevent default to avoid double-firing with mouse events if mixed
-        if (e.cancelable) e.preventDefault();
-        handler(e);
-    }, { passive: false });
-
-    element.addEventListener('touchcancel', () => {
-        moved = true;
-    }, { passive: true });
-}
-
 function bindToolbarAction(button, action) {
     if (!button) return;
-    button.addEventListener('mousedown', (e) => handleAction(e, action));
-    attachTouchAction(button, (e) => handleAction(e, action));
+    // Use mousedown to prevent default (focus loss) but allow click to trigger action
+    button.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Keep focus on editor
+    });
+
+    // Use standard click event - browser handles tap vs scroll logic
+    button.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent default button behavior (form submit etc)
+        action();
+        playSound('click');
+        editor.focus();
+    });
 }
 
 // --- Syntax Highlighting ---
@@ -1071,7 +1043,6 @@ function toggleSound() {
 
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
 btnSound.addEventListener('click', handleSoundButton);
-attachTouchAction(btnSound, handleSoundButton);
 
 
 // --- Fullscreen Logic ---
@@ -1097,7 +1068,7 @@ const handleFullscreenButton = (e) => {
     editor.focus();
 };
 btnFullscreen.addEventListener('click', handleFullscreenButton);
-attachTouchAction(btnFullscreen, handleFullscreenButton);
+// attachTouchAction removed
 
 // --- Theme Logic ---
 function toggleTheme() {
@@ -1122,7 +1093,7 @@ const handleThemeButton = (e) => {
     editor.focus();
 };
 btnTheme.addEventListener('click', handleThemeButton);
-attachTouchAction(btnTheme, handleThemeButton);
+// attachTouchAction removed
 
 
 // --- Typing Event & List Continuation ---
