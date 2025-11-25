@@ -280,7 +280,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     z-index: 2;
     resize: none;
     overflow: hidden;
-    /* No padding - padding is on #editor-scroll-area */
+    /* Match #editor-scroll-area padding to align with highlight layer */
     padding: 0;
     margin: 0;
     box-sizing: border-box;
@@ -290,6 +290,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 #highlight-layer {
     position: absolute;
+    /* Match #editor position exactly - both are children of #editor-scroll-area */
     top: 0;
     left: 0;
     right: 0;
@@ -297,12 +298,20 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
-    /* No padding - padding is on #editor-scroll-area, match editor exactly */
+    /* Match #editor exactly - no padding, same position */
     padding: 0;
     margin: 0;
     box-sizing: border-box;
     /* Font properties are inherited from .editor-layer */
     width: 100%;
+    /* Ensure same font rendering */
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+    white-space: inherit;
+    word-wrap: inherit;
+    overflow-wrap: inherit;
+    word-break: inherit;
 }
 
 /* Light Mode Overrides */

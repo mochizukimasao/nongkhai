@@ -651,8 +651,17 @@ function syncHeight() {
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
         
-        // Ensure highlight layer matches editor width exactly
+        // Ensure highlight layer matches editor position and size exactly
         const editorRect = editor.getBoundingClientRect();
+        const scrollAreaRect = scrollArea.getBoundingClientRect();
+        
+        // Calculate offset from scroll area
+        const topOffset = editorRect.top - scrollAreaRect.top;
+        const leftOffset = editorRect.left - scrollAreaRect.left;
+        
+        // Position highlight layer to match editor exactly
+        highlightLayer.style.top = topOffset + 'px';
+        highlightLayer.style.left = leftOffset + 'px';
         highlightLayer.style.width = editorRect.width + 'px';
     } catch (error) {
         console.error('Error in syncHeight:', error);
