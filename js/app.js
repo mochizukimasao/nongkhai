@@ -22,7 +22,7 @@ function initElements() {
     if (!scrollArea) console.error('Scroll area element not found');
     if (!toast) console.warn('Toast element not found');
 
-    // --- Toolbar Buttons ---
+// --- Toolbar Buttons ---
     btnFloatingMenu = document.getElementById('btn-floating-menu');
     btnSidebarNew = document.getElementById('btn-sidebar-new');
     btnNew = document.getElementById('btn-new');
@@ -50,13 +50,13 @@ function initElements() {
     iconSoundOff = document.getElementById('icon-sound-off');
     btnFullscreen = document.getElementById('btn-fullscreen');
 
-    // --- Sidebar Elements ---
+// --- Sidebar Elements ---
     sidebar = document.getElementById('sidebar');
     sidebarOverlay = document.getElementById('sidebar-overlay');
     btnCloseSidebar = document.getElementById('btn-close-sidebar');
     noteList = document.getElementById('note-list');
 
-    // --- Toolbar Element ---
+// --- Toolbar Element ---
     toolbar = document.getElementById('toolbar');
 }
 
@@ -560,25 +560,25 @@ function bindToolbarAction(button, action) {
     
     try {
         // mousedownでフォーカス維持（デスクトップ用）
-        button.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Keep focus on editor
-        });
+    button.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Keep focus on editor
+    });
 
         // 標準クリックイベントのみ使用
         // ブラウザのネイティブな動作に任せる：
         // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
         // - タップのみの場合は click イベントが発火する
         // - スクロールの場合は click イベントは発火しない
-        button.addEventListener('click', (e) => {
+    button.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             try {
-                action();
+        action();
                 if (typeof playSound === 'function') {
-                    playSound('click');
+        playSound('click');
                 }
                 if (editor) {
-                    editor.focus();
+        editor.focus();
                 }
             } catch (error) {
                 console.error('Error in toolbar action:', error, button);
@@ -615,28 +615,28 @@ function updateHighlights() {
     }
     
     try {
-        let text = editor.value;
+    let text = editor.value;
 
-        // Escape HTML to prevent XSS and rendering issues
-        text = text.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
+    // Escape HTML to prevent XSS and rendering issues
+    text = text.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
-        // Apply Markdown Styling
-        // Bold: **text** -> **<span class="md-bold">text</span>**
-        // We want to underline ONLY the text inside.
-        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+    // Apply Markdown Styling
+    // Bold: **text** -> **<span class="md-bold">text</span>**
+    // We want to underline ONLY the text inside.
+    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
-        // Heading: # text (at start of line)
-        // Support # through ######
-        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
+    // Heading: # text (at start of line)
+    // Support # through ######
+    text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
 
-        // Handle trailing newline for display
-        if (text.endsWith('\n')) {
-            text += '<br>';
-        }
+    // Handle trailing newline for display
+    if (text.endsWith('\n')) {
+        text += '<br>';
+    }
 
-        highlightLayer.innerHTML = text;
+    highlightLayer.innerHTML = text;
     } catch (error) {
         console.error('Error in updateHighlights:', error);
     }
@@ -673,8 +673,8 @@ function syncHeight() {
     
     try {
         // Reset height to get correct scrollHeight
-        editor.style.height = 'auto';
-        highlightLayer.style.height = 'auto';
+    editor.style.height = 'auto';
+    highlightLayer.style.height = 'auto';
 
         // Calculate height - ensure it's at least the scroll area height
         const scrollAreaHeight = scrollArea.clientHeight;
@@ -682,8 +682,8 @@ function syncHeight() {
         const height = Math.max(editorScrollHeight, scrollAreaHeight);
         
         // Set heights
-        editor.style.height = height + 'px';
-        highlightLayer.style.height = height + 'px';
+    editor.style.height = height + 'px';
+    highlightLayer.style.height = height + 'px';
         
         // #editorと#highlight-layerは同じパディングを持っているので、
         // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
@@ -737,11 +737,11 @@ function initEditor() {
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             // 2回のrequestAnimationFrameで確実にレイアウトが完了する
-            updateHighlights();
-            syncHeight();
+        updateHighlights();
+        syncHeight();
             syncPosition();
-            editor.focus();
-        });
+        editor.focus();
+    });
     });
 }
 
@@ -867,11 +867,9 @@ function pastePlain() {
     });
 }
 
-    // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
-
-
 // --- Navigation & Selection Logic ---
 function toggleSelectionMode() {
+    const btnSelectMode = document.getElementById('btn-select-mode');
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
         btnSelectMode.classList.add('select-mode-active');
@@ -884,8 +882,30 @@ function toggleSelectionMode() {
     }
 }
 
+function bindToolbarActions() {
+    if (!btnUndo || !btnRedo || !btnH1 || !btnBold || !btnCopy || !btnPaste || !btnSelectMode) {
+        console.warn('Toolbar buttons not ready, retrying...');
+        setTimeout(bindToolbarActions, 100);
+        return;
+    }
+    
+    // --- Undo/Redo ---
+    bindToolbarAction(btnUndo, () => document.execCommand('undo'));
+    bindToolbarAction(btnRedo, () => document.execCommand('redo'));
+
+    // --- Markdown Insertion ---
+    bindToolbarAction(btnH1, () => insertMarkdown('h1'));
+    bindToolbarAction(btnBold, () => insertMarkdown('bold'));
+    bindToolbarAction(btnQuote, () => insertMarkdown('quote'));
+    bindToolbarAction(btnList, () => insertMarkdown('list'));
+    bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
+
+    // --- Clipboard Operations ---
+    bindToolbarAction(btnCopy, copyAll);
+    bindToolbarAction(btnPaste, pastePlain);
+
     // --- Navigation & Selection Logic ---
-        // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
+bindToolbarAction(btnSelectMode, toggleSelectionMode);
     bindToolbarAction(btnLeft, () => moveCursor('left'));
     bindToolbarAction(btnRight, () => moveCursor('right'));
     bindToolbarAction(btnUp, () => moveCursor('up'));
