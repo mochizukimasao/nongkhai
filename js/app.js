@@ -9,6 +9,10 @@ let btnTheme, iconThemeSun, iconThemeMoon, btnFont;
 let btnSound, iconSoundOn, iconSoundOff, btnFullscreen;
 let sidebar, sidebarOverlay, btnCloseSidebar, noteList, toolbar;
 
+let baseListenersAttached = false;
+let editorListenersAttached = false;
+let uiListenersAttached = false;
+
 // DOMContentLoadedイベントで要素を取得
 function initElements() {
     editor = document.getElementById('editor');
@@ -62,14 +66,29 @@ function initElements() {
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
-scrollArea.addEventListener('scroll', () => {
-    scrollArea.classList.add('scrolling');
 
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-        scrollArea.classList.remove('scrolling');
-    }, 500); // Hide after 0.5 second of inactivity
-});
+function attachBaseListeners() {
+    if (baseListenersAttached) {
+        return;
+    }
+    if (!scrollArea) {
+        console.warn('attachBaseListeners: scrollArea not ready, retrying...');
+        setTimeout(attachBaseListeners, 100);
+        return;
+    }
+    
+    scrollArea.addEventListener('scroll', () => {
+        scrollArea.classList.add('scrolling');
+
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            scrollArea.classList.remove('scrolling');
+        }, 500); // Hide after 0.5 second of inactivity
+    });
+    
+    scrollArea.addEventListener('scroll', syncPosition);
+    baseListenersAttached = true;
+}
 
 // --- Font Toggle Logic ---
 function toggleFont() {
@@ -91,10 +110,10 @@ function toggleFont() {
 const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
-    editor.focus();
+    if (editor) {
+        editor.focus();
+    }
 };
-
-btnFont.addEventListener('click', handleFontButton);
 // attachTouchAction removed - relying on native click
 
 
@@ -433,29 +452,6 @@ async function updateNoteList() {
 
 
 
-btnFloatingMenu.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSidebar();
-});
-// btnMenu.addEventListener('click', ...); // Removed
-
-btnSidebarNew.addEventListener('click', (e) => {
-    e.preventDefault();
-    createNote();
-    // Keep sidebar open? Yes, usually.
-    // editor.focus(); // Focus editor?
-});
-
-btnNew.addEventListener('click', (e) => {
-    e.preventDefault();
-    createNote();
-    editor.focus();
-});
-btnStar.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleFavorite();
-});
-
 // Favorites Toggle
 document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
     e.preventDefault();
@@ -467,12 +463,6 @@ document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
     e.preventDefault();
     toggleTrashView();
 });
-
-btnCloseSidebar.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSidebar();
-});
-sidebarOverlay.addEventListener('click', toggleSidebar);
 
 // --- Settings Persistence ---
 function saveSettings() {
@@ -528,18 +518,6 @@ function loadSettings() {
         }
     }
 }
-
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
-    loadSettings(); // Load settings first
-    initDB();
-
-    // Initialize mobile/responsive behavior
-    handleResize();
-
-    editor.focus();
-});
-
 
 // --- Helper: Prevent Default & Play Sound ---
 function handleAction(e, action) {
@@ -642,8 +620,6 @@ function updateHighlights() {
     }
 }
 
-editor.addEventListener('input', updateHighlights);
-
 // Sync Scroll
 // Since we are scrolling the parent #editor-scroll-area, and both children are absolute/full size,
 // they should move together naturally if they are large enough?
@@ -712,17 +688,16 @@ function syncPosition() {
 // If we want overlay, we usually make the container scroll, and textarea + div grow.
 // Let's try the "Textarea grows, Container scrolls" approach.
 
-editor.addEventListener('input', () => {
+function handleEditorContentSync() {
     updateHighlights();
     syncHeight();
     syncPosition();
-});
+}
 window.addEventListener('resize', () => {
     handleResize();
     syncHeight();
     syncPosition();
 });
-scrollArea.addEventListener('scroll', syncPosition);
 
 // Initial call for editor setup
 // Note: This is separate from main DOMContentLoaded to ensure editor elements are ready
@@ -748,10 +723,14 @@ function initEditor() {
 // 要素の初期化とエディタの初期化を順番に実行
 function initAll() {
     initElements();
+    attachBaseListeners();
+    bindUIControls();
+    loadSettings();
+    initDB();
+    attachEditorListeners();
     initEditor();
-    
-    // ツールバーボタンのイベントリスナーを設定
     bindToolbarActions();
+    handleResize();
 }
 
 // --- Markdown Insertion ---
@@ -882,8 +861,56 @@ function toggleSelectionMode() {
     }
 }
 
+function bindUIControls() {
+    if (uiListenersAttached) {
+        return;
+    }
+    if (!btnFont || !btnFloatingMenu || !btnSidebarNew || !btnNew || !btnStar || !btnCloseSidebar || !sidebarOverlay || !btnSound || !btnFullscreen || !btnTheme) {
+        console.warn('bindUIControls: UI buttons not ready, retrying...');
+        setTimeout(bindUIControls, 100);
+        return;
+    }
+
+    btnFont.addEventListener('click', handleFontButton);
+
+    btnFloatingMenu.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebar();
+    });
+
+    btnSidebarNew.addEventListener('click', (e) => {
+        e.preventDefault();
+        createNote();
+    });
+
+    btnNew.addEventListener('click', (e) => {
+        e.preventDefault();
+        createNote();
+        if (editor) {
+            editor.focus();
+        }
+    });
+
+    btnStar.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleFavorite();
+    });
+
+    btnCloseSidebar.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebar();
+    });
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+
+    btnSound.addEventListener('click', handleSoundButton);
+    btnFullscreen.addEventListener('click', handleFullscreenButton);
+    btnTheme.addEventListener('click', handleThemeButton);
+
+    uiListenersAttached = true;
+}
+
 function bindToolbarActions() {
-    if (!btnUndo || !btnRedo || !btnH1 || !btnBold || !btnCopy || !btnPaste || !btnSelectMode) {
+    if (!btnUndo || !btnRedo || !btnH1 || !btnBold || !btnCopy || !btnPaste || !btnSelectMode || !btnLeft || !btnRight || !btnUp || !btnDown) {
         console.warn('Toolbar buttons not ready, retrying...');
         setTimeout(bindToolbarActions, 100);
         return;
@@ -905,7 +932,7 @@ function bindToolbarActions() {
     bindToolbarAction(btnPaste, pastePlain);
 
     // --- Navigation & Selection Logic ---
-bindToolbarAction(btnSelectMode, toggleSelectionMode);
+    bindToolbarAction(btnSelectMode, toggleSelectionMode);
     bindToolbarAction(btnLeft, () => moveCursor('left'));
     bindToolbarAction(btnRight, () => moveCursor('right'));
     bindToolbarAction(btnUp, () => moveCursor('up'));
@@ -955,6 +982,12 @@ function moveCursor(direction) {
     } else {
         editor.setSelectionRange(newPos, newPos);
     }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+} else {
+    initAll();
 }
 
 // --- State ---
@@ -1177,7 +1210,6 @@ function toggleSound() {
 }
 
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
-btnSound.addEventListener('click', handleSoundButton);
 
 
 // --- Fullscreen Logic ---
@@ -1200,10 +1232,10 @@ function toggleFullscreen() {
 const handleFullscreenButton = (e) => {
     e.preventDefault();
     toggleFullscreen();
-    editor.focus();
+    if (editor) {
+        editor.focus();
+    }
 };
-btnFullscreen.addEventListener('click', handleFullscreenButton);
-// attachTouchAction removed
 
 // --- Theme Logic ---
 function toggleTheme() {
@@ -1225,10 +1257,10 @@ function toggleTheme() {
 const handleThemeButton = (e) => {
     e.preventDefault();
     toggleTheme();
-    editor.focus();
+    if (editor) {
+        editor.focus();
+    }
 };
-btnTheme.addEventListener('click', handleThemeButton);
-// attachTouchAction removed
 
 
 // --- Typing Event & List Continuation ---
@@ -1236,7 +1268,7 @@ btnTheme.addEventListener('click', handleThemeButton);
 let saveTimeout;
 
 // Handle IME input for sound AND Auto-save
-editor.addEventListener('input', (e) => {
+function handleEditorAutoSaveInput(e) {
     // Auto-save (Debounced)
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(saveCurrentNote, 500);
@@ -1249,9 +1281,9 @@ editor.addEventListener('input', (e) => {
     if (e.inputType === 'insertCompositionText' || e.isComposing) {
         playSound('click');
     }
-});
+}
 
-editor.addEventListener('keydown', (e) => {
+function handleEditorKeydown(e) {
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active
@@ -1315,4 +1347,19 @@ editor.addEventListener('keydown', (e) => {
         // Normal keys (English input)
         playSound('click');
     }
-});
+}
+
+function attachEditorListeners() {
+    if (editorListenersAttached) {
+        return;
+    }
+    if (!editor) {
+        console.warn('attachEditorListeners: editor not ready, retrying...');
+        setTimeout(attachEditorListeners, 100);
+        return;
+    }
+    editor.addEventListener('input', handleEditorContentSync);
+    editor.addEventListener('input', handleEditorAutoSaveInput);
+    editor.addEventListener('keydown', handleEditorKeydown);
+    editorListenersAttached = true;
+}
