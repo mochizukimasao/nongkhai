@@ -521,8 +521,11 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments */
     #editor-scroll-area {
-        padding: 30px 16px 100px 16px;
-        /* Reduced padding for mobile */
+        padding: 60px 20px 100px 55px;
+        /* Top padding: 60px - avoids overlap with menu button (top: 15px, size ~34px) */
+        /* Right padding: 20px - comfortable margin */
+        /* Left padding: 55px - ensures no overlap with menu button (left: 20px, size ~34px) + beautiful spacing */
+        /* Bottom padding: 100px - for toolbar */
         max-width: 100%;
     }
 
@@ -533,9 +536,12 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     #highlight-layer {
-        top: 30px;
-        left: 16px;
-        right: 16px;
+        top: 60px;
+        /* Match editor-scroll-area top padding */
+        left: 55px;
+        /* Match editor-scroll-area left padding */
+        right: 20px;
+        /* Match editor-scroll-area right padding */
     }
 
     /* Floating menu button - ensure it's visible on mobile */
@@ -576,8 +582,12 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments for small screens */
     #editor-scroll-area {
-        padding: 20px 12px 100px 12px;
-        /* Even tighter padding */
+        padding: 70px 60px 100px 20px;
+        /* Top padding: 70px - avoids overlap with menu button (top: 10px, size ~38px) */
+        /* Right padding: 20px - comfortable margin */
+        /* Left padding: 60px - ensures no overlap with menu button (left: 10px, size ~38px) + beautiful spacing */
+        /* Bottom padding: 100px - for toolbar */
+        /* Generous padding for beautiful, comfortable design */
     }
 
     .editor-layer {
@@ -586,9 +596,12 @@ body.light-mode #btn-floating-menu:hover {
     }
 
     #highlight-layer {
-        top: 20px;
-        left: 12px;
-        right: 12px;
+        top: 70px;
+        /* Match editor-scroll-area top padding */
+        left: 60px;
+        /* Match editor-scroll-area left padding */
+        right: 20px;
+        /* Match editor-scroll-area right padding */
     }
 
     /* Note items - smaller padding */
