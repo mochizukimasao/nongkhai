@@ -754,17 +754,6 @@ function initAll() {
     bindToolbarActions();
 }
 
-function bindToolbarActions() {
-    if (!btnUndo || !btnRedo || !btnH1 || !btnBold) {
-        console.warn('Toolbar buttons not ready, retrying...');
-        setTimeout(bindToolbarActions, 100);
-        return;
-    }
-    
-    // --- Undo/Redo ---
-    bindToolbarAction(btnUndo, () => document.execCommand('undo'));
-    bindToolbarAction(btnRedo, () => document.execCommand('redo'));
-
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
     const start = editor.selectionStart;
@@ -837,11 +826,7 @@ function insertMarkdown(type) {
     syncHeight();
 }
 
-bindToolbarAction(btnH1, () => insertMarkdown('h1'));
-bindToolbarAction(btnBold, () => insertMarkdown('bold'));
-bindToolbarAction(btnQuote, () => insertMarkdown('quote'));
-bindToolbarAction(btnList, () => insertMarkdown('list'));
-bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
+    // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
 
 // --- Clipboard Operations ---
 function showToast(message) {
@@ -882,9 +867,7 @@ function pastePlain() {
     });
 }
 
-bindToolbarAction(btnCopy, copyAll);
-
-bindToolbarAction(btnPaste, pastePlain);
+    // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
 
 
 // --- Navigation & Selection Logic ---
@@ -902,7 +885,7 @@ function toggleSelectionMode() {
 }
 
     // --- Navigation & Selection Logic ---
-    bindToolbarAction(btnSelectMode, toggleSelectionMode);
+        // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
     bindToolbarAction(btnLeft, () => moveCursor('left'));
     bindToolbarAction(btnRight, () => moveCursor('right'));
     bindToolbarAction(btnUp, () => moveCursor('up'));
@@ -953,12 +936,6 @@ function moveCursor(direction) {
         editor.setSelectionRange(newPos, newPos);
     }
 }
-
-bindToolbarAction(btnLeft, () => moveCursor('left'));
-bindToolbarAction(btnRight, () => moveCursor('right'));
-bindToolbarAction(btnUp, () => moveCursor('up'));
-bindToolbarAction(btnDown, () => moveCursor('down'));
-
 
 // --- State ---
 // (Variables declared at top of script, removing duplicates here)
