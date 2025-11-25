@@ -357,13 +357,50 @@ body.light-mode #editor {
     width: 100%;
     z-index: 100;
     overflow-x: auto;
-    /* Allow scroll on small screens */
+    overflow-y: hidden;
+    /* Enhanced scrolling for mobile */
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    /* Prevent scroll chaining */
+    touch-action: pan-x;
+    /* Only allow horizontal panning */
+    /* Improved scrollbar visibility */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Custom scrollbar for toolbar (WebKit browsers) */
+#toolbar::-webkit-scrollbar {
+    height: 4px;
+}
+
+#toolbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#toolbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    transition: background-color 0.2s ease;
+}
+
+#toolbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 body.light-mode #toolbar {
     background-color: rgba(255, 255, 255, 0.9);
     border-top: 1px solid rgba(0, 0, 0, 0.1);
+    scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+body.light-mode #toolbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+body.light-mode #toolbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.5);
 }
 
 .tool-btn {
@@ -380,6 +417,9 @@ body.light-mode #toolbar {
     min-width: 36px;
     /* Smaller buttons */
     height: 36px;
+    /* Prevent buttons from shrinking to maintain scrollability */
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 
 .tool-btn:hover {
@@ -656,6 +696,14 @@ body.light-mode #btn-floating-menu:hover {
         height: 50px;
         padding: 0 8px;
         gap: 1px;
+        /* Enhanced scrolling for mobile */
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x;
+        /* Ensure flex items don't shrink and maintain scrollability */
+        flex-wrap: nowrap;
+        min-width: max-content;
     }
 
     .tool-btn {
