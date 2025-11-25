@@ -618,7 +618,7 @@
                 toggleTrashView();
             });
 
-            btnCloseSidebar.addEventListener('click', (e) => {
+            document.getElementById('btn-close-sidebar').addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleSidebar();
             });
@@ -641,6 +641,8 @@
                     const settings = JSON.parse(saved);
 
                     // Theme
+                    const iconThemeSun = document.getElementById('icon-theme-sun');
+                    const iconThemeMoon = document.getElementById('icon-theme-moon');
                     if (settings.theme === 'light') {
                         document.body.classList.add('light-mode');
                         iconThemeSun.style.display = 'none';
