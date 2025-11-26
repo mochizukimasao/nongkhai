@@ -63,6 +63,31 @@ html {
     flex-direction: column;
     height: 100%;
     position: relative;
+    z-index: 1; /* Ensure app content is above background if needed, but we want bg inside */
+}
+
+#bg-image {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 50vh;
+    background-image: url('../assets/bg-trees.png');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+    z-index: -1; /* Behind everything */
+    pointer-events: none;
+    opacity: 0.15; /* Very subtle in dark mode */
+    filter: grayscale(100%) contrast(1.2);
+    mask-image: linear-gradient(to top, black 0%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+    transition: opacity 0.5s ease;
+}
+
+body.light-mode #bg-image {
+    opacity: 0.4; /* More visible in light mode */
+    mix-blend-mode: multiply; /* Blends white snow into light grey background */
 }
 
 /* Sidebar (Drawer) */
