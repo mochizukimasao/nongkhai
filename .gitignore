@@ -32,3 +32,11 @@ yarn-error.log*
 *.tmp
 *.temp
 
+# Large audio files (keep only compressed versions)
+assets/rain_full.wav
+assets/AMBForst-*.wav
+assets/ANMLAmph-*.wav
+assets/RAINMisc-*.wav
+assets/WINDVege-*.wav
+assets/rain-street-*.wav
+

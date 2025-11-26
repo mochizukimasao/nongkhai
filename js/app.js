@@ -143,8 +143,8 @@ let bgmEnabled = false;
 let bgmNode = null;
 let bgmGainNode = null;
 let bgmAudioBuffers = {}; // Store all BGM audio buffers
-let currentBgmType = 'forest'; // 'forest', 'rain', 'wind', null (stopped)
-const bgmTypes = ['forest', 'rain', 'wind', null]; // null means stopped
+let currentBgmType = 'rain'; // 'rain', null (stopped)
+const bgmTypes = ['rain', null]; // null means stopped
 let currentBgmSource = null; // Current playing audio source
 
 // --- Touch/Scroll Detection for Toolbar ---
@@ -1542,9 +1542,7 @@ async function loadBgmAudio(type) {
     if (!audioCtx) initAudio();
     
     const fileMap = {
-        'forest': 'assets/forest_short.wav',
-        'rain': 'assets/rain_short_stereo.wav',
-        'wind': 'assets/wind_short.wav'
+        'rain': 'assets/rain_full.ogg'
     };
     
     const filename = fileMap[type];
@@ -1836,8 +1834,8 @@ function toggleBGM() {
     
     if (bgmEnabled) {
         // Cycle to next BGM type (including stop)
-        // Use current type or default to forest if somehow null
-        const currentType = currentBgmType || 'forest';
+        // Use current type or default to rain if somehow null
+        const currentType = currentBgmType || 'rain';
         let currentIndex = bgmTypes.indexOf(currentType);
         
         // If current type not found in array, default to first
@@ -1857,9 +1855,7 @@ function toggleBGM() {
         } else {
             // Show toast with BGM type name
             const typeNames = {
-                'forest': 'Forest',
-                'rain': 'Rain',
-                'wind': 'Wind'
+                'rain': 'Rain'
             };
             showToast(`BGM: ${typeNames[nextType]}`);
             
@@ -1867,9 +1863,9 @@ function toggleBGM() {
             startBGM(nextType);
         }
     } else {
-        // Start BGM with current type (or forest if stopped)
+        // Start BGM with current type (or rain if stopped)
         if (currentBgmType === null || currentBgmType === undefined) {
-            currentBgmType = 'forest';
+            currentBgmType = 'rain';
         }
         
         // Show toast with BGM type name
