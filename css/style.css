@@ -568,7 +568,13 @@ body.light-mode #toast {
 /* Markdown Styles - Restored */
 .md-bold {
     font-weight: normal;
-    /* Underline removed - ** markers are now colored for visibility */
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode - same color as markers */
+}
+
+body.light-mode .md-bold {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
 }
 
 .md-heading {
