@@ -36,6 +36,8 @@ body.light-mode {
     --button-active: rgba(0, 0, 0, 0.1);
     --button-text: #666;
     --button-text-active: #222;
+    /* Light mode gradient: light grey at top, darker grey at bottom */
+    background: linear-gradient(to bottom, #f0f0f0 0%, #b8b8b8 100%);
 }
 
 * {
@@ -49,10 +51,11 @@ html {
     height: 100%;
     width: 100%;
     font-family: var(--font-family);
-    background-color: var(--bg-color);
+    background: linear-gradient(to bottom, #3a3a3a 0%, #1a1a1a 100%);
+    /* Dark mode: lighter grey at top, darker at bottom - stronger contrast */
     color: var(--text-color);
     overflow: hidden;
-    transition: background-color 0.5s ease, color 0.5s ease;
+    transition: background 0.5s ease, color 0.5s ease;
 }
 
 #app {
@@ -244,6 +247,21 @@ body.light-mode .note-action-btn.favorite.favorite-active:hover {
     display: flex;
     justify-content: center;
     /* Center the editor */
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#editor-container.fade-in {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 #editor-scroll-area {
@@ -351,7 +369,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 /* Light Mode Overrides */
 body.light-mode {
-    background-color: #e6e6e6;
+    /* Background gradient is set in body.light-mode above */
     color: #333;
 }
 
@@ -549,10 +567,8 @@ body.light-mode #toast {
 
 /* Markdown Styles - Restored */
 .md-bold {
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-thickness: 1px;
-    font-weight: bold;
+    font-weight: normal;
+    /* Underline removed - ** markers are now colored for visibility */
 }
 
 .md-heading {
@@ -564,11 +580,31 @@ body.light-mode #toast {
     text-underline-offset: 0.15em;
 }
 
+.md-bullet {
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode */
+}
+
+body.light-mode .md-bullet {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
+}
+
+.md-mark {
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode - for markdown symbols like #, ** */
+}
+
+body.light-mode .md-mark {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
+}
+
 /* Font Styles - keep editor and highlight perfectly aligned */
 .font-gothic .editor-layer {
     font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    line-height: 1.8;
-    /* Slightly tighter for Gothic */
+    line-height: 2.0;
+    /* Same line height as Mincho */
 }
 
 /* Floating Menu Button */

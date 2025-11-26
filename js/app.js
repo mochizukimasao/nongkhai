@@ -7,6 +7,7 @@ let btnCopy, btnPaste, btnSelectMode;
 let btnUp, btnDown, btnLeft, btnRight;
 let btnTheme, iconThemeSun, iconThemeMoon, btnFont;
 let btnSound, iconSoundOn, iconSoundOff, btnFullscreen;
+let btnBgm, iconBgmOn, iconBgmOff;
 let sidebar, sidebarOverlay, btnCloseSidebar, noteList, toolbar;
 
 let baseListenersAttached = false;
@@ -52,6 +53,9 @@ function initElements() {
     btnSound = document.getElementById('btn-sound');
     iconSoundOn = document.getElementById('icon-sound-on');
     iconSoundOff = document.getElementById('icon-sound-off');
+    btnBgm = document.getElementById('btn-bgm');
+    iconBgmOn = document.getElementById('icon-bgm-on');
+    iconBgmOff = document.getElementById('icon-bgm-off');
     btnFullscreen = document.getElementById('btn-fullscreen');
 
 // --- Sidebar Elements ---
@@ -128,6 +132,21 @@ let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
 
+// Kill ring for Emacs-style Ctrl+K / Ctrl+Y
+let killRing = '';
+
+// Track last editor content to detect actual text changes
+let lastEditorContent = '';
+
+// BGM state
+let bgmEnabled = false;
+let bgmNode = null;
+let bgmGainNode = null;
+let bgmAudioBuffers = {}; // Store all BGM audio buffers
+let currentBgmType = 'forest'; // 'forest', 'rain', 'wind', null (stopped)
+const bgmTypes = ['forest', 'rain', 'wind', null]; // null means stopped
+let currentBgmSource = null; // Current playing audio source
+
 // --- Touch/Scroll Detection for Toolbar ---
 // Global scroll detection removed to improve responsiveness.
 // We now rely on per-button touch handling in attachTouchAction.
@@ -175,17 +194,17 @@ async function initDB() {
     // Cleanup old trash
     await cleanupTrash();
 
-    // Load last edited note or create new (only if not deleted)
+    // Load last edited note (only if not deleted)
     const lastNote = await db.notes
         .filter(n => !n.deleted) // Robust check for null/undefined
         .reverse()
         .sortBy('updated');
 
-    if (lastNote.length > 0 && lastNote[0].text.trim() === '') {
-        // Reuse the last note if it's empty
+    if (lastNote.length > 0) {
+        // Load the last edited note, regardless of whether it's empty
         loadNote(lastNote[0].id);
     } else {
-        // Otherwise, start with a fresh note
+        // Only create a new note if no notes exist
         createNote();
     }
 
@@ -236,8 +255,21 @@ async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
+        
+        // Add fade-in animation
+        const editorContainer = document.getElementById('editor-container');
+        if (editorContainer) {
+            editorContainer.classList.add('fade-in');
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                editorContainer.classList.remove('fade-in');
+            }, 400);
+        }
+        
         if (editor) {
             editor.value = note.text;
+            // Update last content tracker
+            lastEditorContent = note.text;
             // If viewing a deleted note, maybe show a warning or disable editing?
             // For now, allow viewing.
             if (highlightLayer) {
@@ -780,24 +812,47 @@ function updateHighlights() {
     }
     
     try {
-    let text = editor.value;
+        let text = editor.value;
+        
+        // Early return for empty or invalid text
+        if (text === null || text === undefined) {
+            if (highlightLayer) {
+                highlightLayer.innerHTML = '';
+            }
+            return;
+        }
 
-    // Escape HTML to prevent XSS and rendering issues
-    text = text.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        // Normalize line endings FIRST - before any other processing
+        // This is critical for regex patterns that use ^ and $ anchors
+        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Apply Markdown Styling
-    // Bold: **text** -> **<span class="md-bold">text</span>**
-    // We want to underline ONLY the text inside.
-    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+        // Escape HTML to prevent XSS and rendering issues
+        text = text.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 
-    // Heading: # text (at start of line)
-    // Support # through ######
-    text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
+        // Apply Markdown Styling
+        // Bold: **text** -> <span class="md-mark">**</span><span class="md-bold">text</span><span class="md-mark">**</span>
+        // Color the ** markers and underline the text inside.
+        text = text.replace(/\*\*(.*?)\*\*/g, '<span class="md-mark">**</span><span class="md-bold">$1</span><span class="md-mark">**</span>');
 
-    // Normalize line endings first
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        // Heading: # text (at start of line)
+        // Support # through ###### - color the # symbols
+        text = text.replace(/^(#{1,6})\s+(.*)$/gm, (match, hashes, content) => {
+            return `<span class="md-mark">${hashes}</span> <span class="md-heading">${content}</span>`;
+        });
+
+        // Bullet list: - at start of line -> colored bullet
+        text = text.replace(/^(\s*)(- )/gm, '$1<span class="md-bullet">- </span>');
+        
+        // Numbered list: 1. 2. etc. at start of line -> colored number
+        text = text.replace(/^(\s*)(\d+\. )/gm, '$1<span class="md-bullet">$2</span>');
+        
+        // Asterisk bullet: * at start of line -> colored bullet
+        text = text.replace(/^(\s*)(\* )/gm, '$1<span class="md-bullet">* </span>');
+        
+        // Quote: > at start of line -> colored quote marker
+        text = text.replace(/^(\s*)(&gt; )/gm, '$1<span class="md-bullet">&gt; </span>');
 
     // Convert tabs to spaces to keep alignment consistent
     text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
@@ -806,9 +861,17 @@ function updateHighlights() {
     // This avoids accumulating vertical drift because each newline becomes one DOM line break.
     text = text.replace(/\n/g, '<br>');
 
-    highlightLayer.innerHTML = text;
+        highlightLayer.innerHTML = text;
     } catch (error) {
         console.error('Error in updateHighlights:', error);
+        // Fallback: set empty content to prevent display issues
+        if (highlightLayer) {
+            try {
+                highlightLayer.innerHTML = '';
+            } catch (e) {
+                console.error('Error clearing highlightLayer:', e);
+            }
+        }
     }
 }
 
@@ -912,8 +975,18 @@ function syncPosition() {
 // If we want overlay, we usually make the container scroll, and textarea + div grow.
 // Let's try the "Textarea grows, Container scrolls" approach.
 
-function handleEditorContentSync() {
-    updateHighlights();
+function handleEditorContentSync(e) {
+    if (!editor) return;
+    
+    const currentContent = editor.value;
+    
+    // Only update highlights if text content actually changed
+    // This prevents unnecessary updates when only selection changes
+    if (currentContent !== lastEditorContent) {
+        lastEditorContent = currentContent;
+        updateHighlights();
+    }
+    
     syncHeight();
     syncPosition();
 }
@@ -1107,7 +1180,7 @@ function bindUIControls() {
     if (uiListenersAttached) {
         return;
     }
-    if (!btnFont || !btnFloatingMenu || !btnSidebarNew || !btnNew || !btnStar || !btnCloseSidebar || !sidebarOverlay || !btnSound || !btnFullscreen || !btnTheme) {
+    if (!btnFont || !btnFloatingMenu || !btnSidebarNew || !btnNew || !btnStar || !btnCloseSidebar || !sidebarOverlay || !btnSound || !btnBgm || !btnFullscreen || !btnTheme) {
         console.warn('bindUIControls: UI buttons not ready, retrying...');
         setTimeout(bindUIControls, 100);
         return;
@@ -1145,6 +1218,7 @@ function bindUIControls() {
     sidebarOverlay.addEventListener('click', toggleSidebar);
 
     btnSound.addEventListener('click', handleSoundButton);
+    btnBgm.addEventListener('click', handleBgmButton);
     btnFullscreen.addEventListener('click', handleFullscreenButton);
     btnTheme.addEventListener('click', handleThemeButton);
 
@@ -1459,6 +1533,367 @@ function toggleSound() {
 
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
 
+// --- BGM Logic ---
+
+// Load BGM audio file
+async function loadBgmAudio(type) {
+    if (bgmAudioBuffers[type]) return bgmAudioBuffers[type];
+    
+    if (!audioCtx) initAudio();
+    
+    const fileMap = {
+        'forest': 'assets/forest_short.wav',
+        'rain': 'assets/rain_short_stereo.wav',
+        'wind': 'assets/wind_short.wav'
+    };
+    
+    const filename = fileMap[type];
+    if (!filename) {
+        console.error('Unknown BGM type:', type);
+        return null;
+    }
+    
+    try {
+        // Load audio file
+        console.log(`Loading BGM file: ${filename}`);
+        const response = await fetch(filename);
+        if (!response.ok) {
+            console.error(`Failed to fetch ${filename}: ${response.status} ${response.statusText}`);
+            return null;
+        }
+        console.log(`Fetched ${filename}, size: ${response.headers.get('content-length')} bytes`);
+        const arrayBuffer = await response.arrayBuffer();
+        console.log(`Decoding audio data for ${type}...`);
+        
+        // AudioBufferにデコード
+        bgmAudioBuffers[type] = await audioCtx.decodeAudioData(arrayBuffer);
+        console.log(`Successfully loaded BGM: ${type}, duration: ${bgmAudioBuffers[type].duration}s, channels: ${bgmAudioBuffers[type].numberOfChannels}`);
+        return bgmAudioBuffers[type];
+    } catch (error) {
+        console.error(`Error loading ${type} audio file (${filename}):`, error);
+        console.error('Error details:', error.message, error.stack);
+        return null;
+    }
+}
+
+// createRainSound function removed - now handled directly in startBGM
+
+// Create BGM sound from loaded audio buffer
+function createBgmFromBuffer(buffer) {
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    
+    // ステレオパンニング（中央）
+    const panner = audioCtx.createStereoPanner();
+    panner.pan.value = 0;
+    
+    // 音量調整はbgmGainNodeで行うので、ここでは直接接続
+    source.connect(panner);
+    
+    source.start(0);
+    return { source, panner };
+}
+
+// Create procedurally generated rain sound with improved stereo
+function createRainProcedural() {
+    const bufferSize = 4096;
+    
+    try {
+        // Create stereo ScriptProcessorNode
+        const processor = audioCtx.createScriptProcessor(bufferSize, 0, 2);
+        
+        // Multiple layers for natural sound
+        let phase1 = Math.random() * Math.PI * 2;
+        let phase2 = Math.random() * Math.PI * 2;
+        let phase3 = Math.random() * Math.PI * 2;
+        let burstTimer = 0;
+        
+        processor.onaudioprocess = (e) => {
+            const leftOutput = e.outputBuffer.getChannelData(0);
+            const rightOutput = e.outputBuffer.getChannelData(1);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                // Layer 1: Basic white noise (slightly different for L/R)
+                const noise1L = (Math.random() * 2 - 1) * 0.25;
+                const noise1R = (Math.random() * 2 - 1) * 0.25;
+                
+                // Layer 2: Low-frequency modulation (rain drops)
+                phase1 += 0.008 + Math.random() * 0.004;
+                const mod1 = Math.sin(phase1) * 0.15;
+                const noise2L = (Math.random() * 2 - 1) * 0.2 * (1 + mod1);
+                const noise2R = (Math.random() * 2 - 1) * 0.2 * (1 + mod1 * 0.9);
+                
+                // Layer 3: High-frequency component (fine rain)
+                phase2 += 0.03 + Math.random() * 0.02;
+                const mod2 = Math.sin(phase2) * 0.08;
+                const noise3L = (Math.random() * 2 - 1) * 0.15 * (1 + mod2);
+                const noise3R = (Math.random() * 2 - 1) * 0.15 * (1 + mod2 * 1.1);
+                
+                // Layer 4: Random bursts (bigger drops)
+                burstTimer += Math.random() * 0.5;
+                let burst = 0;
+                if (burstTimer > 50 + Math.random() * 100) {
+                    burst = (Math.random() - 0.5) * 0.25;
+                    burstTimer = 0;
+                }
+                
+                // Combine layers with slight stereo difference
+                leftOutput[i] = noise1L + noise2L + noise3L + burst;
+                rightOutput[i] = noise1R + noise2R + noise3R + burst * 0.8;
+            }
+        };
+        
+        // Add subtle reverb using delay
+        const delay = audioCtx.createDelay();
+        delay.delayTime.value = 0.02;
+        const delayGain = audioCtx.createGain();
+        delayGain.gain.value = 0.15;
+        
+        // Stereo panner for spatial effect
+        const pannerL = audioCtx.createStereoPanner();
+        const pannerR = audioCtx.createStereoPanner();
+        pannerL.pan.value = -0.2;
+        pannerR.pan.value = 0.2;
+        
+        // Volume control
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.25;
+        
+        // Connect: processor -> delay -> panners -> gain
+        processor.connect(delay);
+        delay.connect(delayGain);
+        delayGain.connect(pannerR);
+        
+        // Merge channels
+        const merger = audioCtx.createChannelMerger(2);
+        processor.connect(pannerL);
+        processor.connect(pannerR);
+        pannerL.connect(merger, 0, 0);
+        pannerR.connect(merger, 0, 1);
+        delayGain.connect(merger, 0, 1);
+        
+        merger.connect(gain);
+        
+        return { processor, gain, merger };
+        
+    } catch (error) {
+        console.warn('ScriptProcessorNode not available, using simple fallback');
+        // Fallback: simple filtered noise
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        
+        osc.type = 'sawtooth';
+        osc.frequency.value = 100;
+        filter.type = 'lowpass';
+        filter.frequency.value = 500;
+        filter.Q.value = 1;
+        gain.gain.value = 0.1;
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        return { source: osc, gain };
+    }
+}
+
+async function startBGM(type = null) {
+    if (!audioCtx) initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    // If type is provided, switch to that type
+    if (type !== null && type !== undefined) {
+        currentBgmType = type;
+    }
+    
+    // If current type is null (stopped), don't start
+    if (currentBgmType === null || currentBgmType === undefined) {
+        console.warn('startBGM: currentBgmType is null, cannot start');
+        return;
+    }
+    
+    // Save current type before stopping (stopBGM sets it to null)
+    const bgmTypeToStart = currentBgmType;
+    
+    // Stop current BGM if playing (but don't reset currentBgmType)
+    if (bgmNode) {
+        // Temporarily save the type
+        const savedType = currentBgmType;
+        stopBGM();
+        // Restore the type after stopping
+        currentBgmType = savedType;
+    }
+    
+    // Try to load audio file
+    console.log(`Starting BGM with type: ${bgmTypeToStart}`);
+    const audioBuffer = await loadBgmAudio(bgmTypeToStart);
+    
+    // Use audio file if available, otherwise use procedural sound
+    if (audioBuffer) {
+        console.log(`Using audio buffer for BGM: ${currentBgmType}`);
+        bgmGainNode = audioCtx.createGain();
+        bgmGainNode.gain.value = 0.5; // Volume for background
+        
+        const bgmSound = createBgmFromBuffer(audioBuffer);
+        bgmNode = bgmSound.source;
+        currentBgmSource = bgmSound.source;
+        bgmSound.panner.connect(bgmGainNode);
+        bgmGainNode.connect(audioCtx.destination);
+        bgmEnabled = true;
+    } else {
+        // Fallback to procedural sound
+        console.warn(`Audio buffer not available for ${currentBgmType}, using procedural sound`);
+        bgmGainNode = audioCtx.createGain();
+        bgmGainNode.gain.value = 0.25;
+        
+        const rainSound = createRainProcedural();
+        if (rainSound) {
+            if (rainSound.processor) {
+                bgmNode = rainSound.processor;
+                rainSound.gain.connect(bgmGainNode);
+            } else {
+                bgmNode = rainSound;
+                bgmNode.connect(bgmGainNode);
+            }
+            bgmGainNode.connect(audioCtx.destination);
+            bgmEnabled = true;
+        }
+    }
+    
+    // Update UI
+    if (bgmEnabled) {
+        if (btnBgm) {
+            btnBgm.classList.add('active');
+        }
+        if (iconBgmOn && iconBgmOff) {
+            iconBgmOn.style.display = 'block';
+            iconBgmOff.style.display = 'none';
+        }
+    }
+}
+
+function stopBGM() {
+    // Stop current source if it exists (bgmNode and currentBgmSource may be the same)
+    if (currentBgmSource && currentBgmSource !== bgmNode) {
+        try {
+            if (currentBgmSource.stop) {
+                currentBgmSource.stop();
+            }
+            if (currentBgmSource.disconnect) {
+                currentBgmSource.disconnect();
+            }
+        } catch (e) {
+            console.warn('Error stopping BGM source:', e);
+        }
+        currentBgmSource = null;
+    }
+    
+    if (bgmNode) {
+        try {
+            // Stop source if it's a BufferSource
+            if (bgmNode.stop) {
+                bgmNode.stop();
+            }
+            // Disconnect processor
+            if (bgmNode.disconnect) {
+                bgmNode.disconnect();
+            }
+            // Clear processor callback
+            if (bgmNode.onaudioprocess) {
+                bgmNode.onaudioprocess = null;
+            }
+        } catch (e) {
+            console.warn('Error stopping BGM node:', e);
+        }
+        bgmNode = null;
+        currentBgmSource = null; // Clear both since they may be the same
+    }
+    if (bgmGainNode) {
+        try {
+            bgmGainNode.disconnect();
+        } catch (e) {
+            console.warn('Error disconnecting BGM gain node:', e);
+        }
+        bgmGainNode = null;
+    }
+    
+    bgmEnabled = false;
+    // Set to null to mark as stopped
+    currentBgmType = null;
+    
+    // Update UI
+    if (btnBgm) {
+        btnBgm.classList.remove('active');
+    }
+    if (iconBgmOn && iconBgmOff) {
+        iconBgmOn.style.display = 'none';
+        iconBgmOff.style.display = 'block';
+    }
+}
+
+function toggleBGM() {
+    console.log(`toggleBGM called: bgmEnabled=${bgmEnabled}, currentBgmType=${currentBgmType}`);
+    
+    if (bgmEnabled) {
+        // Cycle to next BGM type (including stop)
+        // Use current type or default to forest if somehow null
+        const currentType = currentBgmType || 'forest';
+        let currentIndex = bgmTypes.indexOf(currentType);
+        
+        // If current type not found in array, default to first
+        if (currentIndex === -1) {
+            currentIndex = 0;
+        }
+        
+        const nextIndex = (currentIndex + 1) % bgmTypes.length;
+        const nextType = bgmTypes[nextIndex];
+        
+        console.log(`Cycling: currentType=${currentType}, currentIndex=${currentIndex}, nextType=${nextType}`);
+        
+        if (nextType === null) {
+            // Stop BGM
+            stopBGM();
+            showToast('BGM: Off');
+        } else {
+            // Show toast with BGM type name
+            const typeNames = {
+                'forest': 'Forest',
+                'rain': 'Rain',
+                'wind': 'Wind'
+            };
+            showToast(`BGM: ${typeNames[nextType]}`);
+            
+            // Switch to next BGM
+            startBGM(nextType);
+        }
+    } else {
+        // Start BGM with current type (or forest if stopped)
+        if (currentBgmType === null || currentBgmType === undefined) {
+            currentBgmType = 'forest';
+        }
+        
+        // Show toast with BGM type name
+        const typeNames = {
+            'forest': 'Forest',
+            'rain': 'Rain',
+            'wind': 'Wind'
+        };
+        showToast(`BGM: ${typeNames[currentBgmType]}`);
+        
+        console.log(`Starting BGM with type: ${currentBgmType}`);
+        startBGM();
+    }
+}
+
+const handleBgmButton = (e) => {
+    e.preventDefault();
+    console.log('BGM button clicked');
+    toggleBGM();
+    if (editor) {
+        editor.focus();
+    }
+};
+
 
 // --- Fullscreen Logic ---
 function toggleFullscreen() {
@@ -1523,8 +1958,9 @@ function handleEditorAutoSaveInput(e) {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(saveCurrentNote, 500);
 
-    // Update UI
-    updateHighlights();
+    // Update UI - only if text actually changed
+    // handleEditorContentSync already handles this, so we don't need to call updateHighlights here
+    // updateHighlights(); // Removed - already called by handleEditorContentSync
     syncHeight();
 
     // Sound for IME
@@ -1539,6 +1975,110 @@ function handleEditorKeydown(e) {
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active
+    }
+
+    // Keyboard Shortcuts
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+    const ctrlOnly = e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+
+    // Emacs-style kill ring: Ctrl+K (kill to end of line) and Ctrl+Y (yank)
+    if (ctrlOnly && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const value = editor.value;
+        
+        // Find end of current line
+        const lineEnd = value.indexOf('\n', start);
+        const killEnd = lineEnd === -1 ? value.length : lineEnd;
+        
+        // Get text from cursor to end of line
+        const killedText = value.substring(start, killEnd);
+        
+        // If there's a newline, include it
+        const textToKill = killEnd < value.length && value[killEnd] === '\n' 
+            ? killedText + '\n' 
+            : killedText;
+        
+        if (textToKill.length > 0) {
+            killRing = textToKill;
+            // Delete the text
+            editor.setRangeText('', start, killEnd < value.length && value[killEnd] === '\n' ? killEnd + 1 : killEnd, 'end');
+            updateHighlights();
+            syncHeight();
+        }
+        return;
+    }
+
+    if (ctrlOnly && e.key.toLowerCase() === 'y') {
+        // Ctrl+Y for yank (paste from kill ring) on Mac
+        // On Windows/Linux, Ctrl+Y is redo
+        if (isMac) {
+            e.preventDefault();
+            if (killRing) {
+                const start = editor.selectionStart;
+                if (document.queryCommandSupported('insertText')) {
+                    document.execCommand('insertText', false, killRing);
+                } else {
+                    editor.setRangeText(killRing, start, start, 'end');
+                }
+                updateHighlights();
+                syncHeight();
+            }
+            return;
+        } else {
+            // Windows/Linux: Ctrl+Y is redo
+            e.preventDefault();
+            document.execCommand('redo');
+            updateHighlights();
+            syncHeight();
+            return;
+        }
+    }
+
+    if (cmdOrCtrl && !e.altKey && !e.shiftKey) {
+        switch (e.key.toLowerCase()) {
+            case 'z':
+                e.preventDefault();
+                document.execCommand('undo');
+                updateHighlights();
+                syncHeight();
+                return;
+            case 'c':
+                e.preventDefault();
+                copyAll();
+                return;
+            case 'v':
+                e.preventDefault();
+                pastePlain();
+                return;
+            case 'x':
+                e.preventDefault();
+                if (document.queryCommandSupported('cut')) {
+                    document.execCommand('cut');
+                    updateHighlights();
+                    syncHeight();
+                }
+                return;
+            case 'a':
+                e.preventDefault();
+                editor.select();
+                return;
+            case 'b':
+                e.preventDefault();
+                insertMarkdown('bold');
+                return;
+        }
+    }
+
+    // Cmd+Shift+Z or Ctrl+Shift+Z for redo (Mac and Windows/Linux)
+    if (cmdOrCtrl && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        document.execCommand('redo');
+        updateHighlights();
+        syncHeight();
+        return;
     }
 
     // List Continuation Logic

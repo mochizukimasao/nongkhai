@@ -509,6 +509,7 @@ nongkhai/
 - `css/style.css`: `.md-heading`の`padding-bottom`を0.05em、`margin-bottom`を0.85emに再設定し、下線を少し上げつつ次段落との余白を増やした
 - 追記1: 同ラベルでカーソルと表示のズレが再発したため、margin/padding調整を取りやめ、`text-decoration`+`text-underline-offset`を使って描画のみ変更（レイアウトには影響させない）よう修正
 - 追記2: さらに要望に合わせて自動太字を廃止し、`font-weight: normal`に変更。下線のみが適用されるシンプルな見出し表示に統一
+- 追記3: `**text**` で囲んだ箇所も太字化せず下線のみになるよう、`.md-bold` の `font-weight` を `normal` に変更
 
 #### 3. 検証結果
 - ⏳ ブラウザでの見栄え確認待ち

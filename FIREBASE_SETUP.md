@@ -93,3 +93,5 @@ service cloud.firestore {
 ### エラー: "auth/unauthorized-domain"
 - Authenticationの承認済みドメインに、現在のドメインが追加されているか確認してください
 
+
+
