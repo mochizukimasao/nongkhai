@@ -155,6 +155,7 @@ let currentBgmSource = null; // Current playing audio source
 let db;
 window.db = null; // グローバルスコープでsync.jsからアクセス可能にする
 let currentNoteId = null;
+window.currentNoteId = null; // sync.jsからアクセス可能にする
 let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
 
@@ -255,6 +256,7 @@ async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
+        window.currentNoteId = id; // sync.jsからアクセス可能にする
 
         // Add fade-in animation
         const editorContainer = document.getElementById('editor-container');

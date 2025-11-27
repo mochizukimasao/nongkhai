@@ -5,6 +5,10 @@ let syncInProgress = false;
 let syncStatusListeners = [];
 let unsubscribeNotes = null;
 
+// デバウンス用のタイマー
+let syncDebounceTimer = null;
+const SYNC_DEBOUNCE_MS = 500; // 500ms待機
+
 // 同期状態のリスナーを登録
 function onSyncStatusChange(callback) {
     syncStatusListeners.push(callback);
@@ -97,7 +101,94 @@ async function deleteNoteFromFirestore(firestoreId) {
     }
 }
 
-// Firestoreからすべてのノートを取得してローカルDBを更新
+// 変更差分を処理する関数（最適化版）
+async function syncFromFirestoreChanges(changes) {
+    if (!isAuthenticated() || !window.db) return;
+    
+    if (syncInProgress) return;
+    syncInProgress = true;
+    
+    try {
+        notifySyncStatus('syncing', '同期中...');
+        
+        let hasChanges = false;
+        const currentNoteId = window.currentNoteId || null;
+        
+        // 変更されたノートだけを処理
+        for (const change of changes) {
+            const doc = change.doc;
+            const firestoreId = doc.id;
+            const firestoreData = doc.data();
+            
+            if (change.type === 'removed') {
+                // 削除されたノートをローカルからも削除
+                const localNote = await window.db.notes.where('firestoreId').equals(firestoreId).first();
+                if (localNote) {
+                    await window.db.notes.delete(localNote.id);
+                    hasChanges = true;
+                }
+            } else {
+                // 追加または更新されたノートを処理
+                const localNote = await window.db.notes.where('firestoreId').equals(firestoreId).first();
+                
+                // 現在編集中のノートは、リモート変更を即座に適用しない（競合を避ける）
+                if (localNote && localNote.id === currentNoteId) {
+                    // 編集中のノートは、更新時刻を比較してリモートの方が新しい場合のみ更新
+                    if (firestoreData.updated > localNote.updated) {
+                        await window.db.notes.update(localNote.id, {
+                            text: firestoreData.text,
+                            updated: firestoreData.updated,
+                            favorite: firestoreData.favorite,
+                            deleted: firestoreData.deleted,
+                            syncedAt: firestoreData.syncedAt || Date.now()
+                        });
+                        hasChanges = true;
+                        
+                        // 現在表示中のノートが更新された場合、エディタを更新
+                        if (typeof loadNote === 'function') {
+                            loadNote(localNote.id);
+                        }
+                    }
+                } else if (localNote) {
+                    // 編集中でないノートは、更新時刻を比較して新しい方を優先
+                    if (firestoreData.updated > localNote.updated) {
+                        await window.db.notes.update(localNote.id, {
+                            text: firestoreData.text,
+                            updated: firestoreData.updated,
+                            favorite: firestoreData.favorite,
+                            deleted: firestoreData.deleted,
+                            syncedAt: firestoreData.syncedAt || Date.now()
+                        });
+                        hasChanges = true;
+                    }
+                } else {
+                    // 新しいノートを追加
+                    const localNoteData = firestoreNoteToLocal(firestoreId, firestoreData);
+                    delete localNoteData.id;
+                    await window.db.notes.add(localNoteData);
+                    hasChanges = true;
+                }
+            }
+        }
+        
+        if (hasChanges) {
+            notifySyncStatus('synced', '同期完了');
+            
+            // ノートリストを更新
+            if (typeof updateNoteList === 'function') {
+                updateNoteList();
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error syncing from Firestore changes:', error);
+        notifySyncStatus('error', '同期エラー: ' + error.message);
+    } finally {
+        syncInProgress = false;
+    }
+}
+
+// Firestoreからすべてのノートを取得してローカルDBを更新（初回同期用）
 async function syncFromFirestore() {
     if (!isAuthenticated() || !window.db) return;
     
@@ -186,8 +277,20 @@ function setupFirestoreListener() {
         
         unsubscribeNotes = notesCollection.onSnapshot(
             (snapshot) => {
-                // 変更があった場合、Firestoreから同期
-                syncFromFirestore();
+                // 変更差分を取得
+                const changes = snapshot.docChanges();
+                
+                if (changes.length === 0) return;
+                
+                // デバウンス処理：連続する変更をまとめる
+                if (syncDebounceTimer) {
+                    clearTimeout(syncDebounceTimer);
+                }
+                
+                syncDebounceTimer = setTimeout(() => {
+                    // 変更差分だけを処理（全ノートを再取得しない）
+                    syncFromFirestoreChanges(changes);
+                }, SYNC_DEBOUNCE_MS);
             },
             (error) => {
                 console.error('Firestore listener error:', error);
