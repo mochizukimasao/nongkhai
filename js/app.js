@@ -137,6 +137,8 @@ let killRing = '';
 
 // Track last editor content to detect actual text changes
 let lastEditorContent = '';
+// Track last saved content for delta sync
+let lastSavedContent = '';
 
 // BGM state
 let bgmEnabled = false;
@@ -272,6 +274,7 @@ async function loadNote(id) {
             editor.value = note.text;
             // Update last content tracker
             lastEditorContent = note.text;
+            lastSavedContent = note.text; // フェーズ2: 差分同期用に保存
             // If viewing a deleted note, maybe show a warning or disable editing?
             // For now, allow viewing.
             if (highlightLayer) {
@@ -291,10 +294,29 @@ async function saveCurrentNote() {
 
     const text = editor.value;
     try {
+        // フェーズ2: 差分を計算
+        let delta = null;
+        if (typeof diff_match_patch !== 'undefined' && lastSavedContent !== '') {
+            const dmp = new diff_match_patch();
+            const diffs = dmp.diff_main(lastSavedContent, text);
+            dmp.diff_cleanupSemantic(diffs);
+            
+            // 差分をパッチ形式に変換（より効率的）
+            const patches = dmp.patch_make(lastSavedContent, diffs);
+            if (patches.length > 0) {
+                // パッチを文字列形式に変換して保存
+                delta = dmp.patch_toText(patches);
+            }
+        }
+        
         await db.notes.update(currentNoteId, {
             text: text,
             updated: Date.now()
         });
+        
+        // 最後に保存した内容を更新
+        lastSavedContent = text;
+        
         updateNoteList();
 
         // Firestoreに同期（非同期で実行、エラーは無視）
@@ -302,7 +324,8 @@ async function saveCurrentNote() {
             if (window.syncManager && window.syncManager.isAuthenticated()) {
                 const note = await db.notes.get(currentNoteId);
                 if (note) {
-                    window.syncManager.syncNoteToFirestore(currentNoteId, note).catch(err => {
+                    // フェーズ2: 差分を含めて同期
+                    window.syncManager.syncNoteToFirestore(currentNoteId, note, delta).catch(err => {
                         console.warn('Sync failed (will retry later):', err);
                     });
                 }
@@ -1935,9 +1958,9 @@ let saveTimeout;
 
 // Handle IME input for sound AND Auto-save
 function handleEditorAutoSaveInput(e) {
-    // Auto-save (Debounced)
+    // Auto-save (Debounced) - フェーズ1: 50msに短縮して即時保存を実現
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveCurrentNote, 500);
+    saveTimeout = setTimeout(saveCurrentNote, 50);
 
     // Update UI - only if text actually changed
     // handleEditorContentSync already handles this, so we don't need to call updateHighlights here

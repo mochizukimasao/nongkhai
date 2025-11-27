@@ -32,8 +32,8 @@ function getNotesCollection() {
 }
 
 // ローカルノートをFirestore形式に変換
-function localNoteToFirestore(note) {
-    return {
+function localNoteToFirestore(note, delta = null) {
+    const data = {
         text: note.text || '',
         created: note.created || Date.now(),
         updated: note.updated || Date.now(),
@@ -41,14 +41,42 @@ function localNoteToFirestore(note) {
         deleted: note.deleted || null,
         syncedAt: Date.now()
     };
+    
+    // フェーズ2: 差分がある場合は追加
+    if (delta) {
+        data.lastDelta = delta;
+        data.deltaUpdated = Date.now();
+    }
+    
+    return data;
 }
 
-// Firestoreノートをローカル形式に変換
-function firestoreNoteToLocal(firestoreId, firestoreData) {
+// Firestoreノートをローカル形式に変換（フェーズ2: 差分適用対応）
+function firestoreNoteToLocal(firestoreId, firestoreData, localText = null) {
+    let text = firestoreData.text || '';
+    
+    // フェーズ2: 差分がある場合、ローカルテキストに適用を試みる
+    if (localText && firestoreData.lastDelta && typeof diff_match_patch !== 'undefined') {
+        try {
+            const dmp = new diff_match_patch();
+            const patches = dmp.patch_fromText(firestoreData.lastDelta);
+            const [patchedText, results] = dmp.patch_apply(patches, localText);
+            
+            // パッチがすべて適用できた場合のみ使用
+            if (results.every(r => r === true)) {
+                text = patchedText;
+            }
+            // パッチが適用できない場合は、テキスト全体を使用（フォールバック）
+        } catch (error) {
+            console.warn('Failed to apply delta, using full text:', error);
+            // エラーが発生した場合は、テキスト全体を使用
+        }
+    }
+    
     return {
         id: null, // ローカルIDは後で設定
         firestoreId: firestoreId,
-        text: firestoreData.text || '',
+        text: text,
         created: firestoreData.created || Date.now(),
         updated: firestoreData.updated || Date.now(),
         favorite: firestoreData.favorite || 0,
@@ -57,15 +85,15 @@ function firestoreNoteToLocal(firestoreId, firestoreData) {
     };
 }
 
-// 単一のノートをFirestoreに保存
-async function syncNoteToFirestore(noteId, note) {
+// 単一のノートをFirestoreに保存（フェーズ2: 差分対応）
+async function syncNoteToFirestore(noteId, note, delta = null) {
     if (!isAuthenticated() || !window.db) return false;
     
     try {
         const notesCollection = getNotesCollection();
         if (!notesCollection) return false;
         
-        const firestoreData = localNoteToFirestore(note);
+        const firestoreData = localNoteToFirestore(note, delta);
         const firestoreId = note.firestoreId;
         
         if (firestoreId) {
@@ -134,6 +162,7 @@ async function syncFromFirestoreChanges(changes) {
                 // 現在編集中のノートは、リモート変更を即座に適用しない（競合を避ける）
                 if (localNote && localNote.id === currentNoteId) {
                     // 編集中のノートは、更新時刻を比較してリモートの方が新しい場合のみ更新
+                    // フェーズ2: 編集中のノートは差分を適用せず、テキスト全体を使用（安全性のため）
                     if (firestoreData.updated > localNote.updated) {
                         await window.db.notes.update(localNote.id, {
                             text: firestoreData.text,
@@ -151,9 +180,11 @@ async function syncFromFirestoreChanges(changes) {
                     }
                 } else if (localNote) {
                     // 編集中でないノートは、更新時刻を比較して新しい方を優先
+                    // フェーズ2: 差分を適用してテキストを再構築
                     if (firestoreData.updated > localNote.updated) {
+                        const mergedNoteData = firestoreNoteToLocal(firestoreId, firestoreData, localNote.text);
                         await window.db.notes.update(localNote.id, {
-                            text: firestoreData.text,
+                            text: mergedNoteData.text,
                             updated: firestoreData.updated,
                             favorite: firestoreData.favorite,
                             deleted: firestoreData.deleted,
@@ -223,9 +254,11 @@ async function syncFromFirestore() {
             
             if (localNote) {
                 // 既存のノート: 更新時刻を比較して新しい方を優先
+                // フェーズ2: 差分を適用してテキストを再構築
                 if (firestoreNote.updated > localNote.updated) {
+                    const mergedNoteData = firestoreNoteToLocal(firestoreNote.firestoreId, firestoreNote, localNote.text);
                     await window.db.notes.update(localNote.id, {
-                        text: firestoreNote.text,
+                        text: mergedNoteData.text,
                         updated: firestoreNote.updated,
                         favorite: firestoreNote.favorite,
                         deleted: firestoreNote.deleted,
