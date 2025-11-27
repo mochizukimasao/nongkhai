@@ -27,7 +27,7 @@ function initElements() {
     if (!scrollArea) console.error('Scroll area element not found');
     if (!toast) console.warn('Toast element not found');
 
-// --- Toolbar Buttons ---
+    // --- Toolbar Buttons ---
     btnFloatingMenu = document.getElementById('btn-floating-menu');
     btnSidebarNew = document.getElementById('btn-sidebar-new');
     btnNew = document.getElementById('btn-new');
@@ -58,13 +58,13 @@ function initElements() {
     iconBgmOff = document.getElementById('icon-bgm-off');
     btnFullscreen = document.getElementById('btn-fullscreen');
 
-// --- Sidebar Elements ---
+    // --- Sidebar Elements ---
     sidebar = document.getElementById('sidebar');
     sidebarOverlay = document.getElementById('sidebar-overlay');
     btnCloseSidebar = document.getElementById('btn-close-sidebar');
     noteList = document.getElementById('note-list');
 
-// --- Toolbar Element ---
+    // --- Toolbar Element ---
     toolbar = document.getElementById('toolbar');
 }
 
@@ -80,7 +80,7 @@ function attachBaseListeners() {
         setTimeout(attachBaseListeners, 100);
         return;
     }
-    
+
     scrollArea.addEventListener('scroll', () => {
         scrollArea.classList.add('scrolling');
 
@@ -89,7 +89,7 @@ function attachBaseListeners() {
             scrollArea.classList.remove('scrolling');
         }, 500); // Hide after 0.5 second of inactivity
     });
-    
+
     scrollArea.addEventListener('scroll', syncPosition);
     baseListenersAttached = true;
 }
@@ -235,7 +235,7 @@ async function createNote() {
     showToast('New Note Created');
     playSound('click');
     if (sidebar && sidebar.classList.contains('open')) toggleSidebar();
-    
+
     // Firestoreに同期（非同期で実行、エラーは無視）
     try {
         if (window.syncManager && window.syncManager.isAuthenticated()) {
@@ -255,7 +255,7 @@ async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
-        
+
         // Add fade-in animation
         const editorContainer = document.getElementById('editor-container');
         if (editorContainer) {
@@ -265,7 +265,7 @@ async function loadNote(id) {
                 editorContainer.classList.remove('fade-in');
             }, 400);
         }
-        
+
         if (editor) {
             editor.value = note.text;
             // Update last content tracker
@@ -294,7 +294,7 @@ async function saveCurrentNote() {
             updated: Date.now()
         });
         updateNoteList();
-        
+
         // Firestoreに同期（非同期で実行、エラーは無視）
         try {
             if (window.syncManager && window.syncManager.isAuthenticated()) {
@@ -323,19 +323,19 @@ async function toggleNoteFavorite(noteId) {
     if (!noteId) return;
     const note = await db.notes.get(noteId);
     if (!note) return;
-    
+
     const newFav = note.favorite ? 0 : 1;
     await db.notes.update(noteId, { favorite: newFav, updated: Date.now() });
-    
+
     // 現在のメモの場合、ツールバーの星ボタンも更新
     if (noteId === currentNoteId) {
         updateStarState(newFav);
     }
-    
+
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
-    
+
     // Firestoreに同期（非同期で実行、エラーは無視）
     try {
         if (window.syncManager && window.syncManager.isAuthenticated()) {
@@ -361,7 +361,7 @@ async function deleteNote(id, event) {
         // Move to Trash
         await db.notes.update(id, { deleted: Date.now() });
         showToast('Moved to Trash');
-        
+
         // Firestoreに同期（非同期で実行、エラーは無視）
         try {
             if (window.syncManager && window.syncManager.isAuthenticated()) {
@@ -395,7 +395,7 @@ async function deleteNote(id, event) {
             } catch (error) {
                 console.warn('Sync error:', error);
             }
-            
+
             await db.notes.delete(id);
             showToast('Deleted Permanently');
             if (currentNoteId === id) {
@@ -414,7 +414,7 @@ async function restoreNote(id, event) {
     showToast('Restored from Trash');
     updateNoteList();
     playSound('click');
-    
+
     // Firestoreに同期（非同期で実行、エラーは無視）
     try {
         if (window.syncManager && window.syncManager.isAuthenticated()) {
@@ -432,7 +432,7 @@ async function restoreNote(id, event) {
 
 function updateStarState(isFav) {
     if (!btnStar) return;
-    
+
     if (isFav) {
         btnStar.classList.add('favorite-active');
     } else {
@@ -447,7 +447,7 @@ function isMobile() {
 
 function handleResize() {
     if (!sidebar) return;
-    
+
     // If resizing from mobile to desktop and sidebar is open, keep it open
     // If resizing from desktop to mobile and sidebar is open, close it to prevent layout issues
     if (!isMobile() && sidebar.classList.contains('open')) {
@@ -465,7 +465,7 @@ function handleResize() {
 // --- Sidebar Logic ---
 function toggleSidebar() {
     if (!sidebar || !sidebarOverlay) return;
-    
+
     const isOpening = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open');
     sidebarOverlay.classList.toggle('visible');
@@ -526,7 +526,7 @@ function toggleTrashView() {
 
 async function updateNoteList() {
     if (!noteList || !db) return;
-    
+
     let notes;
     if (showTrash) {
         // Show deleted notes (deleted is a timestamp)
@@ -675,7 +675,7 @@ function saveSettings() {
 function loadSettings() {
     const saved = localStorage.getItem('editorSettings');
     let settings = null;
-    
+
     if (saved) {
         settings = JSON.parse(saved);
     } else {
@@ -754,37 +754,19 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-    
+
     try {
         // mousedownでフォーカス維持（デスクトップ用）
-    button.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Keep focus on editor
-    });
+        button.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Keep focus on editor
+        });
 
         // 標準クリックイベントのみ使用
         // ブラウザのネイティブな動作に任せる：
         // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
         // - タップのみの場合は click イベントが発火する
         // - スクロールの場合は click イベントは発火しない
-    button.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            try {
-        action();
-                if (typeof playSound === 'function') {
-        playSound('click');
-                }
-                if (editor) {
-        editor.focus();
-                }
-            } catch (error) {
-                console.error('Error in toolbar action:', error, button);
-            }
-        });
-        
-        // タッチデバイス用にtouchendも追加
-        button.addEventListener('touchend', (e) => {
-            // スクロールと区別するため、短いタッチのみ処理
+        button.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             try {
@@ -796,9 +778,10 @@ function bindToolbarAction(button, action) {
                     editor.focus();
                 }
             } catch (error) {
-                console.error('Error in toolbar action (touch):', error, button);
+                console.error('Error in toolbar action:', error, button);
             }
-        }, { passive: false });
+        });
+
     } catch (error) {
         console.error('Error binding toolbar action:', error, button);
     }
@@ -810,10 +793,10 @@ function updateHighlights() {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-    
+
     try {
         let text = editor.value;
-        
+
         // Early return for empty or invalid text
         if (text === null || text === undefined) {
             if (highlightLayer) {
@@ -844,22 +827,22 @@ function updateHighlights() {
 
         // Bullet list: - at start of line -> colored bullet
         text = text.replace(/^(\s*)(- )/gm, '$1<span class="md-bullet">- </span>');
-        
+
         // Numbered list: 1. 2. etc. at start of line -> colored number
         text = text.replace(/^(\s*)(\d+\. )/gm, '$1<span class="md-bullet">$2</span>');
-        
+
         // Asterisk bullet: * at start of line -> colored bullet
         text = text.replace(/^(\s*)(\* )/gm, '$1<span class="md-bullet">* </span>');
-        
+
         // Quote: > at start of line -> colored quote marker
         text = text.replace(/^(\s*)(&gt; )/gm, '$1<span class="md-bullet">&gt; </span>');
 
-    // Convert tabs to spaces to keep alignment consistent
-    text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+        // Convert tabs to spaces to keep alignment consistent
+        text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 
-    // Convert newlines to <br> so the display layer matches the textarea's line breaks exactly.
-    // This avoids accumulating vertical drift because each newline becomes one DOM line break.
-    text = text.replace(/\n/g, '<br>');
+        // Convert newlines to <br> so the display layer matches the textarea's line breaks exactly.
+        // This avoids accumulating vertical drift because each newline becomes one DOM line break.
+        text = text.replace(/\n/g, '<br>');
 
         highlightLayer.innerHTML = text;
     } catch (error) {
@@ -932,22 +915,22 @@ function syncHeight() {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-    
+
     try {
         syncHighlightTypography();
         // Reset height to get correct scrollHeight
-    editor.style.height = 'auto';
-    highlightLayer.style.height = 'auto';
+        editor.style.height = 'auto';
+        highlightLayer.style.height = 'auto';
 
         // Calculate height - ensure it's at least the scroll area height
         const scrollAreaHeight = scrollArea.clientHeight;
         const editorScrollHeight = editor.scrollHeight;
         const height = Math.max(editorScrollHeight, scrollAreaHeight);
-        
+
         // Set heights
-    editor.style.height = height + 'px';
-    highlightLayer.style.height = height + 'px';
-        
+        editor.style.height = height + 'px';
+        highlightLayer.style.height = height + 'px';
+
         // #editorと#highlight-layerは同じパディングを持っているので、
         // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
         // 幅も同じにする
@@ -960,7 +943,7 @@ function syncHeight() {
 // Sync position on scroll and resize
 function syncPosition() {
     if (!editor || !highlightLayer || !scrollArea) return;
-    
+
     try {
         // #editorと#highlight-layerは同じパディングを持っているので、
         // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
@@ -977,16 +960,16 @@ function syncPosition() {
 
 function handleEditorContentSync(e) {
     if (!editor) return;
-    
+
     const currentContent = editor.value;
-    
+
     // Only update highlights if text content actually changed
     // This prevents unnecessary updates when only selection changes
     if (currentContent !== lastEditorContent) {
         lastEditorContent = currentContent;
         updateHighlights();
     }
-    
+
     syncHeight();
     syncPosition();
 }
@@ -1004,16 +987,16 @@ function initEditor() {
         setTimeout(initEditor, 100);
         return;
     }
-    
+
     // レイアウトが完了するまで待つ
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             // 2回のrequestAnimationFrameで確実にレイアウトが完了する
-        updateHighlights();
-        syncHeight();
+            updateHighlights();
+            syncHeight();
             syncPosition();
-        editor.focus();
-    });
+            editor.focus();
+        });
     });
 }
 
@@ -1023,13 +1006,13 @@ async function initAll() {
     attachBaseListeners();
     bindUIControls();
     loadSettings();
-    
+
     // エディタリスナーを先に設定（initDB内でloadNoteが呼ばれる前に）
     attachEditorListeners();
     initEditor();
     bindToolbarActions();
     handleResize();
-    
+
     // 認証を初期化（Firebaseが利用可能な場合のみ、エラーは無視）
     try {
         if (typeof initAuth === 'function') {
@@ -1038,7 +1021,7 @@ async function initAll() {
     } catch (error) {
         console.warn('Auth initialization failed:', error);
     }
-    
+
     // DB初期化は最後に（非同期なので、エディタが準備できてから）
     // initDB内でloadNote/createNoteが呼ばれるが、その時点でeditorとhighlightLayerは準備済み
     await initDB();
@@ -1047,7 +1030,7 @@ async function initAll() {
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
     if (!editor) return;
-    
+
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const text = editor.value;
@@ -1118,7 +1101,7 @@ function insertMarkdown(type) {
     syncHeight();
 }
 
-    // bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
+// bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
 
 // --- Clipboard Operations ---
 function showToast(message) {
@@ -1163,7 +1146,7 @@ function pastePlain() {
 function toggleSelectionMode() {
     const btnSelectMode = document.getElementById('btn-select-mode');
     if (!btnSelectMode || !editor) return;
-    
+
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
         btnSelectMode.classList.add('select-mode-active');
@@ -1231,7 +1214,7 @@ function bindToolbarActions() {
         setTimeout(bindToolbarActions, 100);
         return;
     }
-    
+
     // --- Undo/Redo ---
     bindToolbarAction(btnUndo, () => document.execCommand('undo'));
     bindToolbarAction(btnRedo, () => document.execCommand('redo'));
@@ -1257,7 +1240,7 @@ function bindToolbarActions() {
 
 function moveCursor(direction) {
     if (!editor) return;
-    
+
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const value = editor.value;
@@ -1473,7 +1456,7 @@ function playSound(type) {
 
 function updateSoundIconColor() {
     if (!btnSound) return;
-    
+
     if (!isSoundEnabled) {
         btnSound.style.color = ''; // Reset
         return;
@@ -1496,7 +1479,7 @@ function updateSoundIconColor() {
 
 function toggleSound() {
     if (!btnSound || !iconSoundOn || !iconSoundOff) return;
-    
+
     if (!isSoundEnabled) {
         // Turn On
         isSoundEnabled = true;
@@ -1538,19 +1521,19 @@ const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
 // Load BGM audio file
 async function loadBgmAudio(type) {
     if (bgmAudioBuffers[type]) return bgmAudioBuffers[type];
-    
+
     if (!audioCtx) initAudio();
-    
+
     const fileMap = {
         'rain': 'assets/rain_full.ogg'
     };
-    
+
     const filename = fileMap[type];
     if (!filename) {
         console.error('Unknown BGM type:', type);
         return null;
     }
-    
+
     try {
         // Load audio file
         console.log(`Loading BGM file: ${filename}`);
@@ -1562,7 +1545,7 @@ async function loadBgmAudio(type) {
         console.log(`Fetched ${filename}, size: ${response.headers.get('content-length')} bytes`);
         const arrayBuffer = await response.arrayBuffer();
         console.log(`Decoding audio data for ${type}...`);
-        
+
         // AudioBufferにデコード
         bgmAudioBuffers[type] = await audioCtx.decodeAudioData(arrayBuffer);
         console.log(`Successfully loaded BGM: ${type}, duration: ${bgmAudioBuffers[type].duration}s, channels: ${bgmAudioBuffers[type].numberOfChannels}`);
@@ -1581,14 +1564,14 @@ function createBgmFromBuffer(buffer) {
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
-    
+
     // ステレオパンニング（中央）
     const panner = audioCtx.createStereoPanner();
     panner.pan.value = 0;
-    
+
     // 音量調整はbgmGainNodeで行うので、ここでは直接接続
     source.connect(panner);
-    
+
     source.start(0);
     return { source, panner };
 }
@@ -1596,38 +1579,38 @@ function createBgmFromBuffer(buffer) {
 // Create procedurally generated rain sound with improved stereo
 function createRainProcedural() {
     const bufferSize = 4096;
-    
+
     try {
         // Create stereo ScriptProcessorNode
         const processor = audioCtx.createScriptProcessor(bufferSize, 0, 2);
-        
+
         // Multiple layers for natural sound
         let phase1 = Math.random() * Math.PI * 2;
         let phase2 = Math.random() * Math.PI * 2;
         let phase3 = Math.random() * Math.PI * 2;
         let burstTimer = 0;
-        
+
         processor.onaudioprocess = (e) => {
             const leftOutput = e.outputBuffer.getChannelData(0);
             const rightOutput = e.outputBuffer.getChannelData(1);
-            
+
             for (let i = 0; i < bufferSize; i++) {
                 // Layer 1: Basic white noise (slightly different for L/R)
                 const noise1L = (Math.random() * 2 - 1) * 0.25;
                 const noise1R = (Math.random() * 2 - 1) * 0.25;
-                
+
                 // Layer 2: Low-frequency modulation (rain drops)
                 phase1 += 0.008 + Math.random() * 0.004;
                 const mod1 = Math.sin(phase1) * 0.15;
                 const noise2L = (Math.random() * 2 - 1) * 0.2 * (1 + mod1);
                 const noise2R = (Math.random() * 2 - 1) * 0.2 * (1 + mod1 * 0.9);
-                
+
                 // Layer 3: High-frequency component (fine rain)
                 phase2 += 0.03 + Math.random() * 0.02;
                 const mod2 = Math.sin(phase2) * 0.08;
                 const noise3L = (Math.random() * 2 - 1) * 0.15 * (1 + mod2);
                 const noise3R = (Math.random() * 2 - 1) * 0.15 * (1 + mod2 * 1.1);
-                
+
                 // Layer 4: Random bursts (bigger drops)
                 burstTimer += Math.random() * 0.5;
                 let burst = 0;
@@ -1635,34 +1618,34 @@ function createRainProcedural() {
                     burst = (Math.random() - 0.5) * 0.25;
                     burstTimer = 0;
                 }
-                
+
                 // Combine layers with slight stereo difference
                 leftOutput[i] = noise1L + noise2L + noise3L + burst;
                 rightOutput[i] = noise1R + noise2R + noise3R + burst * 0.8;
             }
         };
-        
+
         // Add subtle reverb using delay
         const delay = audioCtx.createDelay();
         delay.delayTime.value = 0.02;
         const delayGain = audioCtx.createGain();
         delayGain.gain.value = 0.15;
-        
+
         // Stereo panner for spatial effect
         const pannerL = audioCtx.createStereoPanner();
         const pannerR = audioCtx.createStereoPanner();
         pannerL.pan.value = -0.2;
         pannerR.pan.value = 0.2;
-        
+
         // Volume control
         const gain = audioCtx.createGain();
         gain.gain.value = 0.25;
-        
+
         // Connect: processor -> delay -> panners -> gain
         processor.connect(delay);
         delay.connect(delayGain);
         delayGain.connect(pannerR);
-        
+
         // Merge channels
         const merger = audioCtx.createChannelMerger(2);
         processor.connect(pannerL);
@@ -1670,25 +1653,25 @@ function createRainProcedural() {
         pannerL.connect(merger, 0, 0);
         pannerR.connect(merger, 0, 1);
         delayGain.connect(merger, 0, 1);
-        
+
         merger.connect(gain);
-        
+
         return { processor, gain, merger };
-        
+
     } catch (error) {
         console.warn('ScriptProcessorNode not available, using simple fallback');
         // Fallback: simple filtered noise
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         const filter = audioCtx.createBiquadFilter();
-        
+
         osc.type = 'sawtooth';
         osc.frequency.value = 100;
         filter.type = 'lowpass';
         filter.frequency.value = 500;
         filter.Q.value = 1;
         gain.gain.value = 0.1;
-        
+
         osc.connect(filter);
         filter.connect(gain);
         return { source: osc, gain };
@@ -1698,21 +1681,21 @@ function createRainProcedural() {
 async function startBGM(type = null) {
     if (!audioCtx) initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    
+
     // If type is provided, switch to that type
     if (type !== null && type !== undefined) {
         currentBgmType = type;
     }
-    
+
     // If current type is null (stopped), don't start
     if (currentBgmType === null || currentBgmType === undefined) {
         console.warn('startBGM: currentBgmType is null, cannot start');
         return;
     }
-    
+
     // Save current type before stopping (stopBGM sets it to null)
     const bgmTypeToStart = currentBgmType;
-    
+
     // Stop current BGM if playing (but don't reset currentBgmType)
     if (bgmNode) {
         // Temporarily save the type
@@ -1721,17 +1704,17 @@ async function startBGM(type = null) {
         // Restore the type after stopping
         currentBgmType = savedType;
     }
-    
+
     // Try to load audio file
     console.log(`Starting BGM with type: ${bgmTypeToStart}`);
     const audioBuffer = await loadBgmAudio(bgmTypeToStart);
-    
+
     // Use audio file if available, otherwise use procedural sound
     if (audioBuffer) {
         console.log(`Using audio buffer for BGM: ${currentBgmType}`);
         bgmGainNode = audioCtx.createGain();
         bgmGainNode.gain.value = 0.5; // Volume for background
-        
+
         const bgmSound = createBgmFromBuffer(audioBuffer);
         bgmNode = bgmSound.source;
         currentBgmSource = bgmSound.source;
@@ -1743,7 +1726,7 @@ async function startBGM(type = null) {
         console.warn(`Audio buffer not available for ${currentBgmType}, using procedural sound`);
         bgmGainNode = audioCtx.createGain();
         bgmGainNode.gain.value = 0.25;
-        
+
         const rainSound = createRainProcedural();
         if (rainSound) {
             if (rainSound.processor) {
@@ -1757,7 +1740,7 @@ async function startBGM(type = null) {
             bgmEnabled = true;
         }
     }
-    
+
     // Update UI
     if (bgmEnabled) {
         if (btnBgm) {
@@ -1785,7 +1768,7 @@ function stopBGM() {
         }
         currentBgmSource = null;
     }
-    
+
     if (bgmNode) {
         try {
             // Stop source if it's a BufferSource
@@ -1814,11 +1797,11 @@ function stopBGM() {
         }
         bgmGainNode = null;
     }
-    
+
     bgmEnabled = false;
     // Set to null to mark as stopped
     currentBgmType = null;
-    
+
     // Update UI
     if (btnBgm) {
         btnBgm.classList.remove('active');
@@ -1831,23 +1814,23 @@ function stopBGM() {
 
 function toggleBGM() {
     console.log(`toggleBGM called: bgmEnabled=${bgmEnabled}, currentBgmType=${currentBgmType}`);
-    
+
     if (bgmEnabled) {
         // Cycle to next BGM type (including stop)
         // Use current type or default to rain if somehow null
         const currentType = currentBgmType || 'rain';
         let currentIndex = bgmTypes.indexOf(currentType);
-        
+
         // If current type not found in array, default to first
         if (currentIndex === -1) {
             currentIndex = 0;
         }
-        
+
         const nextIndex = (currentIndex + 1) % bgmTypes.length;
         const nextType = bgmTypes[nextIndex];
-        
+
         console.log(`Cycling: currentType=${currentType}, currentIndex=${currentIndex}, nextType=${nextType}`);
-        
+
         if (nextType === null) {
             // Stop BGM
             stopBGM();
@@ -1858,7 +1841,7 @@ function toggleBGM() {
                 'rain': 'Rain'
             };
             showToast(`BGM: ${typeNames[nextType]}`);
-            
+
             // Switch to next BGM
             startBGM(nextType);
         }
@@ -1867,7 +1850,7 @@ function toggleBGM() {
         if (currentBgmType === null || currentBgmType === undefined) {
             currentBgmType = 'rain';
         }
-        
+
         // Show toast with BGM type name
         const typeNames = {
             'forest': 'Forest',
@@ -1875,7 +1858,7 @@ function toggleBGM() {
             'wind': 'Wind'
         };
         showToast(`BGM: ${typeNames[currentBgmType]}`);
-        
+
         console.log(`Starting BGM with type: ${currentBgmType}`);
         startBGM();
     }
@@ -1967,7 +1950,7 @@ function handleEditorAutoSaveInput(e) {
 
 function handleEditorKeydown(e) {
     if (!editor) return;
-    
+
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active
@@ -1984,19 +1967,19 @@ function handleEditorKeydown(e) {
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
         const value = editor.value;
-        
+
         // Find end of current line
         const lineEnd = value.indexOf('\n', start);
         const killEnd = lineEnd === -1 ? value.length : lineEnd;
-        
+
         // Get text from cursor to end of line
         const killedText = value.substring(start, killEnd);
-        
+
         // If there's a newline, include it
-        const textToKill = killEnd < value.length && value[killEnd] === '\n' 
-            ? killedText + '\n' 
+        const textToKill = killEnd < value.length && value[killEnd] === '\n'
+            ? killedText + '\n'
             : killedText;
-        
+
         if (textToKill.length > 0) {
             killRing = textToKill;
             // Delete the text
@@ -2159,7 +2142,7 @@ function initAuth() {
         console.warn('Firebase Auth not available');
         return;
     }
-    
+
     try {
         // 認証状態の変更を監視
         window.firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2167,21 +2150,21 @@ function initAuth() {
                 if (user) {
                     // ログイン済み
                     updateAuthUI(user);
-                    
+
                     // 同期状態のリスナーを設定
                     if (window.syncManager) {
                         window.syncManager.onSyncStatusChange(updateSyncStatusUI);
-                        
+
                         // Firestoreリスナーを設定
                         window.syncManager.setupFirestoreListener();
-                        
+
                         // 初回同期
                         await window.syncManager.syncFromFirestore();
                     }
                 } else {
                     // ログアウト済み
                     updateAuthUI(null);
-                    
+
                     // 同期を停止
                     if (window.syncManager) {
                         window.syncManager.stopSync();
@@ -2191,13 +2174,13 @@ function initAuth() {
                 console.error('Auth state change error:', error);
             }
         });
-        
+
         // ログインボタンのイベントリスナー
         const btnLoginGoogle = document.getElementById('btn-login-google');
         if (btnLoginGoogle) {
             btnLoginGoogle.addEventListener('click', handleGoogleLogin);
         }
-        
+
         // ログアウトボタンのイベントリスナー
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
@@ -2214,7 +2197,7 @@ async function handleGoogleLogin() {
         showToast('Firebaseが設定されていません');
         return;
     }
-    
+
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         showToast('ログイン中...');
@@ -2229,13 +2212,13 @@ async function handleGoogleLogin() {
 
 async function handleLogout() {
     if (!window.firebaseAuth) return;
-    
+
     try {
         // 同期を停止
         if (window.syncManager) {
             window.syncManager.stopSync();
         }
-        
+
         await window.firebaseAuth.signOut();
         showToast('ログアウトしました');
         playSound('click');
@@ -2248,20 +2231,20 @@ async function handleLogout() {
 function updateAuthUI(user) {
     const authStatus = document.getElementById('auth-status');
     const authLogin = document.getElementById('auth-login');
-    
+
     if (!authStatus || !authLogin) return;
-    
+
     try {
         if (user) {
             // ログイン済みUIを表示
             authLogin.style.display = 'none';
             authStatus.style.display = 'block';
-            
+
             // ユーザー情報を表示
             const userName = document.getElementById('user-name');
             const userEmail = document.getElementById('user-email');
             const userAvatar = document.getElementById('user-avatar');
-            
+
             if (userName) userName.textContent = user.displayName || 'ユーザー';
             if (userEmail) userEmail.textContent = user.email || '';
             if (userAvatar) {
@@ -2287,12 +2270,12 @@ function updateAuthUI(user) {
 function updateSyncStatusUI(status, message) {
     const syncIndicator = document.getElementById('sync-indicator');
     const syncText = document.getElementById('sync-text');
-    
+
     if (!syncIndicator || !syncText) return;
-    
+
     try {
         syncText.textContent = message || '';
-        
+
         // ステータスに応じてインジケーターの色を変更
         switch (status) {
             case 'syncing':
