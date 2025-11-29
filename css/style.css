@@ -715,9 +715,61 @@ body.light-mode #btn-floating-menu:hover {
         z-index: 1900;
         /* Below sidebar but above everything else */
     }
-
     /* Prevent body scroll when sidebar is open on mobile */
     body.sidebar-open {
         overflow: hidden;
     }
+}
+
+/* ========================================
+   Background Image (OmmWriter-style)
+   ======================================== */
+
+#bg-image {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    /* 画面全体をカバーしつつ、下側の情景がしっかり見えるようにする */
+    background-image: url('../assets/bg-trees-backup.png');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: 100% auto;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.2;
+    /* ダークモードのときは少し控えめに */
+    filter: grayscale(100%) contrast(1.1) brightness(0.9);
+    /* 上方向に向かって徐々にフェードアウトさせるマスク */
+    mask-image: linear-gradient(to top,
+            black 0%,
+            black 15%,
+            rgba(0, 0, 0, 0.95) 25%,
+            rgba(0, 0, 0, 0.85) 35%,
+            rgba(0, 0, 0, 0.7) 45%,
+            rgba(0, 0, 0, 0.5) 55%,
+            rgba(0, 0, 0, 0.3) 65%,
+            rgba(0, 0, 0, 0.15) 75%,
+            rgba(0, 0, 0, 0.05) 85%,
+            transparent 100%);
+    -webkit-mask-image: linear-gradient(to top,
+            black 0%,
+            black 15%,
+            rgba(0, 0, 0, 0.95) 25%,
+            rgba(0, 0, 0, 0.85) 35%,
+            rgba(0, 0, 0, 0.7) 45%,
+            rgba(0, 0, 0, 0.5) 55%,
+            rgba(0, 0, 0, 0.3) 65%,
+            rgba(0, 0, 0, 0.15) 75%,
+            rgba(0, 0, 0, 0.05) 85%,
+            transparent 100%);
+    transition: opacity 0.5s ease;
+}
+
+body.light-mode #bg-image {
+    opacity: 0.35;
+    /* ライトモードでは少し強めに表示して、文字が埋もれないようにブレンド */
+    mix-blend-mode: multiply;
+    filter: grayscale(100%) contrast(1.1) brightness(1.1);
 }
