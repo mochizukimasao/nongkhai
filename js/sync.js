@@ -219,7 +219,11 @@ async function syncFromFirestoreChanges(changes) {
     }
 }
 
-// Firestoreからすべてのノートを取得してローカルDBを更新（初回同期用）
+// Firestoreからすべてのノートを取得してローカルDBを「サーバー状態で上書き」する
+// 👉 Firestore を唯一のソース・オブ・トゥルースとみなし、
+//    各端末の IndexedDB は毎回ここから再構築する方針にする。
+//    これにより「端末ごとに Trash 状態がずれる」「重複ノートが端末ごとに違う」
+//    といった状態をリセットして常に揃える。
 async function syncFromFirestore() {
     if (!isAuthenticated() || !window.db) return;
     
@@ -234,51 +238,22 @@ async function syncFromFirestore() {
             syncInProgress = false;
             return;
         }
-        
+
         const snapshot = await notesCollection.get();
-        const firestoreNotes = [];
-        
-        snapshot.forEach(doc => {
-            firestoreNotes.push({
-                firestoreId: doc.id,
-                ...doc.data()
-            });
+
+        // --- 重要方針 ---
+        // Firestore 上の状態をそのままローカルにミラーするため、
+        // いったんローカル notes テーブルをクリアしてから
+        // Firestore の内容で再構築する。
+        await window.db.notes.clear();
+
+        snapshot.forEach(async (doc) => {
+            const firestoreId = doc.id;
+            const data = doc.data();
+            const localNoteData = firestoreNoteToLocal(firestoreId, data);
+            delete localNoteData.id; // idは自動生成される
+            await window.db.notes.add(localNoteData);
         });
-        
-        // ローカルDBのすべてのノートを取得
-        const localNotes = await window.db.notes.toArray();
-        
-        // FirestoreのノートでローカルDBを更新
-        for (const firestoreNote of firestoreNotes) {
-            const localNote = localNotes.find(n => n.firestoreId === firestoreNote.firestoreId);
-            
-            if (localNote) {
-                // 既存のノート: 更新時刻を比較して新しい方を優先
-                // フェーズ2: 差分を適用してテキストを再構築
-                if (firestoreNote.updated > localNote.updated) {
-                    const mergedNoteData = firestoreNoteToLocal(firestoreNote.firestoreId, firestoreNote, localNote.text);
-                    await window.db.notes.update(localNote.id, {
-                        text: mergedNoteData.text,
-                        updated: firestoreNote.updated,
-                        favorite: firestoreNote.favorite,
-                        deleted: firestoreNote.deleted,
-                        syncedAt: firestoreNote.syncedAt || Date.now()
-                    });
-                }
-            } else {
-                // 新しいノート: ローカルDBに追加
-                const localNoteData = firestoreNoteToLocal(firestoreNote.firestoreId, firestoreNote);
-                delete localNoteData.id; // idは自動生成される
-                await window.db.notes.add(localNoteData);
-            }
-        }
-        
-        // ローカルにのみ存在するノートをFirestoreにアップロード
-        for (const localNote of localNotes) {
-            if (!localNote.firestoreId && !localNote.deleted) {
-                await syncNoteToFirestore(localNote.id, localNote);
-            }
-        }
         
         notifySyncStatus('synced', '同期完了');
         
