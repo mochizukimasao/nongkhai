@@ -83,7 +83,7 @@ html {
     pointer-events: none;
     /* フィルターとマスクを削除してくっきり表示しつつ、暗くする */
     opacity: 1;
-    filter: brightness(0.6);
+    filter: brightness(0.5);
     mask-image: linear-gradient(to top,
             black 0%,
             black 20%,
