@@ -51,8 +51,8 @@ html {
     height: 100%;
     width: 100%;
     font-family: var(--font-family);
-    background: linear-gradient(to bottom, #3a3a3a 0%, #1a1a1a 100%);
-    /* Dark mode: lighter grey at top, darker at bottom - stronger contrast */
+    background: linear-gradient(to bottom, #2a2a2a 0%, #000000 100%);
+    /* Dark mode: slightly darker gradient */
     color: var(--text-color);
     overflow: hidden;
     transition: background 0.5s ease, color 0.5s ease;
