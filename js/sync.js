@@ -140,6 +140,8 @@ async function syncFromFirestoreChanges(changes) {
         notifySyncStatus('syncing', '同期中...');
         
         let hasChanges = false;
+        const totalChanges = changes.length;
+        let processedChanges = 0;
         const currentNoteId = window.currentNoteId || null;
         
         // 変更されたノートだけを処理
@@ -200,6 +202,12 @@ async function syncFromFirestoreChanges(changes) {
                     hasChanges = true;
                 }
             }
+
+            processedChanges++;
+            // 大量更新時に進捗が分かるよう、数件ごとにステータスを更新
+            if (totalChanges > 0 && (processedChanges === totalChanges || processedChanges % 5 === 0)) {
+                notifySyncStatus('syncing', `クラウドから ${processedChanges}/${totalChanges} 件を反映中...`);
+            }
         }
         
         if (hasChanges) {
@@ -247,13 +255,26 @@ async function syncFromFirestore() {
         // Firestore の内容で再構築する。
         await window.db.notes.clear();
 
-        snapshot.forEach(async (doc) => {
+        const docs = [];
+        snapshot.forEach((doc) => {
+            docs.push(doc);
+        });
+
+        const total = docs.length;
+        let processed = 0;
+
+        for (const doc of docs) {
             const firestoreId = doc.id;
             const data = doc.data();
             const localNoteData = firestoreNoteToLocal(firestoreId, data);
             delete localNoteData.id; // idは自動生成される
             await window.db.notes.add(localNoteData);
-        });
+
+            processed++;
+            if (total > 0 && (processed === total || processed % 10 === 0)) {
+                notifySyncStatus('syncing', `Firestoreから ${processed}/${total} 件を同期中...`);
+            }
+        }
         
         notifySyncStatus('synced', '同期完了');
         
