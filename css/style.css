@@ -736,7 +736,8 @@ body.light-mode #btn-floating-menu:hover {
     background-repeat: no-repeat;
     background-position: center bottom;
     background-size: 100% auto;
-    z-index: -1;
+    /* body の背景色より前、エディタより後ろに出したいので 0 にしておく */
+    z-index: 0;
     pointer-events: none;
     opacity: 0.2;
     /* ダークモードのときは少し控えめに */
