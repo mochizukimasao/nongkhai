@@ -38,9 +38,6 @@ const btnFont = document.getElementById('btn-font'); // New Font Button
 const btnSound = document.getElementById('btn-sound');
 const iconSoundOn = document.getElementById('icon-sound-on');
 const iconSoundOff = document.getElementById('icon-sound-off');
-const btnBgm = document.getElementById('btn-bgm');
-const iconBgmOn = document.getElementById('icon-bgm-on');
-const iconBgmOff = document.getElementById('icon-bgm-off');
 const btnFullscreen = document.getElementById('btn-fullscreen');
 
 // --- Sidebar Elements ---
@@ -97,8 +94,6 @@ const soundProfiles = ['cute', 'relax', 'bubble'];
 let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
-let bgmAudio = null;
-let isBgmPlaying = false;
 
 // --- Touch/Scroll Detection for Toolbar ---
 // Global scroll detection removed to improve responsiveness.
@@ -504,7 +499,7 @@ function loadSettings() {
             btnFont.querySelector('span').style.fontFamily = 'serif';
         }
 
-        // Sound (キータイプの効果音)
+        // Sound
         if (settings.soundEnabled) {
             isSoundEnabled = true;
             currentSoundProfile = settings.soundProfile || 'relax';
@@ -523,66 +518,10 @@ function loadSettings() {
     }
 }
 
-// --- BGM（雨音）コントロール ---
-function initBgm() {
-    if (!bgmAudio) {
-        // index.html から見た相対パスで配置されている
-        bgmAudio = new Audio('assets/rain_full.ogg');
-        bgmAudio.loop = true;
-        bgmAudio.volume = 0.4;
-    }
-}
-
-function updateBgmIcon() {
-    if (!btnBgm || !iconBgmOn || !iconBgmOff) return;
-
-    if (isBgmPlaying) {
-        btnBgm.classList.add('active');
-        iconBgmOn.style.display = 'block';
-        iconBgmOff.style.display = 'none';
-    } else {
-        btnBgm.classList.remove('active');
-        iconBgmOn.style.display = 'none';
-        iconBgmOff.style.display = 'block';
-    }
-}
-
-async function toggleBgm() {
-    if (!bgmAudio) initBgm();
-
-    try {
-        if (!isBgmPlaying) {
-            // 再生開始
-            await bgmAudio.play();
-            isBgmPlaying = true;
-            showToast('Rain BGM: On');
-        } else {
-            // 一時停止
-            bgmAudio.pause();
-            isBgmPlaying = false;
-            showToast('Rain BGM: Off');
-        }
-        updateBgmIcon();
-    } catch (e) {
-        console.error('BGM toggle error:', e);
-        showToast('Rain BGM を再生できませんでした');
-    }
-}
-
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
     loadSettings(); // Load settings first
     initDB();
-
-    // BGM ボタン（雨音）のイベント設定
-    if (btnBgm) {
-        updateBgmIcon(); // 初期状態をアイコンに反映
-        btnBgm.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleBgm();
-            editor.focus();
-        });
-    }
 
     // Initialize mobile/responsive behavior
     handleResize();
