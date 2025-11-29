@@ -523,10 +523,21 @@ window.addEventListener('DOMContentLoaded', () => {
     loadSettings(); // Load settings first
     initDB();
 
+    // Firebase Auth / Firestore 同期の初期化
+    if (typeof initAuth === 'function') {
+        try {
+            initAuth();
+        } catch (e) {
+            console.warn('initAuth failed:', e);
+        }
+    }
+
     // Initialize mobile/responsive behavior
     handleResize();
 
-    editor.focus();
+    if (editor) {
+        editor.focus();
+    }
 });
 
 
@@ -1237,3 +1248,171 @@ editor.addEventListener('keydown', (e) => {
         playSound('click');
     }
 });
+
+// --- Firebase Authentication ---
+function initAuth() {
+    // Firebaseが利用可能かチェック
+    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
+        console.warn('Firebase Auth not available');
+        return;
+    }
+
+    try {
+        // 認証状態の変更を監視
+        window.firebaseAuth.onAuthStateChanged(async (user) => {
+            try {
+                if (user) {
+                    // ログイン済み
+                    updateAuthUI(user);
+
+                    // 同期状態のリスナーを設定
+                    if (window.syncManager) {
+                        window.syncManager.onSyncStatusChange(updateSyncStatusUI);
+
+                        // Firestoreリスナーを設定
+                        window.syncManager.setupFirestoreListener();
+
+                        // 初回同期
+                        await window.syncManager.syncFromFirestore();
+                    }
+                } else {
+                    // ログアウト済み
+                    updateAuthUI(null);
+
+                    // 同期を停止
+                    if (window.syncManager) {
+                        window.syncManager.stopSync();
+                    }
+                }
+            } catch (error) {
+                console.error('Auth state change error:', error);
+            }
+        });
+
+        // ログインボタンのイベントリスナー
+        const btnLoginGoogle = document.getElementById('btn-login-google');
+        if (btnLoginGoogle) {
+            btnLoginGoogle.addEventListener('click', handleGoogleLogin);
+        }
+
+        // ログアウトボタンのイベントリスナー
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', handleLogout);
+        }
+    } catch (error) {
+        console.error('Auth initialization error:', error);
+    }
+}
+
+async function handleGoogleLogin() {
+    // Firebaseが利用可能かチェック
+    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
+        showToast('Firebaseが設定されていません');
+        return;
+    }
+
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        showToast('ログイン中...');
+        await window.firebaseAuth.signInWithPopup(provider);
+        showToast('ログインしました');
+        playSound('click');
+    } catch (error) {
+        console.error('Login error:', error);
+        showToast('ログインに失敗しました: ' + error.message);
+    }
+}
+
+async function handleLogout() {
+    if (!window.firebaseAuth) return;
+
+    try {
+        // 同期を停止
+        if (window.syncManager) {
+            window.syncManager.stopSync();
+        }
+
+        await window.firebaseAuth.signOut();
+        showToast('ログアウトしました');
+        playSound('click');
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('ログアウトに失敗しました');
+    }
+}
+
+function updateAuthUI(user) {
+    const authStatus = document.getElementById('auth-status');
+    const authLogin = document.getElementById('auth-login');
+
+    if (!authStatus || !authLogin) return;
+
+    try {
+        if (user) {
+            // ログイン済みUIを表示
+            authLogin.style.display = 'none';
+            authStatus.style.display = 'block';
+
+            // ユーザー情報を表示
+            const userName = document.getElementById('user-name');
+            const userEmail = document.getElementById('user-email');
+            const userAvatar = document.getElementById('user-avatar');
+
+            if (userName) userName.textContent = user.displayName || 'ユーザー';
+            if (userEmail) userEmail.textContent = user.email || '';
+            if (userAvatar) {
+                if (user.photoURL) {
+                    userAvatar.style.backgroundImage = `url(${user.photoURL})`;
+                    userAvatar.style.backgroundSize = 'cover';
+                    userAvatar.textContent = '';
+                } else {
+                    userAvatar.style.backgroundImage = '';
+                    userAvatar.textContent = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+                }
+            }
+        } else {
+            // ログインUIを表示
+            authStatus.style.display = 'none';
+            authLogin.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Update auth UI error:', error);
+    }
+}
+
+function updateSyncStatusUI(status, message) {
+    const syncIndicator = document.getElementById('sync-indicator');
+    const syncText = document.getElementById('sync-text');
+
+    if (!syncIndicator || !syncText) return;
+
+    try {
+        syncText.textContent = message || '';
+
+        // ステータスに応じてインジケーターの色を変更
+        switch (status) {
+            case 'syncing':
+                syncIndicator.style.color = '#4a90e2'; // Blue
+                syncIndicator.textContent = '●';
+                break;
+            case 'synced':
+                syncIndicator.style.color = '#34c759'; // Green
+                syncIndicator.textContent = '●';
+                break;
+            case 'error':
+                syncIndicator.style.color = '#ff3b30'; // Red
+                syncIndicator.textContent = '●';
+                break;
+            case 'disconnected':
+                syncIndicator.style.color = '#888'; // Gray
+                syncIndicator.textContent = '○';
+                break;
+            default:
+                syncIndicator.style.color = '#888';
+                syncIndicator.textContent = '○';
+        }
+    } catch (error) {
+        console.error('Update sync status UI error:', error);
+    }
+}
