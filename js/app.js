@@ -300,7 +300,7 @@ async function saveCurrentNote() {
             const dmp = new diff_match_patch();
             const diffs = dmp.diff_main(lastSavedContent, text);
             dmp.diff_cleanupSemantic(diffs);
-            
+
             // 差分をパッチ形式に変換（より効率的）
             const patches = dmp.patch_make(lastSavedContent, diffs);
             if (patches.length > 0) {
@@ -308,15 +308,15 @@ async function saveCurrentNote() {
                 delta = dmp.patch_toText(patches);
             }
         }
-        
+
         await db.notes.update(currentNoteId, {
             text: text,
             updated: Date.now()
         });
-        
+
         // 最後に保存した内容を更新
         lastSavedContent = text;
-        
+
         updateNoteList();
 
         // Firestoreに同期（非同期で実行、エラーは無視）
@@ -1584,21 +1584,87 @@ async function loadBgmAudio(type) {
 
 // createRainSound function removed - now handled directly in startBGM
 
-// Create BGM sound from loaded audio buffer
+// Create BGM sound from loaded audio buffer with crossfade looping
 function createBgmFromBuffer(buffer) {
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
+    const FADE_DURATION = 3; // 3秒のクロスフェード
+    let sources = [];
+    let isPlaying = true;
 
-    // ステレオパンニング（中央）
-    const panner = audioCtx.createStereoPanner();
-    panner.pan.value = 0;
+    function scheduleNextSource(startTime) {
+        if (!isPlaying) return;
 
-    // 音量調整はbgmGainNodeで行うので、ここでは直接接続
-    source.connect(panner);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
 
-    source.start(0);
-    return { source, panner };
+        const gainNode = audioCtx.createGain();
+        const panner = audioCtx.createStereoPanner();
+        panner.pan.value = 0;
+
+        source.connect(gainNode);
+        gainNode.connect(panner);
+        panner.connect(bgmGainNode);
+
+        // フェードイン（最初の3秒）
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(1, startTime + FADE_DURATION);
+
+        // フェードアウト（終わりの3秒前から）
+        const fadeOutStart = startTime + buffer.duration - FADE_DURATION;
+        gainNode.gain.setValueAtTime(1, fadeOutStart);
+        gainNode.gain.linearRampToValueAtTime(0, startTime + buffer.duration);
+
+        source.start(startTime);
+        source.stop(startTime + buffer.duration);
+
+        sources.push({ source, gainNode, panner });
+
+        // 次のソースをフェードアウト開始時にスケジュール
+        const nextStartTime = fadeOutStart;
+        const scheduleDelay = (fadeOutStart - audioCtx.currentTime) * 1000;
+
+        if (scheduleDelay > 0) {
+            setTimeout(() => {
+                if (isPlaying) {
+                    scheduleNextSource(nextStartTime);
+                }
+            }, scheduleDelay);
+        }
+
+        // クリーンアップ
+        source.onended = () => {
+            try {
+                source.disconnect();
+                gainNode.disconnect();
+                panner.disconnect();
+            } catch (e) {
+                // Already disconnected
+            }
+            // 配列から削除
+            sources = sources.filter(s => s.source !== source);
+        };
+    }
+
+    // 最初のソースを即座に開始
+    scheduleNextSource(audioCtx.currentTime);
+
+    return {
+        source: sources[0]?.source,
+        panner: sources[0]?.panner,
+        stop: () => {
+            isPlaying = false;
+            sources.forEach(({ source, gainNode, panner }) => {
+                try {
+                    source.stop();
+                    source.disconnect();
+                    gainNode.disconnect();
+                    panner.disconnect();
+                } catch (e) {
+                    // Already stopped
+                }
+            });
+            sources = [];
+        }
+    };
 }
 
 // Create procedurally generated rain sound with improved stereo
@@ -1739,12 +1805,11 @@ async function startBGM(type = null) {
         console.log(`Using audio buffer for BGM: ${currentBgmType}`);
         bgmGainNode = audioCtx.createGain();
         bgmGainNode.gain.value = 0.5; // Volume for background
+        bgmGainNode.connect(audioCtx.destination);
 
         const bgmSound = createBgmFromBuffer(audioBuffer);
-        bgmNode = bgmSound.source;
+        bgmNode = bgmSound; // Store the wrapper object
         currentBgmSource = bgmSound.source;
-        bgmSound.panner.connect(bgmGainNode);
-        bgmGainNode.connect(audioCtx.destination);
         bgmEnabled = true;
     } else {
         // Fallback to procedural sound
@@ -1779,41 +1844,35 @@ async function startBGM(type = null) {
 }
 
 function stopBGM() {
-    // Stop current source if it exists (bgmNode and currentBgmSource may be the same)
-    if (currentBgmSource && currentBgmSource !== bgmNode) {
-        try {
-            if (currentBgmSource.stop) {
-                currentBgmSource.stop();
-            }
-            if (currentBgmSource.disconnect) {
-                currentBgmSource.disconnect();
-            }
-        } catch (e) {
-            console.warn('Error stopping BGM source:', e);
-        }
-        currentBgmSource = null;
-    }
+    bgmEnabled = false;
 
-    if (bgmNode) {
+    // Use wrapper's stop method if available (for seamless looping)
+    if (bgmNode && typeof bgmNode.stop === 'function') {
         try {
-            // Stop source if it's a BufferSource
+            bgmNode.stop();
+        } catch (e) {
+            console.warn('Error stopping BGM wrapper:', e);
+        }
+    } else if (bgmNode) {
+        // Fallback for procedural sound or old sources
+        try {
             if (bgmNode.stop) {
                 bgmNode.stop();
             }
-            // Disconnect processor
             if (bgmNode.disconnect) {
                 bgmNode.disconnect();
             }
-            // Clear processor callback
             if (bgmNode.onaudioprocess) {
                 bgmNode.onaudioprocess = null;
             }
         } catch (e) {
             console.warn('Error stopping BGM node:', e);
         }
-        bgmNode = null;
-        currentBgmSource = null; // Clear both since they may be the same
     }
+
+    bgmNode = null;
+    currentBgmSource = null;
+
     if (bgmGainNode) {
         try {
             bgmGainNode.disconnect();
@@ -1823,7 +1882,6 @@ function stopBGM() {
         bgmGainNode = null;
     }
 
-    bgmEnabled = false;
     // Set to null to mark as stopped
     currentBgmType = null;
 

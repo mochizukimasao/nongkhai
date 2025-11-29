@@ -567,6 +567,27 @@ body.light-mode .tool-btn.active {
     color: #ffd700 !important;
 }
 
+/* BGM Button Color States */
+#btn-bgm {
+    color: #888;
+    /* Gray when off */
+}
+
+#btn-bgm.active {
+    color: #a8d5e2;
+    /* Light blue when on (dark mode) */
+}
+
+body.light-mode #btn-bgm {
+    color: #999;
+    /* Lighter gray when off (light mode) */
+}
+
+body.light-mode #btn-bgm.active {
+    color: #007aff;
+    /* Blue when on (light mode) */
+}
+
 .tool-btn svg {
     width: 18px;
     /* Smaller icons */
