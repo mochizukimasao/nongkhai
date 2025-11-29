@@ -1,98 +1,64 @@
 // Initialize editor elements with error checking
-// 注意: これらの変数はDOMContentLoadedイベントの後に使用される必要がある
-let editor, highlightLayer, scrollArea, toast;
-let btnFloatingMenu, btnSidebarNew, btnNew, btnStar;
-let btnUndo, btnRedo, btnH1, btnBold, btnQuote, btnList, btnOrderedList;
-let btnCopy, btnPaste, btnSelectMode;
-let btnUp, btnDown, btnLeft, btnRight;
-let btnTheme, iconThemeSun, iconThemeMoon, btnFont;
-let btnSound, iconSoundOn, iconSoundOff, btnFullscreen;
-let btnBgm, iconBgmOn, iconBgmOff;
-let sidebar, sidebarOverlay, btnCloseSidebar, noteList, toolbar;
+const editor = document.getElementById('editor');
+const highlightLayer = document.getElementById('highlight-layer');
+const scrollArea = document.getElementById('editor-scroll-area');
+const toast = document.getElementById('toast');
 
-let baseListenersAttached = false;
-let editorListenersAttached = false;
-let uiListenersAttached = false;
+// Check if elements are available
+if (!editor) console.error('Editor element not found');
+if (!highlightLayer) console.error('Highlight layer element not found');
+if (!scrollArea) console.error('Scroll area element not found');
+if (!toast) console.warn('Toast element not found');
 
-// DOMContentLoadedイベントで要素を取得
-function initElements() {
-    editor = document.getElementById('editor');
-    highlightLayer = document.getElementById('highlight-layer');
-    scrollArea = document.getElementById('editor-scroll-area');
-    toast = document.getElementById('toast');
+// --- Toolbar Buttons ---
+// --- Toolbar Buttons ---
+const btnFloatingMenu = document.getElementById('btn-floating-menu');
+const btnSidebarNew = document.getElementById('btn-sidebar-new');
+// const btnMenu = document.getElementById('btn-menu'); // Removed
+const btnNew = document.getElementById('btn-new');
+const btnStar = document.getElementById('btn-star');
+const btnUndo = document.getElementById('btn-undo');
+const btnRedo = document.getElementById('btn-redo');
+const btnH1 = document.getElementById('btn-h1');
+const btnBold = document.getElementById('btn-bold');
+const btnQuote = document.getElementById('btn-quote');
+const btnList = document.getElementById('btn-list');
+const btnOrderedList = document.getElementById('btn-ordered-list');
+const btnCopy = document.getElementById('btn-copy');
+const btnPaste = document.getElementById('btn-paste');
+const btnSelectMode = document.getElementById('btn-select-mode');
+const btnUp = document.getElementById('btn-up');
+const btnDown = document.getElementById('btn-down');
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnTheme = document.getElementById('btn-theme');
+const iconThemeSun = document.getElementById('icon-theme-sun');
+const iconThemeMoon = document.getElementById('icon-theme-moon');
+const btnFont = document.getElementById('btn-font'); // New Font Button
+const btnSound = document.getElementById('btn-sound');
+const iconSoundOn = document.getElementById('icon-sound-on');
+const iconSoundOff = document.getElementById('icon-sound-off');
+const btnFullscreen = document.getElementById('btn-fullscreen');
 
-    // Check if elements are available
-    if (!editor) console.error('Editor element not found');
-    if (!highlightLayer) console.error('Highlight layer element not found');
-    if (!scrollArea) console.error('Scroll area element not found');
-    if (!toast) console.warn('Toast element not found');
+// --- Sidebar Elements ---
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+const noteList = document.getElementById('note-list');
 
-    // --- Toolbar Buttons ---
-    btnFloatingMenu = document.getElementById('btn-floating-menu');
-    btnSidebarNew = document.getElementById('btn-sidebar-new');
-    btnNew = document.getElementById('btn-new');
-    btnStar = document.getElementById('btn-star');
-    btnUndo = document.getElementById('btn-undo');
-    btnRedo = document.getElementById('btn-redo');
-    btnH1 = document.getElementById('btn-h1');
-    btnBold = document.getElementById('btn-bold');
-    btnQuote = document.getElementById('btn-quote');
-    btnList = document.getElementById('btn-list');
-    btnOrderedList = document.getElementById('btn-ordered-list');
-    btnCopy = document.getElementById('btn-copy');
-    btnPaste = document.getElementById('btn-paste');
-    btnSelectMode = document.getElementById('btn-select-mode');
-    btnUp = document.getElementById('btn-up');
-    btnDown = document.getElementById('btn-down');
-    btnLeft = document.getElementById('btn-left');
-    btnRight = document.getElementById('btn-right');
-    btnTheme = document.getElementById('btn-theme');
-    iconThemeSun = document.getElementById('icon-theme-sun');
-    iconThemeMoon = document.getElementById('icon-theme-moon');
-    btnFont = document.getElementById('btn-font');
-    btnSound = document.getElementById('btn-sound');
-    iconSoundOn = document.getElementById('icon-sound-on');
-    iconSoundOff = document.getElementById('icon-sound-off');
-    btnBgm = document.getElementById('btn-bgm');
-    iconBgmOn = document.getElementById('icon-bgm-on');
-    iconBgmOff = document.getElementById('icon-bgm-off');
-    btnFullscreen = document.getElementById('btn-fullscreen');
-
-    // --- Sidebar Elements ---
-    sidebar = document.getElementById('sidebar');
-    sidebarOverlay = document.getElementById('sidebar-overlay');
-    btnCloseSidebar = document.getElementById('btn-close-sidebar');
-    noteList = document.getElementById('note-list');
-
-    // --- Toolbar Element ---
-    toolbar = document.getElementById('toolbar');
-}
+// --- Toolbar Element ---
+const toolbar = document.getElementById('toolbar');
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
+scrollArea.addEventListener('scroll', () => {
+    scrollArea.classList.add('scrolling');
 
-function attachBaseListeners() {
-    if (baseListenersAttached) {
-        return;
-    }
-    if (!scrollArea) {
-        console.warn('attachBaseListeners: scrollArea not ready, retrying...');
-        setTimeout(attachBaseListeners, 100);
-        return;
-    }
-
-    scrollArea.addEventListener('scroll', () => {
-        scrollArea.classList.add('scrolling');
-
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            scrollArea.classList.remove('scrolling');
-        }, 500); // Hide after 0.5 second of inactivity
-    });
-
-    scrollArea.addEventListener('scroll', syncPosition);
-    baseListenersAttached = true;
-}
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+        scrollArea.classList.remove('scrolling');
+    }, 500); // Hide after 0.5 second of inactivity
+});
 
 // --- Font Toggle Logic ---
 function toggleFont() {
@@ -108,19 +74,16 @@ function toggleFont() {
         showToast('Font: Mincho');
     }
     playSound('click');
-    syncHighlightTypography();
-    syncHeight();
-    updateHighlights();
     saveSettings();
 }
 
 const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
-    if (editor) {
-        editor.focus();
-    }
+    editor.focus();
 };
+
+btnFont.addEventListener('click', handleFontButton);
 // attachTouchAction removed - relying on native click
 
 
@@ -132,82 +95,42 @@ let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
 
-// Kill ring for Emacs-style Ctrl+K / Ctrl+Y
-let killRing = '';
-
-// Track last editor content to detect actual text changes
-let lastEditorContent = '';
-// Track last saved content for delta sync
-let lastSavedContent = '';
-
-// BGM state
-let bgmEnabled = false;
-let bgmNode = null;
-let bgmGainNode = null;
-let bgmAudioBuffers = {}; // Store all BGM audio buffers
-let currentBgmType = 'rain'; // 'rain', null (stopped)
-const bgmTypes = ['rain', null]; // null means stopped
-let currentBgmSource = null; // Current playing audio source
-
 // --- Touch/Scroll Detection for Toolbar ---
 // Global scroll detection removed to improve responsiveness.
 // We now rely on per-button touch handling in attachTouchAction.
 
 // --- DB State ---
 let db;
-window.db = null; // グローバルスコープでsync.jsからアクセス可能にする
 let currentNoteId = null;
-window.currentNoteId = null; // sync.jsからアクセス可能にする
 let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
 
 // --- Initialize DB ---
 async function initDB() {
     db = new Dexie("SimpleEditorDB");
-    window.db = db; // グローバルスコープに設定
-    db.version(3).stores({
-        notes: '++id, text, created, updated, favorite, deleted, firestoreId, syncedAt' // Added firestoreId and syncedAt for sync
+    db.version(2).stores({
+        notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
     }).upgrade(tx => {
-        if (tx.version === 2) {
-            // Upgrade from version 2: add firestoreId and syncedAt fields
-            return tx.notes.toCollection().modify(note => {
-                if (!note.hasOwnProperty('firestoreId')) {
-                    note.firestoreId = null;
-                }
-                if (!note.hasOwnProperty('syncedAt')) {
-                    note.syncedAt = null;
-                }
-            });
-        } else if (tx.version === 1) {
-            // Upgrade from version 1: add deleted, firestoreId, and syncedAt fields
-            return tx.notes.toCollection().modify(note => {
-                if (!note.hasOwnProperty('deleted')) {
-                    note.deleted = null;
-                }
-                if (!note.hasOwnProperty('firestoreId')) {
-                    note.firestoreId = null;
-                }
-                if (!note.hasOwnProperty('syncedAt')) {
-                    note.syncedAt = null;
-                }
-            });
-        }
+        // Upgrade existing notes to have deleted: null
+        return tx.notes.toCollection().modify(note => {
+            note.deleted = null;
+        });
     });
 
     // Cleanup old trash
     await cleanupTrash();
 
-    // Load last edited note (only if not deleted)
+    // Load last edited note or create new (only if not deleted)
     const lastNote = await db.notes
         .filter(n => !n.deleted) // Robust check for null/undefined
         .reverse()
         .sortBy('updated');
 
-    if (lastNote.length > 0) {
-        // Load the last edited note, regardless of whether it's empty
+    if (lastNote.length > 0 && lastNote[0].text.trim() === '') {
+        // Reuse the last note if it's empty
         loadNote(lastNote[0].id);
     } else {
-        // Only create a new note if no notes exist
+        // Otherwise, start with a fresh note
         createNote();
     }
 
@@ -230,62 +153,25 @@ async function createNote() {
         created: Date.now(),
         updated: Date.now(),
         favorite: 0,
-        deleted: null,
-        firestoreId: null,
-        syncedAt: null
+        deleted: null
     });
-    await loadNote(id);
+    loadNote(id);
     showToast('New Note Created');
     playSound('click');
-    if (sidebar && sidebar.classList.contains('open')) toggleSidebar();
-
-    // Firestoreに同期（非同期で実行、エラーは無視）
-    try {
-        if (window.syncManager && window.syncManager.isAuthenticated()) {
-            const note = await db.notes.get(id);
-            if (note) {
-                window.syncManager.syncNoteToFirestore(id, note).catch(err => {
-                    console.warn('Sync failed (will retry later):', err);
-                });
-            }
-        }
-    } catch (error) {
-        console.warn('Sync error:', error);
-    }
+    if (sidebar.classList.contains('open')) toggleSidebar();
 }
 
 async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
-        window.currentNoteId = id; // sync.jsからアクセス可能にする
-
-        // Add fade-in animation
-        const editorContainer = document.getElementById('editor-container');
-        if (editorContainer) {
-            editorContainer.classList.add('fade-in');
-            // Remove animation class after animation completes
-            setTimeout(() => {
-                editorContainer.classList.remove('fade-in');
-            }, 400);
-        }
-
-        if (editor) {
-            editor.value = note.text;
-            // Update last content tracker
-            lastEditorContent = note.text;
-            lastSavedContent = note.text; // フェーズ2: 差分同期用に保存
-            // If viewing a deleted note, maybe show a warning or disable editing?
-            // For now, allow viewing.
-            if (highlightLayer) {
-                updateHighlights();
-            }
-            syncHeight();
-        }
+        editor.value = note.text;
+        // If viewing a deleted note, maybe show a warning or disable editing?
+        // For now, allow viewing.
+        updateHighlights();
+        syncHeight();
         updateStarState(note.favorite);
-        if (scrollArea) {
-            scrollArea.scrollTop = 0;
-        }
+        scrollArea.scrollTop = 0;
     }
 }
 
@@ -294,45 +180,11 @@ async function saveCurrentNote() {
 
     const text = editor.value;
     try {
-        // フェーズ2: 差分を計算
-        let delta = null;
-        if (typeof diff_match_patch !== 'undefined' && lastSavedContent !== '') {
-            const dmp = new diff_match_patch();
-            const diffs = dmp.diff_main(lastSavedContent, text);
-            dmp.diff_cleanupSemantic(diffs);
-
-            // 差分をパッチ形式に変換（より効率的）
-            const patches = dmp.patch_make(lastSavedContent, diffs);
-            if (patches.length > 0) {
-                // パッチを文字列形式に変換して保存
-                delta = dmp.patch_toText(patches);
-            }
-        }
-
         await db.notes.update(currentNoteId, {
             text: text,
             updated: Date.now()
         });
-
-        // 最後に保存した内容を更新
-        lastSavedContent = text;
-
         updateNoteList();
-
-        // Firestoreに同期（非同期で実行、エラーは無視）
-        try {
-            if (window.syncManager && window.syncManager.isAuthenticated()) {
-                const note = await db.notes.get(currentNoteId);
-                if (note) {
-                    // フェーズ2: 差分を含めて同期
-                    window.syncManager.syncNoteToFirestore(currentNoteId, note, delta).catch(err => {
-                        console.warn('Sync failed (will retry later):', err);
-                    });
-                }
-            }
-        } catch (error) {
-            console.warn('Sync error:', error);
-        }
     } catch (e) {
         console.error("Save failed", e);
         showToast("Save Failed!");
@@ -341,39 +193,13 @@ async function saveCurrentNote() {
 
 async function toggleFavorite() {
     if (currentNoteId === null) return;
-    await toggleNoteFavorite(currentNoteId);
-}
-
-async function toggleNoteFavorite(noteId) {
-    if (!noteId) return;
-    const note = await db.notes.get(noteId);
-    if (!note) return;
-
+    const note = await db.notes.get(currentNoteId);
     const newFav = note.favorite ? 0 : 1;
-    await db.notes.update(noteId, { favorite: newFav, updated: Date.now() });
-
-    // 現在のメモの場合、ツールバーの星ボタンも更新
-    if (noteId === currentNoteId) {
-        updateStarState(newFav);
-    }
-
+    await db.notes.update(currentNoteId, { favorite: newFav });
+    updateStarState(newFav);
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
-
-    // Firestoreに同期（非同期で実行、エラーは無視）
-    try {
-        if (window.syncManager && window.syncManager.isAuthenticated()) {
-            const updatedNote = await db.notes.get(noteId);
-            if (updatedNote) {
-                window.syncManager.syncNoteToFirestore(noteId, updatedNote).catch(err => {
-                    console.warn('Sync failed (will retry later):', err);
-                });
-            }
-        }
-    } catch (error) {
-        console.warn('Sync error:', error);
-    }
 }
 
 async function deleteNote(id, event) {
@@ -386,20 +212,6 @@ async function deleteNote(id, event) {
         // Move to Trash
         await db.notes.update(id, { deleted: Date.now() });
         showToast('Moved to Trash');
-
-        // Firestoreに同期（非同期で実行、エラーは無視）
-        try {
-            if (window.syncManager && window.syncManager.isAuthenticated()) {
-                const updatedNote = await db.notes.get(id);
-                if (updatedNote) {
-                    window.syncManager.syncNoteToFirestore(id, updatedNote).catch(err => {
-                        console.warn('Sync failed (will retry later):', err);
-                    });
-                }
-            }
-        } catch (error) {
-            console.warn('Sync error:', error);
-        }
     } else {
         // Restore or Permanently Delete? 
         // Let's implement Restore for now if clicking delete in trash
@@ -410,17 +222,6 @@ async function deleteNote(id, event) {
         // "ゴミ箱に入れて...自動的に削除" implies temporary storage.
         // Let's assume clicking delete in trash = Permanent Delete for manual cleanup
         if (confirm('Delete permanently?')) {
-            // Firestoreからも削除
-            try {
-                if (window.syncManager && window.syncManager.isAuthenticated() && note.firestoreId) {
-                    window.syncManager.deleteNoteFromFirestore(note.firestoreId).catch(err => {
-                        console.warn('Firestore delete failed:', err);
-                    });
-                }
-            } catch (error) {
-                console.warn('Sync error:', error);
-            }
-
             await db.notes.delete(id);
             showToast('Deleted Permanently');
             if (currentNoteId === id) {
@@ -435,29 +236,13 @@ async function deleteNote(id, event) {
 
 async function restoreNote(id, event) {
     if (event) event.stopPropagation();
-    await db.notes.update(id, { deleted: null, updated: Date.now() });
+    await db.notes.update(id, { deleted: null });
     showToast('Restored from Trash');
     updateNoteList();
     playSound('click');
-
-    // Firestoreに同期（非同期で実行、エラーは無視）
-    try {
-        if (window.syncManager && window.syncManager.isAuthenticated()) {
-            const note = await db.notes.get(id);
-            if (note) {
-                window.syncManager.syncNoteToFirestore(id, note).catch(err => {
-                    console.warn('Sync failed (will retry later):', err);
-                });
-            }
-        }
-    } catch (error) {
-        console.warn('Sync error:', error);
-    }
 }
 
 function updateStarState(isFav) {
-    if (!btnStar) return;
-
     if (isFav) {
         btnStar.classList.add('favorite-active');
     } else {
@@ -471,8 +256,6 @@ function isMobile() {
 }
 
 function handleResize() {
-    if (!sidebar) return;
-
     // If resizing from mobile to desktop and sidebar is open, keep it open
     // If resizing from desktop to mobile and sidebar is open, close it to prevent layout issues
     if (!isMobile() && sidebar.classList.contains('open')) {
@@ -489,8 +272,6 @@ function handleResize() {
 
 // --- Sidebar Logic ---
 function toggleSidebar() {
-    if (!sidebar || !sidebarOverlay) return;
-
     const isOpening = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open');
     sidebarOverlay.classList.toggle('visible');
@@ -522,9 +303,7 @@ function toggleSidebar() {
 function toggleFavoritesView() {
     showFavorites = !showFavorites;
     const btn = document.getElementById('btn-toggle-favorites');
-    if (btn) {
-        btn.classList.toggle('active', showFavorites);
-    }
+    btn.classList.toggle('active', showFavorites);
     // Disable trash view when showing favorites
     if (showFavorites) {
         showTrash = false;
@@ -537,9 +316,7 @@ function toggleFavoritesView() {
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
-    if (btn) {
-        btn.classList.toggle('active', showTrash);
-    }
+    btn.classList.toggle('active', showTrash);
     // Disable favorites view when showing trash
     if (showTrash) {
         showFavorites = false;
@@ -550,8 +327,6 @@ function toggleTrashView() {
 }
 
 async function updateNoteList() {
-    if (!noteList || !db) return;
-
     let notes;
     if (showTrash) {
         // Show deleted notes (deleted is a timestamp)
@@ -597,8 +372,6 @@ async function updateNoteList() {
 
         // Action Buttons
         let actionBtns = '';
-        const favClass = note.favorite ? 'favorite-active' : '';
-        const showFavoriteToggle = !showTrash;
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
@@ -606,22 +379,18 @@ async function updateNoteList() {
             <button class="note-action-btn delete" title="Delete Permanently">×</button>
         `;
         } else {
-            // Favorite & Delete
+            // Delete (Move to Trash)
             actionBtns = `
-            <button class="note-action-btn favorite ${favClass}" title="${note.favorite ? 'Remove from Favorites' : 'Add to Favorites'}" data-note-id="${note.id}">★</button>
             <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
-        const favoriteIndicator = (!showFavoriteToggle && note.favorite)
-            ? '<span class="note-fav-icon">★</span>'
-            : '';
 
         li.innerHTML = `
         <div style="flex:1; overflow:hidden;">
             <div class="note-title">${title}</div>
             <div class="note-meta">
                 <span>${date}</span>
-                ${favoriteIndicator}
+                <span class="note-fav-icon">★</span>
             </div>
         </div>
         <div class="note-actions">
@@ -639,17 +408,6 @@ async function updateNoteList() {
         });
 
         // Button Events
-        const btnFavorite = li.querySelector('.favorite');
-        if (btnFavorite) {
-            btnFavorite.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const noteId = parseInt(btnFavorite.getAttribute('data-note-id'));
-                if (noteId) {
-                    await toggleNoteFavorite(noteId);
-                }
-            });
-        }
-
         const btnDelete = li.querySelector('.delete');
         if (btnDelete) btnDelete.addEventListener('click', (e) => deleteNote(note.id, e));
 
@@ -664,27 +422,46 @@ async function updateNoteList() {
 
 
 
+btnFloatingMenu.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleSidebar();
+});
+// btnMenu.addEventListener('click', ...); // Removed
+
+btnSidebarNew.addEventListener('click', (e) => {
+    e.preventDefault();
+    createNote();
+    // Keep sidebar open? Yes, usually.
+    // editor.focus(); // Focus editor?
+});
+
+btnNew.addEventListener('click', (e) => {
+    e.preventDefault();
+    createNote();
+    editor.focus();
+});
+btnStar.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFavorite();
+});
+
 // Favorites Toggle
-const btnToggleFavorites = document.getElementById('btn-toggle-favorites');
-if (btnToggleFavorites) {
-    btnToggleFavorites.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleFavoritesView();
-    });
-} else {
-    console.warn('btn-toggle-favorites not found; favorites toggle disabled');
-}
+document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFavoritesView();
+});
 
 // Trash Toggle
-const btnToggleTrash = document.getElementById('btn-toggle-trash');
-if (btnToggleTrash) {
-    btnToggleTrash.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleTrashView();
-    });
-} else {
-    console.warn('btn-toggle-trash not found; trash toggle disabled');
-}
+document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleTrashView();
+});
+
+btnCloseSidebar.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleSidebar();
+});
+sidebarOverlay.addEventListener('click', toggleSidebar);
 
 // --- Settings Persistence ---
 function saveSettings() {
@@ -699,23 +476,10 @@ function saveSettings() {
 
 function loadSettings() {
     const saved = localStorage.getItem('editorSettings');
-    let settings = null;
-
     if (saved) {
-        settings = JSON.parse(saved);
-    } else {
-        // 初回起動時はライトモードをデフォルトにする
-        settings = {
-            theme: 'light',
-            font: 'serif',
-            soundEnabled: false,
-            soundProfile: 'relax'
-        };
-        localStorage.setItem('editorSettings', JSON.stringify(settings));
-    }
+        const settings = JSON.parse(saved);
 
-    // Theme
-    if (iconThemeSun && iconThemeMoon) {
+        // Theme
         if (settings.theme === 'light') {
             document.body.classList.add('light-mode');
             iconThemeSun.style.display = 'none';
@@ -725,24 +489,17 @@ function loadSettings() {
             iconThemeSun.style.display = 'block';
             iconThemeMoon.style.display = 'none';
         }
-    }
 
-    // Font
-    if (btnFont) {
-        const span = btnFont.querySelector('span');
-        if (span) {
-            if (settings.font === 'gothic') {
-                document.body.classList.add('font-gothic');
-                span.style.fontFamily = 'sans-serif';
-            } else {
-                document.body.classList.remove('font-gothic');
-                span.style.fontFamily = 'serif';
-            }
+        // Font
+        if (settings.font === 'gothic') {
+            document.body.classList.add('font-gothic');
+            btnFont.querySelector('span').style.fontFamily = 'sans-serif';
+        } else {
+            document.body.classList.remove('font-gothic');
+            btnFont.querySelector('span').style.fontFamily = 'serif';
         }
-    }
 
-    // Sound
-    if (btnSound && iconSoundOn && iconSoundOff) {
+        // Sound
         if (settings.soundEnabled) {
             isSoundEnabled = true;
             currentSoundProfile = settings.soundProfile || 'relax';
@@ -761,6 +518,18 @@ function loadSettings() {
     }
 }
 
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+    loadSettings(); // Load settings first
+    initDB();
+
+    // Initialize mobile/responsive behavior
+    handleResize();
+
+    editor.focus();
+});
+
+
 // --- Helper: Prevent Default & Play Sound ---
 function handleAction(e, action) {
     // Removed global scroll check.
@@ -769,9 +538,7 @@ function handleAction(e, action) {
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
-    if (editor) {
-        editor.focus(); // Ensure focus
-    }
+    editor.focus(); // Ensure focus
 }
 
 function bindToolbarAction(button, action) {
@@ -779,7 +546,7 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-
+    
     try {
         // mousedownでフォーカス維持（デスクトップ用）
         button.addEventListener('mousedown', (e) => {
@@ -793,20 +560,14 @@ function bindToolbarAction(button, action) {
         // - スクロールの場合は click イベントは発火しない
         button.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             try {
                 action();
-                if (typeof playSound === 'function') {
-                    playSound('click');
-                }
-                if (editor) {
-                    editor.focus();
-                }
+                playSound('click');
+                editor.focus();
             } catch (error) {
-                console.error('Error in toolbar action:', error, button);
+                console.error('Error in toolbar action:', error);
             }
         });
-
     } catch (error) {
         console.error('Error binding toolbar action:', error, button);
     }
@@ -818,21 +579,9 @@ function updateHighlights() {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-
+    
     try {
         let text = editor.value;
-
-        // Early return for empty or invalid text
-        if (text === null || text === undefined) {
-            if (highlightLayer) {
-                highlightLayer.innerHTML = '';
-            }
-            return;
-        }
-
-        // Normalize line endings FIRST - before any other processing
-        // This is critical for regex patterns that use ^ and $ anchors
-        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
         // Escape HTML to prevent XSS and rendering issues
         text = text.replace(/&/g, '&amp;')
@@ -840,48 +589,26 @@ function updateHighlights() {
             .replace(/>/g, '&gt;');
 
         // Apply Markdown Styling
-        // Bold: **text** -> <span class="md-mark">**</span><span class="md-bold">text</span><span class="md-mark">**</span>
-        // Color the ** markers and underline the text inside.
-        text = text.replace(/\*\*(.*?)\*\*/g, '<span class="md-mark">**</span><span class="md-bold">$1</span><span class="md-mark">**</span>');
+        // Bold: **text** -> **<span class="md-bold">text</span>**
+        // We want to underline ONLY the text inside.
+        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
         // Heading: # text (at start of line)
-        // Support # through ###### - color the # symbols
-        text = text.replace(/^(#{1,6})\s+(.*)$/gm, (match, hashes, content) => {
-            return `<span class="md-mark">${hashes}</span> <span class="md-heading">${content}</span>`;
-        });
+        // Support # through ######
+        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
 
-        // Bullet list: - at start of line -> colored bullet
-        text = text.replace(/^(\s*)(- )/gm, '$1<span class="md-bullet">- </span>');
-
-        // Numbered list: 1. 2. etc. at start of line -> colored number
-        text = text.replace(/^(\s*)(\d+\. )/gm, '$1<span class="md-bullet">$2</span>');
-
-        // Asterisk bullet: * at start of line -> colored bullet
-        text = text.replace(/^(\s*)(\* )/gm, '$1<span class="md-bullet">* </span>');
-
-        // Quote: > at start of line -> colored quote marker
-        text = text.replace(/^(\s*)(&gt; )/gm, '$1<span class="md-bullet">&gt; </span>');
-
-        // Convert tabs to spaces to keep alignment consistent
-        text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
-
-        // Convert newlines to <br> so the display layer matches the textarea's line breaks exactly.
-        // This avoids accumulating vertical drift because each newline becomes one DOM line break.
-        text = text.replace(/\n/g, '<br>');
+        // Handle trailing newline for display
+        if (text.endsWith('\n')) {
+            text += '<br>';
+        }
 
         highlightLayer.innerHTML = text;
     } catch (error) {
         console.error('Error in updateHighlights:', error);
-        // Fallback: set empty content to prevent display issues
-        if (highlightLayer) {
-            try {
-                highlightLayer.innerHTML = '';
-            } catch (e) {
-                console.error('Error clearing highlightLayer:', e);
-            }
-        }
     }
 }
+
+editor.addEventListener('input', updateHighlights);
 
 // Sync Scroll
 // Since we are scrolling the parent #editor-scroll-area, and both children are absolute/full size,
@@ -904,78 +631,37 @@ function updateHighlights() {
 // BUT here we have a scrollable container #editor-scroll-area.
 // If we set textarea height to scrollHeight, it expands.
 
-function syncHighlightTypography() {
-    if (!editor || !highlightLayer) {
-        return;
-    }
-    try {
-        const computed = window.getComputedStyle(editor);
-        const props = [
-            'fontFamily',
-            'fontSize',
-            'fontWeight',
-            'fontStyle',
-            'fontVariant',
-            'lineHeight',
-            'letterSpacing',
-            'wordSpacing',
-            'textTransform',
-            'textIndent',
-            'textAlign',
-            'tabSize',
-            'MozTabSize'
-        ];
-        props.forEach(prop => {
-            if (computed[prop]) {
-                highlightLayer.style[prop] = computed[prop];
-            }
-        });
-    } catch (error) {
-        console.error('Error syncing highlight typography:', error);
-    }
-}
-
 function syncHeight() {
     if (!editor || !highlightLayer || !scrollArea) {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-
+    
     try {
-        syncHighlightTypography();
-        // Reset height to get correct scrollHeight
+        // Reset height to min to get correct scrollHeight
         editor.style.height = 'auto';
         highlightLayer.style.height = 'auto';
 
-        // Calculate height - ensure it's at least the scroll area height
-        const scrollAreaHeight = scrollArea.clientHeight;
-        const editorScrollHeight = editor.scrollHeight;
-        const height = Math.max(editorScrollHeight, scrollAreaHeight);
-
-        // Set heights
+        const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
-
-        // #editorと#highlight-layerは同じパディングを持っているので、
-        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
-        // 幅も同じにする
-        highlightLayer.style.width = editor.offsetWidth + 'px';
+        
+        // Ensure highlight layer matches editor width and padding exactly
+        const editorRect = editor.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(editor);
+        const editorPadding = {
+            top: parseInt(computedStyle.paddingTop) || 60,
+            left: parseInt(computedStyle.paddingLeft) || 32,
+            right: parseInt(computedStyle.paddingRight) || 32
+        };
+        
+        // Match width exactly (accounting for padding)
+        highlightLayer.style.width = editorRect.width + 'px';
+        
+        // Ensure padding matches exactly
+        highlightLayer.style.padding = `${editorPadding.top}px ${editorPadding.right}px 0 ${editorPadding.left}px`;
     } catch (error) {
         console.error('Error in syncHeight:', error);
-    }
-}
-
-// Sync position on scroll and resize
-function syncPosition() {
-    if (!editor || !highlightLayer || !scrollArea) return;
-
-    try {
-        // #editorと#highlight-layerは同じパディングを持っているので、
-        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
-        // 幅も同じにする
-        highlightLayer.style.width = editor.offsetWidth + 'px';
-    } catch (error) {
-        console.error('Error in syncPosition:', error);
     }
 }
 
@@ -983,79 +669,31 @@ function syncPosition() {
 // If we want overlay, we usually make the container scroll, and textarea + div grow.
 // Let's try the "Textarea grows, Container scrolls" approach.
 
-function handleEditorContentSync(e) {
-    if (!editor) return;
-
-    const currentContent = editor.value;
-
-    // Only update highlights if text content actually changed
-    // This prevents unnecessary updates when only selection changes
-    if (currentContent !== lastEditorContent) {
-        lastEditorContent = currentContent;
-        updateHighlights();
-    }
-
-    syncHeight();
-    syncPosition();
-}
-window.addEventListener('resize', () => {
-    handleResize();
-    syncHeight();
-    syncPosition();
-});
+editor.addEventListener('input', syncHeight);
+window.addEventListener('resize', handleResize);
 
 // Initial call for editor setup
 // Note: This is separate from main DOMContentLoaded to ensure editor elements are ready
-function initEditor() {
-    if (!editor || !highlightLayer || !scrollArea) {
-        console.warn('Editor elements not ready, retrying...');
-        setTimeout(initEditor, 100);
-        return;
-    }
-
-    // レイアウトが完了するまで待つ
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // 2回のrequestAnimationFrameで確実にレイアウトが完了する
-            updateHighlights();
-            syncHeight();
-            syncPosition();
-            editor.focus();
-        });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        updateHighlights();
+        syncHeight();
+        editor.focus();
     });
+} else {
+    // DOM already loaded
+    updateHighlights();
+    syncHeight();
+    editor.focus();
 }
 
-// 要素の初期化とエディタの初期化を順番に実行
-async function initAll() {
-    initElements();
-    attachBaseListeners();
-    bindUIControls();
-    loadSettings();
 
-    // エディタリスナーを先に設定（initDB内でloadNoteが呼ばれる前に）
-    attachEditorListeners();
-    initEditor();
-    bindToolbarActions();
-    handleResize();
-
-    // 認証を初期化（Firebaseが利用可能な場合のみ、エラーは無視）
-    try {
-        if (typeof initAuth === 'function') {
-            initAuth();
-        }
-    } catch (error) {
-        console.warn('Auth initialization failed:', error);
-    }
-
-    // DB初期化は最後に（非同期なので、エディタが準備できてから）
-    // initDB内でloadNote/createNoteが呼ばれるが、その時点でeditorとhighlightLayerは準備済み
-    await initDB();
-}
+// --- Undo/Redo ---
+bindToolbarAction(btnUndo, () => document.execCommand('undo'));
+bindToolbarAction(btnRedo, () => document.execCommand('redo'));
 
 // --- Markdown Insertion ---
 function insertMarkdown(type) {
-    if (!editor) return;
-
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const text = editor.value;
@@ -1126,11 +764,14 @@ function insertMarkdown(type) {
     syncHeight();
 }
 
-// bindToolbarAction の呼び出しは bindToolbarActions 関数内で実行
+bindToolbarAction(btnH1, () => insertMarkdown('h1'));
+bindToolbarAction(btnBold, () => insertMarkdown('bold'));
+bindToolbarAction(btnQuote, () => insertMarkdown('quote'));
+bindToolbarAction(btnList, () => insertMarkdown('list'));
+bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
 
 // --- Clipboard Operations ---
 function showToast(message) {
-    if (!toast) return;
     toast.textContent = message;
     toast.style.opacity = '1';
     setTimeout(() => {
@@ -1139,7 +780,6 @@ function showToast(message) {
 }
 
 function copyAll() {
-    if (!editor) return;
     navigator.clipboard.writeText(editor.value).then(() => {
         showToast('Copied All!');
     }).catch(err => {
@@ -1149,7 +789,6 @@ function copyAll() {
 }
 
 function pastePlain() {
-    if (!editor) return;
     navigator.clipboard.readText().then(text => {
         if (document.queryCommandSupported('insertText')) {
             document.execCommand('insertText', false, text);
@@ -1167,11 +806,13 @@ function pastePlain() {
     });
 }
 
+bindToolbarAction(btnCopy, copyAll);
+
+bindToolbarAction(btnPaste, pastePlain);
+
+
 // --- Navigation & Selection Logic ---
 function toggleSelectionMode() {
-    const btnSelectMode = document.getElementById('btn-select-mode');
-    if (!btnSelectMode || !editor) return;
-
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
         btnSelectMode.classList.add('select-mode-active');
@@ -1184,88 +825,9 @@ function toggleSelectionMode() {
     }
 }
 
-function bindUIControls() {
-    if (uiListenersAttached) {
-        return;
-    }
-    if (!btnFont || !btnFloatingMenu || !btnSidebarNew || !btnNew || !btnStar || !btnCloseSidebar || !sidebarOverlay || !btnSound || !btnBgm || !btnFullscreen || !btnTheme) {
-        console.warn('bindUIControls: UI buttons not ready, retrying...');
-        setTimeout(bindUIControls, 100);
-        return;
-    }
-
-    btnFont.addEventListener('click', handleFontButton);
-
-    btnFloatingMenu.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSidebar();
-    });
-
-    btnSidebarNew.addEventListener('click', (e) => {
-        e.preventDefault();
-        createNote();
-    });
-
-    btnNew.addEventListener('click', (e) => {
-        e.preventDefault();
-        createNote();
-        if (editor) {
-            editor.focus();
-        }
-    });
-
-    btnStar.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleFavorite();
-    });
-
-    btnCloseSidebar.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSidebar();
-    });
-    sidebarOverlay.addEventListener('click', toggleSidebar);
-
-    btnSound.addEventListener('click', handleSoundButton);
-    btnBgm.addEventListener('click', handleBgmButton);
-    btnFullscreen.addEventListener('click', handleFullscreenButton);
-    btnTheme.addEventListener('click', handleThemeButton);
-
-    uiListenersAttached = true;
-}
-
-function bindToolbarActions() {
-    if (!btnUndo || !btnRedo || !btnH1 || !btnBold || !btnCopy || !btnPaste || !btnSelectMode || !btnLeft || !btnRight || !btnUp || !btnDown) {
-        console.warn('Toolbar buttons not ready, retrying...');
-        setTimeout(bindToolbarActions, 100);
-        return;
-    }
-
-    // --- Undo/Redo ---
-    bindToolbarAction(btnUndo, () => document.execCommand('undo'));
-    bindToolbarAction(btnRedo, () => document.execCommand('redo'));
-
-    // --- Markdown Insertion ---
-    bindToolbarAction(btnH1, () => insertMarkdown('h1'));
-    bindToolbarAction(btnBold, () => insertMarkdown('bold'));
-    bindToolbarAction(btnQuote, () => insertMarkdown('quote'));
-    bindToolbarAction(btnList, () => insertMarkdown('list'));
-    bindToolbarAction(btnOrderedList, () => insertMarkdown('ordered-list'));
-
-    // --- Clipboard Operations ---
-    bindToolbarAction(btnCopy, copyAll);
-    bindToolbarAction(btnPaste, pastePlain);
-
-    // --- Navigation & Selection Logic ---
-    bindToolbarAction(btnSelectMode, toggleSelectionMode);
-    bindToolbarAction(btnLeft, () => moveCursor('left'));
-    bindToolbarAction(btnRight, () => moveCursor('right'));
-    bindToolbarAction(btnUp, () => moveCursor('up'));
-    bindToolbarAction(btnDown, () => moveCursor('down'));
-}
+bindToolbarAction(btnSelectMode, toggleSelectionMode);
 
 function moveCursor(direction) {
-    if (!editor) return;
-
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const value = editor.value;
@@ -1310,11 +872,11 @@ function moveCursor(direction) {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAll);
-} else {
-    initAll();
-}
+bindToolbarAction(btnLeft, () => moveCursor('left'));
+bindToolbarAction(btnRight, () => moveCursor('right'));
+bindToolbarAction(btnUp, () => moveCursor('up'));
+bindToolbarAction(btnDown, () => moveCursor('down'));
+
 
 // --- State ---
 // (Variables declared at top of script, removing duplicates here)
@@ -1480,8 +1042,6 @@ function playSound(type) {
 }
 
 function updateSoundIconColor() {
-    if (!btnSound) return;
-
     if (!isSoundEnabled) {
         btnSound.style.color = ''; // Reset
         return;
@@ -1503,8 +1063,6 @@ function updateSoundIconColor() {
 }
 
 function toggleSound() {
-    if (!btnSound || !iconSoundOn || !iconSoundOff) return;
-
     if (!isSoundEnabled) {
         // Turn On
         isSoundEnabled = true;
@@ -1540,421 +1098,7 @@ function toggleSound() {
 }
 
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
-
-// --- BGM Logic ---
-
-// Load BGM audio file
-async function loadBgmAudio(type) {
-    if (bgmAudioBuffers[type]) return bgmAudioBuffers[type];
-
-    if (!audioCtx) initAudio();
-
-    const fileMap = {
-        'rain': 'assets/rain_full.ogg'
-    };
-
-    const filename = fileMap[type];
-    if (!filename) {
-        console.error('Unknown BGM type:', type);
-        return null;
-    }
-
-    try {
-        // Load audio file
-        console.log(`Loading BGM file: ${filename}`);
-        const response = await fetch(filename);
-        if (!response.ok) {
-            console.error(`Failed to fetch ${filename}: ${response.status} ${response.statusText}`);
-            return null;
-        }
-        console.log(`Fetched ${filename}, size: ${response.headers.get('content-length')} bytes`);
-        const arrayBuffer = await response.arrayBuffer();
-        console.log(`Decoding audio data for ${type}...`);
-
-        // AudioBufferにデコード
-        bgmAudioBuffers[type] = await audioCtx.decodeAudioData(arrayBuffer);
-        console.log(`Successfully loaded BGM: ${type}, duration: ${bgmAudioBuffers[type].duration}s, channels: ${bgmAudioBuffers[type].numberOfChannels}`);
-        return bgmAudioBuffers[type];
-    } catch (error) {
-        console.error(`Error loading ${type} audio file (${filename}):`, error);
-        console.error('Error details:', error.message, error.stack);
-        return null;
-    }
-}
-
-// createRainSound function removed - now handled directly in startBGM
-
-// Create BGM sound from loaded audio buffer with crossfade looping
-function createBgmFromBuffer(buffer) {
-    const FADE_DURATION = 3; // 3秒のクロスフェード
-    let sources = [];
-    let isPlaying = true;
-
-    function scheduleNextSource(startTime) {
-        if (!isPlaying) return;
-
-        const source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-
-        const gainNode = audioCtx.createGain();
-        const panner = audioCtx.createStereoPanner();
-        panner.pan.value = 0;
-
-        source.connect(gainNode);
-        gainNode.connect(panner);
-        panner.connect(bgmGainNode);
-
-        // フェードイン（最初の3秒）
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(1, startTime + FADE_DURATION);
-
-        // フェードアウト（終わりの3秒前から）
-        const fadeOutStart = startTime + buffer.duration - FADE_DURATION;
-        gainNode.gain.setValueAtTime(1, fadeOutStart);
-        gainNode.gain.linearRampToValueAtTime(0, startTime + buffer.duration);
-
-        source.start(startTime);
-        source.stop(startTime + buffer.duration);
-
-        sources.push({ source, gainNode, panner });
-
-        // 次のソースをフェードアウト開始時にスケジュール
-        const nextStartTime = fadeOutStart;
-        const scheduleDelay = (fadeOutStart - audioCtx.currentTime) * 1000;
-
-        if (scheduleDelay > 0) {
-            setTimeout(() => {
-                if (isPlaying) {
-                    scheduleNextSource(nextStartTime);
-                }
-            }, scheduleDelay);
-        }
-
-        // クリーンアップ
-        source.onended = () => {
-            try {
-                source.disconnect();
-                gainNode.disconnect();
-                panner.disconnect();
-            } catch (e) {
-                // Already disconnected
-            }
-            // 配列から削除
-            sources = sources.filter(s => s.source !== source);
-        };
-    }
-
-    // 最初のソースを即座に開始
-    scheduleNextSource(audioCtx.currentTime);
-
-    return {
-        source: sources[0]?.source,
-        panner: sources[0]?.panner,
-        stop: () => {
-            isPlaying = false;
-            sources.forEach(({ source, gainNode, panner }) => {
-                try {
-                    source.stop();
-                    source.disconnect();
-                    gainNode.disconnect();
-                    panner.disconnect();
-                } catch (e) {
-                    // Already stopped
-                }
-            });
-            sources = [];
-        }
-    };
-}
-
-// Create procedurally generated rain sound with improved stereo
-function createRainProcedural() {
-    const bufferSize = 4096;
-
-    try {
-        // Create stereo ScriptProcessorNode
-        const processor = audioCtx.createScriptProcessor(bufferSize, 0, 2);
-
-        // Multiple layers for natural sound
-        let phase1 = Math.random() * Math.PI * 2;
-        let phase2 = Math.random() * Math.PI * 2;
-        let phase3 = Math.random() * Math.PI * 2;
-        let burstTimer = 0;
-
-        processor.onaudioprocess = (e) => {
-            const leftOutput = e.outputBuffer.getChannelData(0);
-            const rightOutput = e.outputBuffer.getChannelData(1);
-
-            for (let i = 0; i < bufferSize; i++) {
-                // Layer 1: Basic white noise (slightly different for L/R)
-                const noise1L = (Math.random() * 2 - 1) * 0.25;
-                const noise1R = (Math.random() * 2 - 1) * 0.25;
-
-                // Layer 2: Low-frequency modulation (rain drops)
-                phase1 += 0.008 + Math.random() * 0.004;
-                const mod1 = Math.sin(phase1) * 0.15;
-                const noise2L = (Math.random() * 2 - 1) * 0.2 * (1 + mod1);
-                const noise2R = (Math.random() * 2 - 1) * 0.2 * (1 + mod1 * 0.9);
-
-                // Layer 3: High-frequency component (fine rain)
-                phase2 += 0.03 + Math.random() * 0.02;
-                const mod2 = Math.sin(phase2) * 0.08;
-                const noise3L = (Math.random() * 2 - 1) * 0.15 * (1 + mod2);
-                const noise3R = (Math.random() * 2 - 1) * 0.15 * (1 + mod2 * 1.1);
-
-                // Layer 4: Random bursts (bigger drops)
-                burstTimer += Math.random() * 0.5;
-                let burst = 0;
-                if (burstTimer > 50 + Math.random() * 100) {
-                    burst = (Math.random() - 0.5) * 0.25;
-                    burstTimer = 0;
-                }
-
-                // Combine layers with slight stereo difference
-                leftOutput[i] = noise1L + noise2L + noise3L + burst;
-                rightOutput[i] = noise1R + noise2R + noise3R + burst * 0.8;
-            }
-        };
-
-        // Add subtle reverb using delay
-        const delay = audioCtx.createDelay();
-        delay.delayTime.value = 0.02;
-        const delayGain = audioCtx.createGain();
-        delayGain.gain.value = 0.15;
-
-        // Stereo panner for spatial effect
-        const pannerL = audioCtx.createStereoPanner();
-        const pannerR = audioCtx.createStereoPanner();
-        pannerL.pan.value = -0.2;
-        pannerR.pan.value = 0.2;
-
-        // Volume control
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.25;
-
-        // Connect: processor -> delay -> panners -> gain
-        processor.connect(delay);
-        delay.connect(delayGain);
-        delayGain.connect(pannerR);
-
-        // Merge channels
-        const merger = audioCtx.createChannelMerger(2);
-        processor.connect(pannerL);
-        processor.connect(pannerR);
-        pannerL.connect(merger, 0, 0);
-        pannerR.connect(merger, 0, 1);
-        delayGain.connect(merger, 0, 1);
-
-        merger.connect(gain);
-
-        return { processor, gain, merger };
-
-    } catch (error) {
-        console.warn('ScriptProcessorNode not available, using simple fallback');
-        // Fallback: simple filtered noise
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-
-        osc.type = 'sawtooth';
-        osc.frequency.value = 100;
-        filter.type = 'lowpass';
-        filter.frequency.value = 500;
-        filter.Q.value = 1;
-        gain.gain.value = 0.1;
-
-        osc.connect(filter);
-        filter.connect(gain);
-        return { source: osc, gain };
-    }
-}
-
-async function startBGM(type = null) {
-    if (!audioCtx) initAudio();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    // If type is provided, switch to that type
-    if (type !== null && type !== undefined) {
-        currentBgmType = type;
-    }
-
-    // If current type is null (stopped), don't start
-    if (currentBgmType === null || currentBgmType === undefined) {
-        console.warn('startBGM: currentBgmType is null, cannot start');
-        return;
-    }
-
-    // Save current type before stopping (stopBGM sets it to null)
-    const bgmTypeToStart = currentBgmType;
-
-    // Stop current BGM if playing (but don't reset currentBgmType)
-    if (bgmNode) {
-        // Temporarily save the type
-        const savedType = currentBgmType;
-        stopBGM();
-        // Restore the type after stopping
-        currentBgmType = savedType;
-    }
-
-    // Try to load audio file
-    console.log(`Starting BGM with type: ${bgmTypeToStart}`);
-    const audioBuffer = await loadBgmAudio(bgmTypeToStart);
-
-    // Use audio file if available, otherwise use procedural sound
-    if (audioBuffer) {
-        console.log(`Using audio buffer for BGM: ${currentBgmType}`);
-        bgmGainNode = audioCtx.createGain();
-        bgmGainNode.gain.value = 0.5; // Volume for background
-        bgmGainNode.connect(audioCtx.destination);
-
-        const bgmSound = createBgmFromBuffer(audioBuffer);
-        bgmNode = bgmSound; // Store the wrapper object
-        currentBgmSource = bgmSound.source;
-        bgmEnabled = true;
-    } else {
-        // Fallback to procedural sound
-        console.warn(`Audio buffer not available for ${currentBgmType}, using procedural sound`);
-        bgmGainNode = audioCtx.createGain();
-        bgmGainNode.gain.value = 0.25;
-
-        const rainSound = createRainProcedural();
-        if (rainSound) {
-            if (rainSound.processor) {
-                bgmNode = rainSound.processor;
-                rainSound.gain.connect(bgmGainNode);
-            } else {
-                bgmNode = rainSound;
-                bgmNode.connect(bgmGainNode);
-            }
-            bgmGainNode.connect(audioCtx.destination);
-            bgmEnabled = true;
-        }
-    }
-
-    // Update UI
-    if (bgmEnabled) {
-        if (btnBgm) {
-            btnBgm.classList.add('active');
-        }
-        if (iconBgmOn && iconBgmOff) {
-            iconBgmOn.style.display = 'block';
-            iconBgmOff.style.display = 'none';
-        }
-    }
-}
-
-function stopBGM() {
-    bgmEnabled = false;
-
-    // Use wrapper's stop method if available (for seamless looping)
-    if (bgmNode && typeof bgmNode.stop === 'function') {
-        try {
-            bgmNode.stop();
-        } catch (e) {
-            console.warn('Error stopping BGM wrapper:', e);
-        }
-    } else if (bgmNode) {
-        // Fallback for procedural sound or old sources
-        try {
-            if (bgmNode.stop) {
-                bgmNode.stop();
-            }
-            if (bgmNode.disconnect) {
-                bgmNode.disconnect();
-            }
-            if (bgmNode.onaudioprocess) {
-                bgmNode.onaudioprocess = null;
-            }
-        } catch (e) {
-            console.warn('Error stopping BGM node:', e);
-        }
-    }
-
-    bgmNode = null;
-    currentBgmSource = null;
-
-    if (bgmGainNode) {
-        try {
-            bgmGainNode.disconnect();
-        } catch (e) {
-            console.warn('Error disconnecting BGM gain node:', e);
-        }
-        bgmGainNode = null;
-    }
-
-    // Set to null to mark as stopped
-    currentBgmType = null;
-
-    // Update UI
-    if (btnBgm) {
-        btnBgm.classList.remove('active');
-    }
-    if (iconBgmOn && iconBgmOff) {
-        iconBgmOn.style.display = 'none';
-        iconBgmOff.style.display = 'block';
-    }
-}
-
-function toggleBGM() {
-    console.log(`toggleBGM called: bgmEnabled=${bgmEnabled}, currentBgmType=${currentBgmType}`);
-
-    if (bgmEnabled) {
-        // Cycle to next BGM type (including stop)
-        // Use current type or default to rain if somehow null
-        const currentType = currentBgmType || 'rain';
-        let currentIndex = bgmTypes.indexOf(currentType);
-
-        // If current type not found in array, default to first
-        if (currentIndex === -1) {
-            currentIndex = 0;
-        }
-
-        const nextIndex = (currentIndex + 1) % bgmTypes.length;
-        const nextType = bgmTypes[nextIndex];
-
-        console.log(`Cycling: currentType=${currentType}, currentIndex=${currentIndex}, nextType=${nextType}`);
-
-        if (nextType === null) {
-            // Stop BGM
-            stopBGM();
-            showToast('BGM: Off');
-        } else {
-            // Show toast with BGM type name
-            const typeNames = {
-                'rain': 'Rain'
-            };
-            showToast(`BGM: ${typeNames[nextType]}`);
-
-            // Switch to next BGM
-            startBGM(nextType);
-        }
-    } else {
-        // Start BGM with current type (or rain if stopped)
-        if (currentBgmType === null || currentBgmType === undefined) {
-            currentBgmType = 'rain';
-        }
-
-        // Show toast with BGM type name
-        const typeNames = {
-            'forest': 'Forest',
-            'rain': 'Rain',
-            'wind': 'Wind'
-        };
-        showToast(`BGM: ${typeNames[currentBgmType]}`);
-
-        console.log(`Starting BGM with type: ${currentBgmType}`);
-        startBGM();
-    }
-}
-
-const handleBgmButton = (e) => {
-    e.preventDefault();
-    console.log('BGM button clicked');
-    toggleBGM();
-    if (editor) {
-        editor.focus();
-    }
-};
+btnSound.addEventListener('click', handleSoundButton);
 
 
 // --- Fullscreen Logic ---
@@ -1977,24 +1121,22 @@ function toggleFullscreen() {
 const handleFullscreenButton = (e) => {
     e.preventDefault();
     toggleFullscreen();
-    if (editor) {
-        editor.focus();
-    }
+    editor.focus();
 };
+btnFullscreen.addEventListener('click', handleFullscreenButton);
+// attachTouchAction removed
 
 // --- Theme Logic ---
 function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
 
-    if (iconThemeSun && iconThemeMoon) {
-        if (isLight) {
-            iconThemeSun.style.display = 'none';
-            iconThemeMoon.style.display = 'block';
-        } else {
-            iconThemeSun.style.display = 'block';
-            iconThemeMoon.style.display = 'none';
-        }
+    if (isLight) {
+        iconThemeSun.style.display = 'none';
+        iconThemeMoon.style.display = 'block';
+    } else {
+        iconThemeSun.style.display = 'block';
+        iconThemeMoon.style.display = 'none';
     }
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
@@ -2004,10 +1146,10 @@ function toggleTheme() {
 const handleThemeButton = (e) => {
     e.preventDefault();
     toggleTheme();
-    if (editor) {
-        editor.focus();
-    }
+    editor.focus();
 };
+btnTheme.addEventListener('click', handleThemeButton);
+// attachTouchAction removed
 
 
 // --- Typing Event & List Continuation ---
@@ -2015,132 +1157,25 @@ const handleThemeButton = (e) => {
 let saveTimeout;
 
 // Handle IME input for sound AND Auto-save
-function handleEditorAutoSaveInput(e) {
-    // Auto-save (Debounced) - フェーズ1: 50msに短縮して即時保存を実現
+editor.addEventListener('input', (e) => {
+    // Auto-save (Debounced)
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveCurrentNote, 50);
+    saveTimeout = setTimeout(saveCurrentNote, 500);
 
-    // Update UI - only if text actually changed
-    // handleEditorContentSync already handles this, so we don't need to call updateHighlights here
-    // updateHighlights(); // Removed - already called by handleEditorContentSync
+    // Update UI
+    updateHighlights();
     syncHeight();
 
     // Sound for IME
     if (e.inputType === 'insertCompositionText' || e.isComposing) {
         playSound('click');
     }
-}
+});
 
-function handleEditorKeydown(e) {
-    if (!editor) return;
-
+editor.addEventListener('keydown', (e) => {
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active
-    }
-
-    // Keyboard Shortcuts
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-    const ctrlOnly = e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
-
-    // Emacs-style kill ring: Ctrl+K (kill to end of line) and Ctrl+Y (yank)
-    if (ctrlOnly && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        const value = editor.value;
-
-        // Find end of current line
-        const lineEnd = value.indexOf('\n', start);
-        const killEnd = lineEnd === -1 ? value.length : lineEnd;
-
-        // Get text from cursor to end of line
-        const killedText = value.substring(start, killEnd);
-
-        // If there's a newline, include it
-        const textToKill = killEnd < value.length && value[killEnd] === '\n'
-            ? killedText + '\n'
-            : killedText;
-
-        if (textToKill.length > 0) {
-            killRing = textToKill;
-            // Delete the text
-            editor.setRangeText('', start, killEnd < value.length && value[killEnd] === '\n' ? killEnd + 1 : killEnd, 'end');
-            updateHighlights();
-            syncHeight();
-        }
-        return;
-    }
-
-    if (ctrlOnly && e.key.toLowerCase() === 'y') {
-        // Ctrl+Y for yank (paste from kill ring) on Mac
-        // On Windows/Linux, Ctrl+Y is redo
-        if (isMac) {
-            e.preventDefault();
-            if (killRing) {
-                const start = editor.selectionStart;
-                if (document.queryCommandSupported('insertText')) {
-                    document.execCommand('insertText', false, killRing);
-                } else {
-                    editor.setRangeText(killRing, start, start, 'end');
-                }
-                updateHighlights();
-                syncHeight();
-            }
-            return;
-        } else {
-            // Windows/Linux: Ctrl+Y is redo
-            e.preventDefault();
-            document.execCommand('redo');
-            updateHighlights();
-            syncHeight();
-            return;
-        }
-    }
-
-    if (cmdOrCtrl && !e.altKey && !e.shiftKey) {
-        switch (e.key.toLowerCase()) {
-            case 'z':
-                e.preventDefault();
-                document.execCommand('undo');
-                updateHighlights();
-                syncHeight();
-                return;
-            case 'c':
-                e.preventDefault();
-                copyAll();
-                return;
-            case 'v':
-                e.preventDefault();
-                pastePlain();
-                return;
-            case 'x':
-                e.preventDefault();
-                if (document.queryCommandSupported('cut')) {
-                    document.execCommand('cut');
-                    updateHighlights();
-                    syncHeight();
-                }
-                return;
-            case 'a':
-                e.preventDefault();
-                editor.select();
-                return;
-            case 'b':
-                e.preventDefault();
-                insertMarkdown('bold');
-                return;
-        }
-    }
-
-    // Cmd+Shift+Z or Ctrl+Shift+Z for redo (Mac and Windows/Linux)
-    if (cmdOrCtrl && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        document.execCommand('redo');
-        updateHighlights();
-        syncHeight();
-        return;
     }
 
     // List Continuation Logic
@@ -2201,187 +1236,4 @@ function handleEditorKeydown(e) {
         // Normal keys (English input)
         playSound('click');
     }
-}
-
-function attachEditorListeners() {
-    if (editorListenersAttached) {
-        return;
-    }
-    if (!editor) {
-        console.warn('attachEditorListeners: editor not ready, retrying...');
-        setTimeout(attachEditorListeners, 100);
-        return;
-    }
-    editor.addEventListener('input', handleEditorContentSync);
-    editor.addEventListener('input', handleEditorAutoSaveInput);
-    editor.addEventListener('keydown', handleEditorKeydown);
-    editorListenersAttached = true;
-}
-
-// --- Firebase Authentication ---
-function initAuth() {
-    // Firebaseが利用可能かチェック
-    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
-        console.warn('Firebase Auth not available');
-        return;
-    }
-
-    try {
-        // 認証状態の変更を監視
-        window.firebaseAuth.onAuthStateChanged(async (user) => {
-            try {
-                if (user) {
-                    // ログイン済み
-                    updateAuthUI(user);
-
-                    // 同期状態のリスナーを設定
-                    if (window.syncManager) {
-                        window.syncManager.onSyncStatusChange(updateSyncStatusUI);
-
-                        // Firestoreリスナーを設定
-                        window.syncManager.setupFirestoreListener();
-
-                        // 初回同期
-                        await window.syncManager.syncFromFirestore();
-                    }
-                } else {
-                    // ログアウト済み
-                    updateAuthUI(null);
-
-                    // 同期を停止
-                    if (window.syncManager) {
-                        window.syncManager.stopSync();
-                    }
-                }
-            } catch (error) {
-                console.error('Auth state change error:', error);
-            }
-        });
-
-        // ログインボタンのイベントリスナー
-        const btnLoginGoogle = document.getElementById('btn-login-google');
-        if (btnLoginGoogle) {
-            btnLoginGoogle.addEventListener('click', handleGoogleLogin);
-        }
-
-        // ログアウトボタンのイベントリスナー
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', handleLogout);
-        }
-    } catch (error) {
-        console.error('Auth initialization error:', error);
-    }
-}
-
-async function handleGoogleLogin() {
-    // Firebaseが利用可能かチェック
-    if (typeof firebase === 'undefined' || !window.firebaseAuth) {
-        showToast('Firebaseが設定されていません');
-        return;
-    }
-
-    try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        showToast('ログイン中...');
-        await window.firebaseAuth.signInWithPopup(provider);
-        showToast('ログインしました');
-        playSound('click');
-    } catch (error) {
-        console.error('Login error:', error);
-        showToast('ログインに失敗しました: ' + error.message);
-    }
-}
-
-async function handleLogout() {
-    if (!window.firebaseAuth) return;
-
-    try {
-        // 同期を停止
-        if (window.syncManager) {
-            window.syncManager.stopSync();
-        }
-
-        await window.firebaseAuth.signOut();
-        showToast('ログアウトしました');
-        playSound('click');
-    } catch (error) {
-        console.error('Logout error:', error);
-        showToast('ログアウトに失敗しました');
-    }
-}
-
-function updateAuthUI(user) {
-    const authStatus = document.getElementById('auth-status');
-    const authLogin = document.getElementById('auth-login');
-
-    if (!authStatus || !authLogin) return;
-
-    try {
-        if (user) {
-            // ログイン済みUIを表示
-            authLogin.style.display = 'none';
-            authStatus.style.display = 'block';
-
-            // ユーザー情報を表示
-            const userName = document.getElementById('user-name');
-            const userEmail = document.getElementById('user-email');
-            const userAvatar = document.getElementById('user-avatar');
-
-            if (userName) userName.textContent = user.displayName || 'ユーザー';
-            if (userEmail) userEmail.textContent = user.email || '';
-            if (userAvatar) {
-                if (user.photoURL) {
-                    userAvatar.style.backgroundImage = `url(${user.photoURL})`;
-                    userAvatar.style.backgroundSize = 'cover';
-                    userAvatar.textContent = '';
-                } else {
-                    userAvatar.style.backgroundImage = '';
-                    userAvatar.textContent = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
-                }
-            }
-        } else {
-            // ログインUIを表示
-            authStatus.style.display = 'none';
-            authLogin.style.display = 'block';
-        }
-    } catch (error) {
-        console.error('Update auth UI error:', error);
-    }
-}
-
-function updateSyncStatusUI(status, message) {
-    const syncIndicator = document.getElementById('sync-indicator');
-    const syncText = document.getElementById('sync-text');
-
-    if (!syncIndicator || !syncText) return;
-
-    try {
-        syncText.textContent = message || '';
-
-        // ステータスに応じてインジケーターの色を変更
-        switch (status) {
-            case 'syncing':
-                syncIndicator.style.color = '#4a90e2'; // Blue
-                syncIndicator.textContent = '●';
-                break;
-            case 'synced':
-                syncIndicator.style.color = '#34c759'; // Green
-                syncIndicator.textContent = '●';
-                break;
-            case 'error':
-                syncIndicator.style.color = '#ff3b30'; // Red
-                syncIndicator.textContent = '●';
-                break;
-            case 'disconnected':
-                syncIndicator.style.color = '#888'; // Gray
-                syncIndicator.textContent = '○';
-                break;
-            default:
-                syncIndicator.style.color = '#888';
-                syncIndicator.textContent = '○';
-        }
-    } catch (error) {
-        console.error('Update sync status UI error:', error);
-    }
-}
+});
