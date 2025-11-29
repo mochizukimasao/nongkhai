@@ -1,13 +1,13 @@
 :root {
     /* OmmWriter-inspired palette (Dark Mode Default) */
-    --bg-color: #1a1a1a;
-    /* Deep dark grey */
+    --bg-color: #121212;
+    /* Deeper dark grey */
     --text-color: #d0d0d0;
     /* Soft grey text */
     --highlight-color: #d0d0d0;
     /* Same as text for highlight layer */
     --caret-color: #fff;
-    --toolbar-bg: rgba(26, 26, 26, 0.9);
+    --toolbar-bg: rgba(18, 18, 18, 0.9);
     --toolbar-border: transparent;
     --button-bg: transparent;
     --button-hover: rgba(255, 255, 255, 0.1);
@@ -19,8 +19,8 @@
 
     /* Typography */
     --font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif;
-    --font-size: 18px;
-    --line-height: 1.8;
+    --font-size: 17px;
+    --line-height: 2.0;
 }
 
 /* Light Mode Override - Softer Grey */
@@ -51,8 +51,8 @@ html {
     height: 100%;
     width: 100%;
     font-family: var(--font-family);
-    background: linear-gradient(to bottom, #2a2a2a 0%, #000000 100%);
-    /* Dark mode: slightly darker gradient */
+    background: linear-gradient(to bottom, #1a1a1a 0%, #000000 100%);
+    /* Dark mode: darker gradient */
     color: var(--text-color);
     overflow: hidden;
     transition: background 0.5s ease, color 0.5s ease;
@@ -74,7 +74,7 @@ html {
     width: 100%;
     height: 100vh;
     /* 画面全体の高さを確保して画像の下の部分も表示 */
-    background-image: url('../assets/bg-trees-backup.png');
+    background-image: url('../assets/bg-mekong.webp');
     background-repeat: no-repeat;
     background-position: center bottom;
     background-size: cover;
@@ -82,23 +82,26 @@ html {
     /* Behind everything */
     pointer-events: none;
     /* フィルターとマスクを削除してくっきり表示しつつ、暗くする */
+    /* 画面下部をより暗くして文字を見やすくする */
     opacity: 1;
-    filter: brightness(0.5);
+    filter: brightness(0.4);
     mask-image: linear-gradient(to top,
-            black 0%,
-            black 20%,
-            rgba(0, 0, 0, 0.9) 30%,
-            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.6) 10%,
+            rgba(0, 0, 0, 0.7) 20%,
+            rgba(0, 0, 0, 0.75) 30%,
+            rgba(0, 0, 0, 0.65) 40%,
             rgba(0, 0, 0, 0.5) 50%,
             rgba(0, 0, 0, 0.3) 60%,
             rgba(0, 0, 0, 0.15) 70%,
             rgba(0, 0, 0, 0.05) 80%,
             transparent 90%);
     -webkit-mask-image: linear-gradient(to top,
-            black 0%,
-            black 20%,
-            rgba(0, 0, 0, 0.9) 30%,
-            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.6) 10%,
+            rgba(0, 0, 0, 0.7) 20%,
+            rgba(0, 0, 0, 0.75) 30%,
+            rgba(0, 0, 0, 0.65) 40%,
             rgba(0, 0, 0, 0.5) 50%,
             rgba(0, 0, 0, 0.3) 60%,
             rgba(0, 0, 0, 0.15) 70%,
@@ -112,6 +115,9 @@ body.light-mode #bg-image {
     /* ライトモードでは色をしっかり見せる */
     filter: none;
     /* ダークモードのgrayscaleをリセット - 元の美しいパステルカラーを表示 */
+    /* ライトモードではマスクを外してくっきり表示 */
+    mask-image: none;
+    -webkit-mask-image: none;
 }
 
 /* Sidebar (Drawer) */
@@ -121,7 +127,7 @@ body.light-mode #bg-image {
     left: 0;
     width: 300px;
     height: 100%;
-    background-color: #252525;
+    background-color: #1e1e1e;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
@@ -673,6 +679,17 @@ body.light-mode .md-bullet {
 }
 
 body.light-mode .md-mark {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
+}
+
+.md-quote {
+    font-weight: normal;
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode - same color as bold */
+}
+
+body.light-mode .md-quote {
     color: #dc3545;
     /* Red matching browser spellcheck underline color for light mode */
 }

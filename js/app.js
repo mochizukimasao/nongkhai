@@ -39,6 +39,8 @@ const btnSound = document.getElementById('btn-sound');
 const iconSoundOn = document.getElementById('icon-sound-on');
 const iconSoundOff = document.getElementById('icon-sound-off');
 const btnFullscreen = document.getElementById('btn-fullscreen');
+const btnBgImage = document.getElementById('btn-bg-image');
+const bgImage = document.getElementById('bg-image');
 
 // --- Sidebar Elements ---
 const sidebar = document.getElementById('sidebar');
@@ -75,6 +77,7 @@ function toggleFont() {
     }
     playSound('click');
     saveSettings();
+    syncHeight();
 }
 
 const handleFontButton = (e) => {
@@ -94,6 +97,13 @@ const soundProfiles = ['cute', 'relax', 'bubble'];
 let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
+
+// Background image state
+const bgImages = [
+    { name: 'mekong', path: '../assets/bg-mekong.webp' },
+    { name: 'trees', path: '../assets/bg-trees.webp' }
+];
+let currentBgImageIndex = 0;
 
 // --- Touch/Scroll Detection for Toolbar ---
 // Global scroll detection removed to improve responsiveness.
@@ -116,6 +126,11 @@ async function initDB() {
             note.deleted = null;
         });
     });
+    db.version(3).stores({
+        notes: '++id, text, created, updated, favorite, deleted',
+        noteHistory: '++id, noteId, timestamp, title, text'
+    });
+    window.db = db;
 
     // Cleanup old trash
     await cleanupTrash();
@@ -146,6 +161,17 @@ async function cleanupTrash() {
         .delete();
 }
 
+function getNoteTitle(text = '') {
+    return (text || '').split('\n')[0].trim() || 'Untitled';
+}
+
+function escapeForHTML(text = '') {
+    return (text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 // --- Note Logic ---
 async function createNote() {
     const id = await db.notes.add({
@@ -165,6 +191,7 @@ async function loadNote(id) {
     const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
+        window.currentNoteId = currentNoteId;
         editor.value = note.text;
         // If viewing a deleted note, maybe show a warning or disable editing?
         // For now, allow viewing.
@@ -180,11 +207,24 @@ async function saveCurrentNote() {
 
     const text = editor.value;
     try {
-        await db.notes.update(currentNoteId, {
-            text: text,
-            updated: Date.now()
-        });
-        updateNoteList();
+        const currentNote = await db.notes.get(currentNoteId);
+        if (!currentNote) return;
+
+        if (currentNote.text !== text) {
+            // 保存前の状態を履歴として保存
+            await db.noteHistory.add({
+                noteId: currentNoteId,
+                timestamp: Date.now(),
+                text: currentNote.text || '',
+                title: getNoteTitle(currentNote.text)
+            });
+
+            await db.notes.update(currentNoteId, {
+                text: text,
+                updated: Date.now()
+            });
+            updateNoteList();
+        }
     } catch (e) {
         console.error("Save failed", e);
         showToast("Save Failed!");
@@ -227,6 +267,7 @@ async function deleteNote(id, event) {
             if (currentNoteId === id) {
                 editor.value = '';
                 currentNoteId = null;
+                window.currentNoteId = currentNoteId;
             }
         }
     }
@@ -240,6 +281,51 @@ async function restoreNote(id, event) {
     showToast('Restored from Trash');
     updateNoteList();
     playSound('click');
+}
+
+async function getNoteHistory(noteId) {
+    if (!noteId) return [];
+    try {
+        const history = await db.noteHistory.where('noteId').equals(noteId).sortBy('timestamp');
+        return history.reverse(); // 新しい順
+    } catch (error) {
+        console.error('Get note history failed', error);
+        return [];
+    }
+}
+
+async function restoreNoteFromHistory(noteId, historyId) {
+    if (!noteId || !historyId) return;
+
+    try {
+        const note = await db.notes.get(noteId);
+        const historyEntry = await db.noteHistory.get(historyId);
+
+        if (!note || !historyEntry || historyEntry.noteId !== noteId) return;
+
+        // 復元前の状態を履歴に保存
+        await db.noteHistory.add({
+            noteId,
+            timestamp: Date.now(),
+            text: note.text || '',
+            title: getNoteTitle(note.text)
+        });
+
+        await db.notes.update(noteId, {
+            text: historyEntry.text || '',
+            updated: Date.now()
+        });
+
+        await loadNote(noteId);
+        updateNoteList();
+        showToast('履歴から復元しました');
+
+        // 復元後のリストを最新に更新
+        await renderHistoryList(noteId);
+    } catch (error) {
+        console.error('Restore note from history failed', error);
+        showToast('履歴の復元に失敗しました');
+    }
 }
 
 function updateStarState(isFav) {
@@ -326,6 +412,86 @@ function toggleTrashView() {
     updateNoteList();
 }
 
+async function renderHistoryList(noteId) {
+    const historyList = document.getElementById('history-list');
+    if (!historyList) return;
+
+    historyList.innerHTML = '';
+    const historyItems = await getNoteHistory(noteId);
+
+    if (historyItems.length === 0) {
+        historyList.innerHTML = '<div style="padding:12px; color:#888;">履歴がありません</div>';
+        return;
+    }
+
+    historyItems.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.style.padding = '10px 8px';
+        item.style.borderBottom = '1px solid #333';
+        item.style.cursor = 'pointer';
+
+        const timestamp = new Date(entry.timestamp).toLocaleString();
+        const title = escapeForHTML(entry.title || '');
+        const previewSource = entry.text || '';
+        const preview = escapeForHTML(previewSource.replace(/\s+/g, ' ').slice(0, 50));
+        const overflow = previewSource.length > 50 ? '...' : '';
+
+        item.innerHTML = `
+            <div style="font-size:12px; color:#888;">${timestamp}</div>
+            <div style="font-weight:bold; margin:2px 0;">${title}</div>
+            <div style="font-size:12px; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${preview}${overflow}</div>
+        `;
+
+        item.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await restoreNoteFromHistory(noteId, entry.id);
+        });
+
+        historyList.appendChild(item);
+    });
+}
+
+async function showNoteHistory(noteId) {
+    const modal = document.getElementById('history-modal');
+    const titleEl = document.getElementById('history-modal-title');
+    if (!modal || !titleEl) return;
+
+    const note = await db.notes.get(noteId);
+    titleEl.textContent = note ? `${getNoteTitle(note.text)}` : '';
+    modal.dataset.noteId = noteId;
+    modal.style.display = 'flex';
+
+    await renderHistoryList(noteId);
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('history-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.dataset.noteId = '';
+}
+
+function initHistoryModalEvents() {
+    const modal = document.getElementById('history-modal');
+    const closeBtn = document.getElementById('btn-close-history');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeHistoryModal();
+        });
+    }
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeHistoryModal();
+            }
+        });
+    }
+}
+
 async function updateNoteList() {
     let notes;
     if (showTrash) {
@@ -367,7 +533,7 @@ async function updateNoteList() {
         if (note.id === currentNoteId) li.classList.add('active');
         if (note.favorite) li.classList.add('favorite');
 
-        const title = note.text.split('\n')[0].trim() || 'Untitled';
+        const title = getNoteTitle(note.text);
         const date = new Date(showTrash ? note.deleted : note.updated).toLocaleString();
 
         // Action Buttons
@@ -375,12 +541,14 @@ async function updateNoteList() {
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
+            <button class="note-action-btn history" title="履歴">🕘</button>
             <button class="note-action-btn restore" title="Restore">↩</button>
             <button class="note-action-btn delete" title="Delete Permanently">×</button>
         `;
         } else {
             // Delete (Move to Trash)
             actionBtns = `
+            <button class="note-action-btn history" title="履歴">🕘</button>
             <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
@@ -413,6 +581,12 @@ async function updateNoteList() {
 
         const btnRestore = li.querySelector('.restore');
         if (btnRestore) btnRestore.addEventListener('click', (e) => restoreNote(note.id, e));
+
+        const btnHistory = li.querySelector('.history');
+        if (btnHistory) btnHistory.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showNoteHistory(note.id);
+        });
 
         noteList.appendChild(li);
     });
@@ -469,7 +643,8 @@ function saveSettings() {
         theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
         font: document.body.classList.contains('font-gothic') ? 'gothic' : 'serif',
         soundEnabled: isSoundEnabled,
-        soundProfile: currentSoundProfile
+        soundProfile: currentSoundProfile,
+        bgImageIndex: currentBgImageIndex
     };
     localStorage.setItem('editorSettings', JSON.stringify(settings));
 }
@@ -515,13 +690,26 @@ function loadSettings() {
             iconSoundOff.style.display = 'block';
             btnSound.style.color = '';
         }
+
+        // Background Image
+        if (settings.bgImageIndex !== undefined && bgImage) {
+            currentBgImageIndex = settings.bgImageIndex;
+            bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+        }
     }
 }
 
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
     loadSettings(); // Load settings first
+    
+    // Initialize background image (if not loaded from settings)
+    if (bgImage && bgImages.length > 0 && !bgImage.style.backgroundImage) {
+        bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+    }
+    
     initDB();
+    initHistoryModalEvents();
 
     // Firebase Auth / Firestore 同期の初期化
     if (typeof initAuth === 'function') {
@@ -557,7 +745,7 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-    
+
     try {
         // mousedownでフォーカス維持（デスクトップ用）
         button.addEventListener('mousedown', (e) => {
@@ -590,33 +778,89 @@ function updateHighlights() {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-    
+
     try {
         let text = editor.value;
 
         // Escape HTML to prevent XSS and rendering issues
+        // Do this first, but we'll handle quotes specially
         text = text.replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
         // Apply Markdown Styling
+        // Process in order: Quote -> Heading -> Bullet -> Bold -> Symbols
+        
+        // Quote: > at start of line (after escaping, so we match &gt;)
+        // > symbol gets colored, text part is not styled
+        text = text.replace(/^(&gt;)\s+(.*)$/gm, '<span class="md-mark">&gt;</span> $2');
+
+        // Heading: # text (at start of line)
+        // Support # through ######
+        // # symbol gets colored, only the text part gets underlined
+        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
+
+        // Bullet list: - or * at start of line
+        text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
+
         // Bold: **text** -> **<span class="md-bold">text</span>**
         // We want to underline ONLY the text inside.
         text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
+        // Markdown symbols (#, **) - color the symbols themselves
+        // Only process standalone symbols that weren't already processed
+        text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
+        text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
+
         // Heading: # text (at start of line)
         // Support # through ######
-        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-heading">$1 $2</span>');
+        // # symbol gets colored, only the text part gets underlined
+        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
 
-        // Handle trailing newline for display
-        if (text.endsWith('\n')) {
-            text += '<br>';
-        }
+        // Bullet list: - or * at start of line
+        text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
 
-        highlightLayer.innerHTML = text;
-    } catch (error) {
-        console.error('Error in updateHighlights:', error);
+        // Bold: **text** -> **<span class="md-bold">text</span>**
+        // We want to underline ONLY the text inside.
+        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+
+        // Markdown symbols (#, **) - color the symbols themselves
+        // Only process standalone symbols that weren't already processed
+        text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
+        text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
+
+        // Convert all newlines to <br> tags
+        // This ensures line breaks are properly rendered in HTML
+        text = text.replace(/\n/g, '<br>');
+
+	    highlightLayer.innerHTML = text;
+	} catch (error) {
+	    console.error('Error in updateHighlights:', error);
+	}
+}
+
+function syncHighlightTypography() {
+    if (!editor || !highlightLayer) {
+        console.warn('syncHighlightTypography: editor or highlightLayer is not available');
+        return;
     }
+
+    const editorStyle = window.getComputedStyle(editor);
+    const lineHeight = editorStyle.lineHeight;
+
+    highlightLayer.style.fontSize = editorStyle.fontSize;
+    // Check if lineHeight is a valid numeric value (not 'normal' or invalid)
+    const lineHeightNum = parseFloat(lineHeight);
+    if (lineHeight && lineHeight !== 'normal' && !isNaN(lineHeightNum) && lineHeightNum > 0) {
+        highlightLayer.style.lineHeight = lineHeight;
+    } else {
+        // Use CSS default (2.0 from .editor-layer)
+        highlightLayer.style.lineHeight = '';
+    }
+    highlightLayer.style.fontFamily = editorStyle.fontFamily;
+    highlightLayer.style.fontWeight = editorStyle.fontWeight;
+    highlightLayer.style.letterSpacing = editorStyle.letterSpacing;
+    highlightLayer.style.wordSpacing = editorStyle.wordSpacing;
 }
 
 editor.addEventListener('input', updateHighlights);
@@ -647,30 +891,26 @@ function syncHeight() {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-    
+
     try {
-        // Reset height to min to get correct scrollHeight
+        syncHighlightTypography();
+        // Reset height to get correct scrollHeight
         editor.style.height = 'auto';
         highlightLayer.style.height = 'auto';
 
-        const height = Math.max(editor.scrollHeight, scrollArea.clientHeight);
+        // Calculate height - ensure it's at least the scroll area height
+        const scrollAreaHeight = scrollArea.clientHeight;
+        const editorScrollHeight = editor.scrollHeight;
+        const height = Math.max(editorScrollHeight, scrollAreaHeight);
+
+        // Set heights
         editor.style.height = height + 'px';
         highlightLayer.style.height = height + 'px';
-        
-        // Ensure highlight layer matches editor width and padding exactly
-        const editorRect = editor.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(editor);
-        const editorPadding = {
-            top: parseInt(computedStyle.paddingTop) || 60,
-            left: parseInt(computedStyle.paddingLeft) || 32,
-            right: parseInt(computedStyle.paddingRight) || 32
-        };
-        
-        // Match width exactly (accounting for padding)
-        highlightLayer.style.width = editorRect.width + 'px';
-        
-        // Ensure padding matches exactly
-        highlightLayer.style.padding = `${editorPadding.top}px ${editorPadding.right}px 0 ${editorPadding.left}px`;
+
+        // #editorと#highlight-layerは同じパディングを持っているので、
+        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
+        // 幅も同じにする
+        highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
         console.error('Error in syncHeight:', error);
     }
@@ -1111,6 +1351,36 @@ function toggleSound() {
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
 btnSound.addEventListener('click', handleSoundButton);
 
+// --- Background Image Toggle Logic ---
+function toggleBackgroundImage() {
+    if (!bgImage) return;
+    
+    // Cycle through background images
+    currentBgImageIndex = (currentBgImageIndex + 1) % bgImages.length;
+    bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+    
+    // Show toast notification
+    const imageNames = {
+        'trees': 'Trees',
+        'mekong': 'Mekong'
+    };
+    const imageName = imageNames[bgImages[currentBgImageIndex].name] || bgImages[currentBgImageIndex].name;
+    showToast(`Background: ${imageName}`);
+    
+    // Save settings
+    saveSettings();
+    playSound('click');
+}
+
+const handleBgImageButton = (e) => {
+    e.preventDefault();
+    toggleBackgroundImage();
+    editor.focus();
+};
+
+if (btnBgImage) {
+    btnBgImage.addEventListener('click', handleBgImageButton);
+}
 
 // --- Fullscreen Logic ---
 function toggleFullscreen() {
@@ -1198,6 +1468,29 @@ editor.addEventListener('keydown', (e) => {
         const lastNewline = value.lastIndexOf('\n', start - 1);
         const currentLineStart = lastNewline + 1;
         const currentLine = value.substring(currentLineStart, start);
+
+        // Check for quote pattern (> at start of line)
+        const quoteMatch = currentLine.match(/^(\s*)>\s/);
+        if (quoteMatch) {
+            e.preventDefault(); // Stop default enter
+            
+            // If line is just the quote prefix (empty quote), remove it and new line
+            if (currentLine.trim() === quoteMatch[0].trim()) {
+                editor.setRangeText('\n', currentLineStart, start, 'end');
+                playSound('enter');
+                updateHighlights();
+                syncHeight();
+                return;
+            }
+            
+            // Continue quote on next line
+            const prefix = quoteMatch[0];
+            editor.setRangeText('\n' + prefix, start, start, 'end');
+            playSound('enter');
+            updateHighlights();
+            syncHeight();
+            return;
+        }
 
         // Check for list pattern
         const listMatch = currentLine.match(/^(\s*)([-*]|\d+\.)\s/);
@@ -1381,14 +1674,17 @@ function updateAuthUI(user) {
     }
 }
 
-function updateSyncStatusUI(status, message) {
+function updateSyncStatusUI(status, message, progress = null) {
     const syncIndicator = document.getElementById('sync-indicator');
     const syncText = document.getElementById('sync-text');
 
     if (!syncIndicator || !syncText) return;
 
     try {
-        syncText.textContent = message || '';
+        const hasProgress = progress !== null && progress !== undefined;
+        const progressText = hasProgress ? ` (${progress}%)` : '';
+        const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
+        syncText.textContent = displayMessage;
 
         // ステータスに応じてインジケーターの色を変更
         switch (status) {

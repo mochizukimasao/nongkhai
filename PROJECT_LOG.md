@@ -104,6 +104,398 @@ nongkhai/
 
 ## 開発ログ
 
+### [2025-11-29] ⭐ 完璧な壁紙設定 - 背景画像切り替え機能の実装
+
+**⚠️ 重要: この設定は完璧な状態です。問題が発生した場合は、必ずこの設定に戻してください。**
+
+#### 1. 実装内容
+背景画像を切り替える機能を実装し、以下の2つの画像を切り替え可能にしました：
+- **Mekong** (`bg-mekong.webp`) - デフォルト
+- **Trees** (`bg-trees.webp`)
+
+#### 2. 実施した実装
+
+##### 2.1 HTMLの追加 (`index.html`)
+
+**背景画像切り替えボタンの追加（BGMボタンとフルスクリーンボタンの間）:**
+```html
+<!-- Background Image Toggle -->
+<button class="tool-btn" id="btn-bg-image" aria-label="Toggle Background Image">
+    <svg viewBox="0 0 24 24">
+        <!-- Image/Photo icon -->
+        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+    </svg>
+</button>
+```
+
+##### 2.2 JavaScriptの実装 (`js/app.js`)
+
+**背景画像の状態管理（101-105行目）:**
+```javascript
+// Background image state
+const bgImages = [
+    { name: 'mekong', path: '../assets/bg-mekong.webp' },
+    { name: 'trees', path: '../assets/bg-trees.webp' }
+];
+let currentBgImageIndex = 0;
+```
+
+**要素の取得（42行目）:**
+```javascript
+const btnBgImage = document.getElementById('btn-bg-image');
+const bgImage = document.getElementById('bg-image');
+```
+
+**背景画像切り替え関数（1355-1370行目）:**
+```javascript
+function toggleBackgroundImage() {
+    if (!bgImage) return;
+    
+    // Cycle through background images
+    currentBgImageIndex = (currentBgImageIndex + 1) % bgImages.length;
+    bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+    
+    // Show toast notification
+    const imageNames = {
+        'trees': 'Trees',
+        'mekong': 'Mekong'
+    };
+    const imageName = imageNames[bgImages[currentBgImageIndex].name] || bgImages[currentBgImageIndex].name;
+    showToast(`Background: ${imageName}`);
+    
+    // Save settings
+    saveSettings();
+    playSound('click');
+}
+```
+
+**イベントリスナーの追加（1372-1378行目）:**
+```javascript
+const handleBgImageButton = (e) => {
+    e.preventDefault();
+    toggleBackgroundImage();
+    editor.focus();
+};
+
+if (btnBgImage) {
+    btnBgImage.addEventListener('click', handleBgImageButton);
+}
+```
+
+**設定の保存・読み込み（634-641行目、694-697行目）:**
+```javascript
+function saveSettings() {
+    const settings = {
+        theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
+        font: document.body.classList.contains('font-gothic') ? 'gothic' : 'serif',
+        soundEnabled: isSoundEnabled,
+        soundProfile: currentSoundProfile,
+        bgImageIndex: currentBgImageIndex  // 背景画像の設定を保存
+    };
+    localStorage.setItem('editorSettings', JSON.stringify(settings));
+}
+
+// loadSettings内
+// Background Image
+if (settings.bgImageIndex !== undefined && bgImage) {
+    currentBgImageIndex = settings.bgImageIndex;
+    bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+}
+```
+
+**初期化処理（703-707行目）:**
+```javascript
+window.addEventListener('DOMContentLoaded', () => {
+    loadSettings(); // Load settings first
+    
+    // Initialize background image (if not loaded from settings)
+    if (bgImage && bgImages.length > 0 && !bgImage.style.backgroundImage) {
+        bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
+    }
+    
+    initDB();
+    initHistoryModalEvents();
+    // ...
+});
+```
+
+##### 2.3 CSSの設定 (`css/style.css`)
+
+**背景画像の基本設定（70-88行目）:**
+```css
+#bg-image {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-image: url('../assets/bg-mekong.webp');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+    z-index: -1;
+    pointer-events: none;
+    /* フィルターとマスクを削除してくっきり表示しつつ、暗くする */
+    opacity: 1;
+    filter: brightness(0.4);
+    mask-image: linear-gradient(to top,
+            black 0%,
+            black 20%,
+            rgba(0, 0, 0, 0.9) 30%,
+            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 50%,
+            rgba(0, 0, 0, 0.3) 60%,
+            rgba(0, 0, 0, 0.15) 70%,
+            rgba(0, 0, 0, 0.05) 80%,
+            transparent 90%);
+    -webkit-mask-image: linear-gradient(to top,
+            black 0%,
+            black 20%,
+            rgba(0, 0, 0, 0.9) 30%,
+            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 50%,
+            rgba(0, 0, 0, 0.3) 60%,
+            rgba(0, 0, 0, 0.15) 70%,
+            rgba(0, 0, 0, 0.05) 80%,
+            transparent 90%);
+    transition: opacity 0.5s ease;
+}
+```
+
+**ライトモードの設定（90-96行目）:**
+```css
+body.light-mode #bg-image {
+    opacity: 0.7;
+    /* ライトモードでは色をしっかり見せる */
+    filter: none;
+    /* ダークモードのgrayscaleをリセット - 元の美しいパステルカラーを表示 */
+    /* ライトモードではマスクを外してくっきり表示 */
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+```
+
+**重要なポイント:**
+- ダークモード: `mask-image`のグラデーション効果を維持（明るさを抑えるため）
+- ライトモード: `mask-image`を`none`に設定（くっきり表示）
+
+##### 2.4 ファイルの準備
+
+**WebP変換:**
+- `bg-trees-backup.png`を`bg-trees.webp`に変換（品質80、約25KB）
+- 元の`bg-trees-backup.png`は削除
+
+#### 3. 検証結果
+- ✅ 背景画像切り替えボタンが正しく動作する
+- ✅ 切り替え時にトースト通知が表示される
+- ✅ 設定がlocalStorageに保存され、次回起動時も維持される
+- ✅ ダークモードでは`mask-image`で明るさを抑える
+- ✅ ライトモードでは`mask-image`を外してくっきり表示
+
+#### 4. 重要な注意事項
+
+**この設定を維持するために:**
+1. 背景画像の配列（`bgImages`）に画像を追加する場合は、`name`と`path`を正しく設定
+2. `toggleBackgroundImage()`関数で`currentBgImageIndex`を循環させる
+3. 設定の保存・読み込みに`bgImageIndex`を含める
+4. ダークモードとライトモードで`mask-image`の設定を分ける
+
+**問題が発生した場合:**
+1. このログを参照して、上記の設定を確認
+2. `bgImages`配列が正しく定義されているか確認
+3. `toggleBackgroundImage()`関数が正しく実装されているか確認
+4. CSSの`mask-image`設定を確認（ダークモードとライトモードで異なる）
+
+---
+
+### [2025-11-29] ⭐ 完璧な設定 - カーソル位置・改行・マークダウン装飾・引用継続の完全修正
+
+**⚠️ 重要: この設定は完璧な状態です。問題が発生した場合は、必ずこの設定に戻してください。**
+
+#### 1. 問題の概要
+以下の問題がすべて解決された完璧な状態：
+1. ✅ カーソル位置のずれ（1行目はOK、2行目以降でズレる問題）
+2. ✅ 改行が反映されない問題
+3. ✅ マークダウン装飾（見出し、太字、箇条書き、引用）が表示されない問題
+4. ✅ 引用の自動継続機能
+
+#### 2. 実施した修正
+
+##### 2.1 カーソル位置のずれ修正 (`js/app.js`)
+
+**`syncHighlightTypography()`関数の追加（788-807行目）:**
+```javascript
+function syncHighlightTypography() {
+    if (!editor || !highlightLayer) {
+        console.warn('syncHighlightTypography: editor or highlightLayer is not available');
+        return;
+    }
+
+    const editorStyle = window.getComputedStyle(editor);
+    const lineHeight = editorStyle.lineHeight;
+
+    highlightLayer.style.fontSize = editorStyle.fontSize;
+    // Check if lineHeight is a valid numeric value (not 'normal' or invalid)
+    const lineHeightNum = parseFloat(lineHeight);
+    if (lineHeight && lineHeight !== 'normal' && !isNaN(lineHeightNum) && lineHeightNum > 0) {
+        highlightLayer.style.lineHeight = lineHeight;
+    } else {
+        // Use CSS default (2.0 from .editor-layer)
+        highlightLayer.style.lineHeight = '';
+    }
+    highlightLayer.style.fontFamily = editorStyle.fontFamily;
+    highlightLayer.style.fontWeight = editorStyle.fontWeight;
+    highlightLayer.style.letterSpacing = editorStyle.letterSpacing;
+    highlightLayer.style.wordSpacing = editorStyle.wordSpacing;
+}
+```
+
+**重要なポイント:**
+- Safariで`getComputedStyle().lineHeight`が`'normal'`を返す問題に対応
+- 実数値チェック（`parseFloat`）で有効な値のみを適用
+- 無効な場合は空文字（CSS既定値の2.0）にフォールバック
+
+**`syncHeight()`関数での呼び出し（839行目）:**
+```javascript
+syncHighlightTypography(); // フォント設定を同期
+```
+
+##### 2.2 改行処理の修正 (`js/app.js`)
+
+**`updateHighlights()`関数内（792-793行目）:**
+```javascript
+// Convert all newlines to <br> tags
+// This ensures line breaks are properly rendered in HTML
+text = text.replace(/\n/g, '<br>');
+```
+
+**重要なポイント:**
+- すべての改行文字（`\n`）を`<br>`タグに変換
+- 以前は最後の改行のみを処理していたが、すべての改行を処理するように変更
+
+##### 2.3 マークダウン装飾の完全実装 (`js/app.js`)
+
+**`updateHighlights()`関数内（768-790行目）:**
+
+処理順序: エスケープ → 引用 → 見出し → 箇条書き → 太字 → 記号
+
+```javascript
+// Escape HTML to prevent XSS and rendering issues
+text = text.replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+// Quote: > at start of line (after escaping, so we match &gt;)
+// > symbol gets colored, text part is not styled
+text = text.replace(/^(&gt;)\s+(.*)$/gm, '<span class="md-mark">&gt;</span> $2');
+
+// Heading: # text (at start of line)
+// # symbol gets colored, only the text part gets underlined
+text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
+
+// Bullet list: - or * at start of line
+text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
+
+// Bold: **text** -> **<span class="md-bold">text</span>**
+text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+
+// Markdown symbols (#, **) - color the symbols themselves
+text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
+text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
+```
+
+**重要なポイント:**
+- エスケープ処理を先に実行（`>`が`&gt;`になる）
+- 引用の処理で`&gt;`を検索
+- 見出しは記号とスペースの下には下線なし、テキスト部分のみ下線
+- 引用は記号のみ色付け、テキスト部分は通常の色
+
+##### 2.4 CSSスタイル (`css/style.css`)
+
+**マークダウン装飾のスタイル（639-689行目）:**
+```css
+.md-bold {
+    font-weight: normal;
+    color: #5dade2; /* Light blue (cyan) for dark mode */
+}
+body.light-mode .md-bold {
+    color: #dc3545; /* Red for light mode */
+}
+
+.md-heading {
+    display: inline;
+    font-weight: normal;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+}
+
+.md-mark {
+    color: #5dade2; /* Light blue (cyan) for dark mode */
+}
+body.light-mode .md-mark {
+    color: #dc3545; /* Red for light mode */
+}
+```
+
+##### 2.5 引用の自動継続機能 (`js/app.js`)
+
+**`keydown`イベントハンドラ内（1410-1456行目）:**
+```javascript
+// Check for quote pattern (> at start of line)
+const quoteMatch = currentLine.match(/^(\s*)>\s/);
+if (quoteMatch) {
+    e.preventDefault(); // Stop default enter
+    
+    // If line is just the quote prefix (empty quote), remove it and new line
+    if (currentLine.trim() === quoteMatch[0].trim()) {
+        editor.setRangeText('\n', currentLineStart, start, 'end');
+        playSound('enter');
+        updateHighlights();
+        syncHeight();
+        return;
+    }
+    
+    // Continue quote on next line
+    const prefix = quoteMatch[0];
+    editor.setRangeText('\n' + prefix, start, start, 'end');
+    playSound('enter');
+    updateHighlights();
+    syncHeight();
+    return;
+}
+```
+
+**重要なポイント:**
+- 引用行（`> `で始まる）でEnterを押すと、次の行にも`> `が自動挿入
+- 空の引用行でEnterを押すと、引用記号を削除して通常の改行
+- リストの継続処理と同じ仕組み
+
+#### 3. 検証結果
+- ✅ カーソル位置が1行目以降も完全に一致
+- ✅ 改行が正しく表示される
+- ✅ マークダウン装飾（見出し、太字、箇条書き、引用）が正しく表示される
+- ✅ 引用の自動継続が動作する
+- ✅ Safariでも正常に動作（`line-height: normal`問題に対応）
+
+#### 4. 重要な注意事項
+
+**この設定を維持するために:**
+1. `syncHighlightTypography()`関数は必ず`syncHeight()`内で呼び出す
+2. `line-height`のチェックは実数値チェック（`parseFloat`）を含める
+3. 改行処理はすべての`\n`を`<br>`に変換する
+4. マークダウン処理の順序: エスケープ → 引用 → 見出し → 箇条書き → 太字 → 記号
+5. 引用の処理では`&gt;`を検索（エスケープ後の文字列）
+
+**問題が発生した場合:**
+1. このログを参照して、上記の設定を確認
+2. `syncHighlightTypography()`関数が正しく実装されているか確認
+3. `updateHighlights()`の処理順序を確認
+4. 改行処理がすべての`\n`を`<br>`に変換しているか確認
+
+---
+
 ### [2025-01-XX] エディタのカーソル位置ずれとツールバー反応不良の修正
 
 #### 1. 問題の概要

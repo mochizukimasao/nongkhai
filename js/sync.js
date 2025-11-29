@@ -15,8 +15,8 @@ function onSyncStatusChange(callback) {
 }
 
 // 同期状態を通知
-function notifySyncStatus(status, message) {
-    syncStatusListeners.forEach(callback => callback(status, message));
+function notifySyncStatus(status, message, progress = null) {
+    syncStatusListeners.forEach(callback => callback(status, message, progress));
 }
 
 // ユーザーがログインしているか確認
@@ -206,12 +206,13 @@ async function syncFromFirestoreChanges(changes) {
             processedChanges++;
             // 大量更新時に進捗が分かるよう、数件ごとにステータスを更新
             if (totalChanges > 0 && (processedChanges === totalChanges || processedChanges % 5 === 0)) {
-                notifySyncStatus('syncing', `クラウドから ${processedChanges}/${totalChanges} 件を反映中...`);
+                const progress = Math.round((processedChanges / totalChanges) * 100);
+                notifySyncStatus('syncing', `クラウドから ${processedChanges}/${totalChanges} 件を反映中...`, progress);
             }
         }
         
         if (hasChanges) {
-            notifySyncStatus('synced', '同期完了');
+            notifySyncStatus('synced', '同期完了', 100);
             
             // ノートリストを更新
             if (typeof updateNoteList === 'function') {
@@ -249,6 +250,12 @@ async function syncFromFirestore() {
 
         const snapshot = await notesCollection.get();
 
+        // リモートが空の場合はローカルを消さずに終了
+        if (snapshot.empty) {
+            notifySyncStatus('synced', 'クラウドにデータがありません');
+            return;
+        }
+
         // --- 重要方針 ---
         // Firestore 上の状態をそのままローカルにミラーするため、
         // いったんローカル notes テーブルをクリアしてから
@@ -272,11 +279,12 @@ async function syncFromFirestore() {
 
             processed++;
             if (total > 0 && (processed === total || processed % 10 === 0)) {
-                notifySyncStatus('syncing', `Firestoreから ${processed}/${total} 件を同期中...`);
+                const progress = Math.round((processed / total) * 100);
+                notifySyncStatus('syncing', `Firestoreから ${processed}/${total} 件を同期中...`, progress);
             }
         }
         
-        notifySyncStatus('synced', '同期完了');
+        notifySyncStatus('synced', '同期完了', 100);
         
         // ノートリストを更新
         if (typeof updateNoteList === 'function') {
@@ -382,4 +390,3 @@ window.syncManager = {
     onSyncStatusChange,
     isAuthenticated
 };
-

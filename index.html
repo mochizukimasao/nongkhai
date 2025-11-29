@@ -6,89 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nongkhai - Mindfulness Text Editor</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        :root {
-            /* OmmWriter-inspired palette (Dark Mode Default) */
-            --bg-color: #1a1a1a;
-            /* Deep dark grey */
-            --text-color: #d0d0d0;
-            /* Soft grey text */
-            --highlight-color: #d0d0d0;
-            /* Same as text for highlight layer */
-            --caret-color: #fff;
-            --toolbar-bg: rgba(26, 26, 26, 0.9);
-            --toolbar-border: transparent;
-            --button-bg: transparent;
-            --button-hover: rgba(255, 255, 255, 0.1);
-            --button-active: rgba(255, 255, 255, 0.2);
-            --button-text: #888;
-            --button-text-active: #fff;
-            --button-select-active: #4a90e2;
-            /* Blue for active selection mode */
 
-            /* Typography */
-            --font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif;
-            --font-size: 17px;
-            --line-height: 1.8;
-        }
-
-        /* Light Mode Override - Softer Grey */
-        body.light-mode {
-            --bg-color: #e6e6e6;
-            /* Softer grey, easier on eyes */
-            --text-color: #333333;
-            /* Dark grey text */
-            --highlight-color: #333333;
-            --caret-color: #000;
-            --toolbar-bg: rgba(230, 230, 230, 0.9);
-            --button-hover: rgba(0, 0, 0, 0.05);
-            --button-active: rgba(0, 0, 0, 0.1);
-            --button-text: #666;
-            --button-text-active: #222;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            font-family: var(--font-family);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow: hidden;
-            transition: background-color 0.5s ease, color 0.5s ease;
-        }
-
-        #app {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        #editor-container {
-            flex: 1;
-            position: relative;
-            width: 100%;
-            overflow-y: auto;
-            /* Scroll handled here? No, let's handle scroll on textarea/div */
-            /* Actually, for overlay to work, we need a wrapper that scrolls, OR the textarea scrolls and we sync. 
-               Syncing scroll is safer for native feel. */
-            overflow: hidden;
-            /* Container doesn't scroll, elements inside do */
-            display: flex;
-            justify-content: center;
-        }
-
-        /* Editor styles are defined in css/style.css */
-    </style>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <!-- diff-match-patch for delta sync -->
-    <script src="https://cdn.jsdelivr.net/npm/diff-match-patch@1.0.5/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/diff-match-patch@1.0.5/diff_match_patch.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -184,6 +105,21 @@
             </ul>
         </div>
         <div id="sidebar-overlay"></div>
+        <div id="history-modal"
+            style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 3000; align-items: center; justify-content: center; padding: 20px;">
+            <div
+                style="background: var(--bg-color); color: var(--text-color); width: 90%; max-width: 720px; max-height: 80vh; border: 1px solid #333; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                <div
+                    style="display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #333;">
+                    <div>
+                        <div style="font-weight: bold;">ノート履歴</div>
+                        <div id="history-modal-title" style="font-size: 12px; color: #888; margin-top: 2px;"></div>
+                    </div>
+                    <button id="btn-close-history" class="tool-btn" style="margin: 0;">×</button>
+                </div>
+                <div id="history-list" style="overflow-y: auto; padding: 10px 15px;"></div>
+            </div>
+        </div>
 
         <div id="editor-container">
             <div id="editor-scroll-area">
@@ -345,6 +281,14 @@
                         <!-- Umbrella (same as on, color will differentiate) -->
                         <path d="M12 6c4.42 0 8 3.58 8 8H4c0-4.42 3.58-8 8-8z" />
                         <path d="M13 14v4c0 1.1-.9 2-2 2s-2-.9-2-2h2c0 .55.45 1 1 1s1-.45 1-1v-4h-2z" />
+                    </svg>
+                </button>
+
+                <!-- Background Image Toggle -->
+                <button class="tool-btn" id="btn-bg-image" aria-label="Toggle Background Image">
+                    <svg viewBox="0 0 24 24">
+                        <!-- Image/Photo icon -->
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                     </svg>
                 </button>
 
