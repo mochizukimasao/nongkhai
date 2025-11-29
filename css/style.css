@@ -19,7 +19,7 @@
 
     /* Typography */
     --font-family: "Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif;
-    --font-size: 17px;
+    --font-size: 18px;
     --line-height: 1.8;
 }
 
@@ -36,6 +36,8 @@ body.light-mode {
     --button-active: rgba(0, 0, 0, 0.1);
     --button-text: #666;
     --button-text-active: #222;
+    /* Light mode gradient: light grey at top, darker grey at bottom */
+    background: linear-gradient(to bottom, #f0f0f0 0%, #b8b8b8 100%);
 }
 
 * {
@@ -49,10 +51,11 @@ html {
     height: 100%;
     width: 100%;
     font-family: var(--font-family);
-    background-color: var(--bg-color);
+    background: linear-gradient(to bottom, #2a2a2a 0%, #000000 100%);
+    /* Dark mode: slightly darker gradient */
     color: var(--text-color);
     overflow: hidden;
-    transition: background-color 0.5s ease, color 0.5s ease;
+    transition: background 0.5s ease, color 0.5s ease;
 }
 
 #app {
@@ -60,6 +63,55 @@ html {
     flex-direction: column;
     height: 100%;
     position: relative;
+    z-index: 1;
+    /* Ensure app content is above background if needed, but we want bg inside */
+}
+
+#bg-image {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    /* 画面全体の高さを確保して画像の下の部分も表示 */
+    background-image: url('../assets/bg-trees-backup.png');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+    z-index: -1;
+    /* Behind everything */
+    pointer-events: none;
+    /* フィルターとマスクを削除してくっきり表示しつつ、暗くする */
+    opacity: 1;
+    filter: brightness(0.5);
+    mask-image: linear-gradient(to top,
+            black 0%,
+            black 20%,
+            rgba(0, 0, 0, 0.9) 30%,
+            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 50%,
+            rgba(0, 0, 0, 0.3) 60%,
+            rgba(0, 0, 0, 0.15) 70%,
+            rgba(0, 0, 0, 0.05) 80%,
+            transparent 90%);
+    -webkit-mask-image: linear-gradient(to top,
+            black 0%,
+            black 20%,
+            rgba(0, 0, 0, 0.9) 30%,
+            rgba(0, 0, 0, 0.7) 40%,
+            rgba(0, 0, 0, 0.5) 50%,
+            rgba(0, 0, 0, 0.3) 60%,
+            rgba(0, 0, 0, 0.15) 70%,
+            rgba(0, 0, 0, 0.05) 80%,
+            transparent 90%);
+    transition: opacity 0.5s ease;
+}
+
+body.light-mode #bg-image {
+    opacity: 0.7;
+    /* ライトモードでは色をしっかり見せる */
+    filter: none;
+    /* ダークモードのgrayscaleをリセット - 元の美しいパステルカラーを表示 */
 }
 
 /* Sidebar (Drawer) */
@@ -149,6 +201,42 @@ html {
     background-color: rgba(68, 255, 68, 0.1);
 }
 
+.note-action-btn.favorite {
+    color: #666;
+}
+
+.note-action-btn.favorite:hover {
+    color: #ffd700;
+    background-color: rgba(255, 215, 0, 0.1);
+}
+
+.note-action-btn.favorite.favorite-active {
+    color: #ffd700;
+}
+
+.note-action-btn.favorite.favorite-active:hover {
+    color: #ffed4e;
+    background-color: rgba(255, 215, 0, 0.2);
+}
+
+body.light-mode .note-action-btn.favorite {
+    color: #999;
+}
+
+body.light-mode .note-action-btn.favorite:hover {
+    color: #ffb300;
+    background-color: rgba(255, 179, 0, 0.1);
+}
+
+body.light-mode .note-action-btn.favorite.favorite-active {
+    color: #ffb300;
+}
+
+body.light-mode .note-action-btn.favorite.favorite-active:hover {
+    color: #ffc933;
+    background-color: rgba(255, 179, 0, 0.2);
+}
+
 .note-item.active {
     background-color: #2a4050;
     /* Active note highlight */
@@ -208,6 +296,22 @@ html {
     display: flex;
     justify-content: center;
     /* Center the editor */
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#editor-container.fade-in {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 #editor-scroll-area {
@@ -218,8 +322,8 @@ html {
     margin: 0 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 60px 32px 140px 32px;
-    /* More generous breathing room + toolbar clearance */
+    /* パディングを削除 - #editorと#highlight-layerに設定 */
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -280,8 +384,8 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
     z-index: 2;
     resize: none;
     overflow: hidden;
-    /* Match #editor-scroll-area padding to align with highlight layer */
-    padding: 0;
+    /* パディングを設定 - #highlight-layerと同じ */
+    padding: 60px 32px 140px 32px;
     margin: 0;
     box-sizing: border-box;
     width: 100%;
@@ -290,15 +394,15 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 #highlight-layer {
     position: absolute;
-    /* Position will be set by JavaScript to match #editor exactly */
+    /* #editorの上に重ねる - 同じ位置に配置 */
     top: 0;
     left: 0;
     z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
-    /* Match #editor exactly - no padding, same position */
-    padding: 0;
+    /* #editorと同じパディングを設定 */
+    padding: 60px 32px 140px 32px;
     margin: 0;
     box-sizing: border-box;
     /* Font properties are inherited from .editor-layer */
@@ -315,7 +419,7 @@ body.light-mode #editor-scroll-area.scrolling::-webkit-scrollbar-thumb {
 
 /* Light Mode Overrides */
 body.light-mode {
-    background-color: #e6e6e6;
+    /* Background gradient is set in body.light-mode above */
     color: #333;
 }
 
@@ -463,6 +567,27 @@ body.light-mode .tool-btn.active {
     color: #ffd700 !important;
 }
 
+/* BGM Button Color States */
+#btn-bgm {
+    color: #888;
+    /* Gray when off */
+}
+
+#btn-bgm.active {
+    color: #a8d5e2;
+    /* Light blue when on (dark mode) */
+}
+
+body.light-mode #btn-bgm {
+    color: #999;
+    /* Lighter gray when off (light mode) */
+}
+
+body.light-mode #btn-bgm.active {
+    color: #007aff;
+    /* Blue when on (light mode) */
+}
+
 .tool-btn svg {
     width: 18px;
     /* Smaller icons */
@@ -513,24 +638,50 @@ body.light-mode #toast {
 
 /* Markdown Styles - Restored */
 .md-bold {
-    text-decoration: underline;
-    text-decoration-style: dashed;
-    text-decoration-thickness: 1px;
-    font-weight: bold;
+    font-weight: normal;
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode - same color as markers */
+}
+
+body.light-mode .md-bold {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
 }
 
 .md-heading {
-    border-bottom: 1px solid currentColor;
-    font-weight: bold;
-    display: inline-block;
-    width: 100%;
+    display: inline;
+    font-weight: normal;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
 }
 
-/* Font Styles */
-.font-gothic #highlight-layer {
+.md-bullet {
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode */
+}
+
+body.light-mode .md-bullet {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
+}
+
+.md-mark {
+    color: #5dade2;
+    /* Light blue (cyan) for dark mode - for markdown symbols like #, ** */
+}
+
+body.light-mode .md-mark {
+    color: #dc3545;
+    /* Red matching browser spellcheck underline color for light mode */
+}
+
+/* Font Styles - keep editor and highlight perfectly aligned */
+.font-gothic .editor-layer {
     font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    line-height: 1.8;
-    /* Slightly tighter for Gothic */
+    line-height: 2.0;
+    /* Same line height as Mincho */
 }
 
 /* Floating Menu Button */
@@ -573,6 +724,7 @@ body.light-mode #btn-floating-menu:hover {
 
 /* Tablet: 768px and below */
 @media (max-width: 768px) {
+
     /* Sidebar: Overlay style for mobile */
     #sidebar {
         width: 280px;
@@ -583,11 +735,15 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments */
     #editor-scroll-area {
-        padding: 70px 28px 120px 28px;
-        /* More top space plus wider gutters */
+        padding: 0;
         max-width: 100%;
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
+    }
+
+    #editor,
+    #highlight-layer {
+        padding: 70px 28px 120px 28px;
     }
 
     .editor-layer {
@@ -599,11 +755,6 @@ body.light-mode #btn-floating-menu:hover {
         max-width: 100%;
     }
 
-    #highlight-layer {
-        /* No padding - padding is on #editor-scroll-area */
-        padding: 0 !important;
-    }
-
     /* Floating menu button - ensure it's visible on mobile */
     #btn-floating-menu {
         display: block !important;
@@ -613,7 +764,7 @@ body.light-mode #btn-floating-menu:hover {
         visibility: visible !important;
         pointer-events: auto !important;
     }
-    
+
     /* Hide floating menu button when sidebar is open on mobile */
     body.sidebar-open #btn-floating-menu {
         display: none !important;
@@ -625,6 +776,7 @@ body.light-mode #btn-floating-menu:hover {
 
 /* Mobile: 480px and below */
 @media (max-width: 480px) {
+
     /* Sidebar: Full width on small screens */
     #sidebar {
         width: 100%;
@@ -642,10 +794,14 @@ body.light-mode #btn-floating-menu:hover {
 
     /* Editor adjustments for small screens */
     #editor-scroll-area {
-        padding: 80px 24px 120px 24px;
-        /* Extra breathing room but still within narrow screens */
+        padding: 0;
         overflow-x: hidden;
         /* Prevent horizontal scrolling */
+    }
+
+    #editor,
+    #highlight-layer {
+        padding: 80px 24px 120px 24px;
     }
 
     .editor-layer {
@@ -654,11 +810,6 @@ body.light-mode #btn-floating-menu:hover {
         overflow-wrap: break-word;
         word-break: break-word;
         max-width: 100%;
-    }
-
-    #highlight-layer {
-        /* No padding - padding is on #editor-scroll-area */
-        padding: 0 !important;
     }
 
     /* Note items - smaller padding */
@@ -715,61 +866,46 @@ body.light-mode #btn-floating-menu:hover {
         z-index: 1900;
         /* Below sidebar but above everything else */
     }
+
     /* Prevent body scroll when sidebar is open on mobile */
     body.sidebar-open {
         overflow: hidden;
     }
 }
 
-/* ========================================
-   Background Image (OmmWriter-style)
-   ======================================== */
-
-#bg-image {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    /* 画面全体をカバーしつつ、下側の情景がしっかり見えるようにする */
-    background-image: url('../assets/bg-trees-backup.png');
-    background-repeat: no-repeat;
-    background-position: center bottom;
-    background-size: 100% auto;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.2;
-    /* ダークモードのときは少し控えめに */
-    filter: grayscale(100%) contrast(1.1) brightness(0.9);
-    /* 上方向に向かって徐々にフェードアウトさせるマスク */
-    mask-image: linear-gradient(to top,
-            black 0%,
-            black 15%,
-            rgba(0, 0, 0, 0.95) 25%,
-            rgba(0, 0, 0, 0.85) 35%,
-            rgba(0, 0, 0, 0.7) 45%,
-            rgba(0, 0, 0, 0.5) 55%,
-            rgba(0, 0, 0, 0.3) 65%,
-            rgba(0, 0, 0, 0.15) 75%,
-            rgba(0, 0, 0, 0.05) 85%,
-            transparent 100%);
-    -webkit-mask-image: linear-gradient(to top,
-            black 0%,
-            black 15%,
-            rgba(0, 0, 0, 0.95) 25%,
-            rgba(0, 0, 0, 0.85) 35%,
-            rgba(0, 0, 0, 0.7) 45%,
-            rgba(0, 0, 0, 0.5) 55%,
-            rgba(0, 0, 0, 0.3) 65%,
-            rgba(0, 0, 0, 0.15) 75%,
-            rgba(0, 0, 0, 0.05) 85%,
-            transparent 100%);
-    transition: opacity 0.5s ease;
+/* Auth Section Styles */
+#auth-section {
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
-body.light-mode #bg-image {
-    opacity: 0.35;
-    /* ライトモードでは少し強めに表示して、文字が埋もれないようにブレンド */
-    mix-blend-mode: multiply;
-    filter: grayscale(100%) contrast(1.1) brightness(1.1);
+#auth-login button,
+#auth-status button {
+    border: 1px solid var(--button-text);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#auth-login button:hover,
+#auth-status button:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-text-active);
+}
+
+#user-avatar {
+    flex-shrink: 0;
+}
+
+#sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#sync-indicator {
+    font-size: 8px;
+    transition: color 0.3s ease;
+}
+
+body.light-mode #auth-section {
+    background-color: rgba(255, 255, 255, 0.2);
 }
