@@ -4,11 +4,11 @@ const highlightLayer = document.getElementById('highlight-layer');
 const scrollArea = document.getElementById('editor-scroll-area');
 const toast = document.getElementById('toast');
 
-    // Check if elements are available
-    if (!editor) console.error('Editor element not found');
-    if (!highlightLayer) console.error('Highlight layer element not found');
-    if (!scrollArea) console.error('Scroll area element not found');
-    if (!toast) console.warn('Toast element not found');
+// Check if elements are available
+if (!editor) console.error('Editor element not found');
+if (!highlightLayer) console.error('Highlight layer element not found');
+if (!scrollArea) console.error('Scroll area element not found');
+if (!toast) console.warn('Toast element not found');
 
 // --- Toolbar Buttons ---
 // --- Toolbar Buttons ---
@@ -53,35 +53,27 @@ const toolbar = document.getElementById('toolbar');
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
-function initScrollArea() {
-    if (scrollArea) {
-    scrollArea.addEventListener('scroll', () => {
-        scrollArea.classList.add('scrolling');
+scrollArea.addEventListener('scroll', () => {
+    scrollArea.classList.add('scrolling');
 
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            scrollArea.classList.remove('scrolling');
-        }, 500); // Hide after 0.5 second of inactivity
-    });
-    }
-}
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+        scrollArea.classList.remove('scrolling');
+    }, 500); // Hide after 0.5 second of inactivity
+});
 
 // --- Font Toggle Logic ---
 function toggleFont() {
     document.body.classList.toggle('font-gothic');
     const isGothic = document.body.classList.contains('font-gothic');
-    const fontBtn = document.getElementById('btn-font');
-    if (fontBtn) {
-        const span = fontBtn.querySelector('span');
-        if (span) {
+    const span = btnFont.querySelector('span');
+
     if (isGothic) {
         span.style.fontFamily = 'sans-serif';
         showToast('Font: Gothic');
     } else {
         span.style.fontFamily = 'serif';
         showToast('Font: Mincho');
-            }
-        }
     }
     playSound('click');
     saveSettings();
@@ -91,15 +83,11 @@ function toggleFont() {
 const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
-    if (editor) editor.focus();
+    editor.focus();
 };
 
-function initFontButton() {
-    const fontBtn = document.getElementById('btn-font');
-    if (fontBtn) {
-        fontBtn.addEventListener('click', handleFontButton);
-    }
-}
+btnFont.addEventListener('click', handleFontButton);
+// attachTouchAction removed - relying on native click
 
 
 // --- State ---
@@ -134,8 +122,8 @@ async function initDB() {
         notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
     }).upgrade(tx => {
         // Upgrade existing notes to have deleted: null
-            return tx.notes.toCollection().modify(note => {
-                    note.deleted = null;
+        return tx.notes.toCollection().modify(note => {
+            note.deleted = null;
         });
     });
     db.version(3).stores({
@@ -204,13 +192,13 @@ async function loadNote(id) {
     if (note) {
         currentNoteId = id;
         window.currentNoteId = currentNoteId;
-            editor.value = note.text;
-            // If viewing a deleted note, maybe show a warning or disable editing?
-            // For now, allow viewing.
-                updateHighlights();
-            syncHeight();
+        editor.value = note.text;
+        // If viewing a deleted note, maybe show a warning or disable editing?
+        // For now, allow viewing.
+        updateHighlights();
+        syncHeight();
         updateStarState(note.favorite);
-            scrollArea.scrollTop = 0;
+        scrollArea.scrollTop = 0;
     }
 }
 
@@ -231,11 +219,11 @@ async function saveCurrentNote() {
                 title: getNoteTitle(currentNote.text)
             });
 
-        await db.notes.update(currentNoteId, {
-            text: text,
-            updated: Date.now()
-        });
-        updateNoteList();
+            await db.notes.update(currentNoteId, {
+                text: text,
+                updated: Date.now()
+            });
+            updateNoteList();
         }
     } catch (e) {
         console.error("Save failed", e);
@@ -248,7 +236,7 @@ async function toggleFavorite() {
     const note = await db.notes.get(currentNoteId);
     const newFav = note.favorite ? 0 : 1;
     await db.notes.update(currentNoteId, { favorite: newFav });
-        updateStarState(newFav);
+    updateStarState(newFav);
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
@@ -370,40 +358,29 @@ function handleResize() {
 
 // --- Sidebar Logic ---
 function toggleSidebar() {
-    // 要素を再取得（確実に存在するように）
-    const sidebarEl = document.getElementById('sidebar');
-    const sidebarOverlayEl = document.getElementById('sidebar-overlay');
-    const floatingMenuBtn = document.getElementById('btn-floating-menu');
-    
-    if (!sidebarEl || !sidebarOverlayEl) {
-        console.error('[toggleSidebar] Sidebar elements not found');
-        return;
-    }
-    
-    const isOpening = !sidebarEl.classList.contains('open');
-    console.log('[toggleSidebar] Toggling sidebar, isOpening:', isOpening);
-    sidebarEl.classList.toggle('open');
-    sidebarOverlayEl.classList.toggle('visible');
+    const isOpening = !sidebar.classList.contains('open');
+    sidebar.classList.toggle('open');
+    sidebarOverlay.classList.toggle('visible');
 
     // Hide/show floating menu button when sidebar opens/closes
-    if (sidebarEl.classList.contains('open')) {
+    if (sidebar.classList.contains('open')) {
         document.body.classList.add('sidebar-open');
         // Force hide button with multiple methods
-        if (floatingMenuBtn) {
-            floatingMenuBtn.style.display = 'none';
-            floatingMenuBtn.style.visibility = 'hidden';
-            floatingMenuBtn.style.opacity = '0';
-            floatingMenuBtn.style.pointerEvents = 'none';
+        if (btnFloatingMenu) {
+            btnFloatingMenu.style.display = 'none';
+            btnFloatingMenu.style.visibility = 'hidden';
+            btnFloatingMenu.style.opacity = '0';
+            btnFloatingMenu.style.pointerEvents = 'none';
         }
         updateNoteList();
     } else {
         document.body.classList.remove('sidebar-open');
         // Restore button visibility - always restore, CSS will handle mobile/desktop display
-        if (floatingMenuBtn) {
-            floatingMenuBtn.style.display = '';
-            floatingMenuBtn.style.visibility = '';
-            floatingMenuBtn.style.opacity = '';
-            floatingMenuBtn.style.pointerEvents = '';
+        if (btnFloatingMenu) {
+            btnFloatingMenu.style.display = '';
+            btnFloatingMenu.style.visibility = '';
+            btnFloatingMenu.style.opacity = '';
+            btnFloatingMenu.style.pointerEvents = '';
         }
     }
     playSound('click');
@@ -412,7 +389,7 @@ function toggleSidebar() {
 function toggleFavoritesView() {
     showFavorites = !showFavorites;
     const btn = document.getElementById('btn-toggle-favorites');
-        btn.classList.toggle('active', showFavorites);
+    btn.classList.toggle('active', showFavorites);
     // Disable trash view when showing favorites
     if (showFavorites) {
         showTrash = false;
@@ -425,7 +402,7 @@ function toggleFavoritesView() {
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
-        btn.classList.toggle('active', showTrash);
+    btn.classList.toggle('active', showTrash);
     // Disable favorites view when showing trash
     if (showTrash) {
         showFavorites = false;
@@ -564,41 +541,15 @@ async function updateNoteList() {
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
-            <button class="note-action-btn history" title="履歴">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                </svg>
-            </button>
-            <button class="note-action-btn restore" title="Restore">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                </svg>
-            </button>
-            <button class="note-action-btn delete" title="Delete Permanently">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                </svg>
-            </button>
+            <button class="note-action-btn history" title="履歴">🕘</button>
+            <button class="note-action-btn restore" title="Restore">↩</button>
+            <button class="note-action-btn delete" title="Delete Permanently">×</button>
         `;
         } else {
-            // Favorite, History & Delete (Move to Trash)
-            const favoriteClass = note.favorite ? 'favorite favorite-active' : 'favorite';
+            // Delete (Move to Trash)
             actionBtns = `
-            <button class="note-action-btn ${favoriteClass}" title="${note.favorite ? 'Remove from Favorites' : 'Add to Favorites'}" data-note-id="${note.id}">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                </svg>
-            </button>
-            <button class="note-action-btn history" title="履歴">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                </svg>
-            </button>
-            <button class="note-action-btn delete" title="Move to Trash">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                </svg>
-            </button>
+            <button class="note-action-btn history" title="履歴">🕘</button>
+            <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
 
@@ -618,32 +569,13 @@ async function updateNoteList() {
         // Click on item to load
         li.addEventListener('click', () => {
             loadNote(note.id);
-            // Always close sidebar after selecting a note (works on all devices)
+            // Auto-close sidebar on mobile after selecting a note
+            if (isMobile()) {
                 toggleSidebar();
+            }
         });
 
         // Button Events
-        const btnFavorite = li.querySelector('.favorite');
-        if (btnFavorite) {
-            btnFavorite.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const noteId = parseInt(e.currentTarget.getAttribute('data-note-id'));
-                if (noteId) {
-                    const note = await db.notes.get(noteId);
-                    if (note) {
-                        const newFav = note.favorite ? 0 : 1;
-                        await db.notes.update(noteId, { favorite: newFav });
-                        updateNoteList();
-                        if (noteId === currentNoteId) {
-                            updateStarState(newFav);
-                        }
-                        showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
-                        playSound('click');
-                    }
-                }
-            });
-        }
-
         const btnDelete = li.querySelector('.delete');
         if (btnDelete) btnDelete.addEventListener('click', (e) => deleteNote(note.id, e));
 
@@ -662,44 +594,48 @@ async function updateNoteList() {
 
 // --- Event Listeners for New Features ---
 
-// Sidebar button event listeners are initialized in initSidebarButtons()
 
-function initToolbarButtons() {
-    // New note button
-    if (btnNew) {
-        btnNew.addEventListener('click', (e) => {
-            e.preventDefault();
-            createNote();
-            if (editor) editor.focus();
-        });
-    }
-    
-    // Star button
-    if (btnStar) {
-        btnStar.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleFavorite();
-        });
-    }
-}
+
+btnFloatingMenu.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleSidebar();
+});
+// btnMenu.addEventListener('click', ...); // Removed
+
+btnSidebarNew.addEventListener('click', (e) => {
+    e.preventDefault();
+    createNote();
+    // Keep sidebar open? Yes, usually.
+    // editor.focus(); // Focus editor?
+});
+
+btnNew.addEventListener('click', (e) => {
+    e.preventDefault();
+    createNote();
+    editor.focus();
+});
+btnStar.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFavorite();
+});
 
 // Favorites Toggle
-const btnToggleFavorites = document.getElementById('btn-toggle-favorites');
-if (btnToggleFavorites) {
-    btnToggleFavorites.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleFavoritesView();
-    });
-}
+document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleFavoritesView();
+});
 
 // Trash Toggle
-const btnToggleTrash = document.getElementById('btn-toggle-trash');
-if (btnToggleTrash) {
-    btnToggleTrash.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleTrashView();
-    });
-}
+document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleTrashView();
+});
+
+btnCloseSidebar.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleSidebar();
+});
+sidebarOverlay.addEventListener('click', toggleSidebar);
 
 // --- Settings Persistence ---
 function saveSettings() {
@@ -718,266 +654,53 @@ function loadSettings() {
     if (saved) {
         const settings = JSON.parse(saved);
 
-    // Theme
+        // Theme
         if (settings.theme === 'light') {
             document.body.classList.add('light-mode');
-            const themeSun = document.getElementById('icon-theme-sun');
-            const themeMoon = document.getElementById('icon-theme-moon');
-            if (themeSun) themeSun.style.display = 'none';
-            if (themeMoon) themeMoon.style.display = 'block';
+            iconThemeSun.style.display = 'none';
+            iconThemeMoon.style.display = 'block';
         } else {
             document.body.classList.remove('light-mode');
-            const themeSun = document.getElementById('icon-theme-sun');
-            const themeMoon = document.getElementById('icon-theme-moon');
-            if (themeSun) themeSun.style.display = 'block';
-            if (themeMoon) themeMoon.style.display = 'none';
-    }
-
-    // Font
-            if (settings.font === 'gothic') {
-                document.body.classList.add('font-gothic');
-            const fontBtn = document.getElementById('btn-font');
-            if (fontBtn) {
-                const span = fontBtn.querySelector('span');
-                if (span) span.style.fontFamily = 'sans-serif';
-            }
-            } else {
-                document.body.classList.remove('font-gothic');
-            const fontBtn = document.getElementById('btn-font');
-            if (fontBtn) {
-                const span = fontBtn.querySelector('span');
-                if (span) span.style.fontFamily = 'serif';
+            iconThemeSun.style.display = 'block';
+            iconThemeMoon.style.display = 'none';
         }
-    }
 
-    // Sound
+        // Font
+        if (settings.font === 'gothic') {
+            document.body.classList.add('font-gothic');
+            btnFont.querySelector('span').style.fontFamily = 'sans-serif';
+        } else {
+            document.body.classList.remove('font-gothic');
+            btnFont.querySelector('span').style.fontFamily = 'serif';
+        }
+
+        // Sound
         if (settings.soundEnabled) {
             isSoundEnabled = true;
             currentSoundProfile = settings.soundProfile || 'relax';
-            const soundBtn = document.getElementById('btn-sound');
-            const soundOn = document.getElementById('icon-sound-on');
-            const soundOff = document.getElementById('icon-sound-off');
-            if (soundBtn) soundBtn.classList.add('active');
-            if (soundOn) soundOn.style.display = 'block';
-            if (soundOff) soundOff.style.display = 'none';
+            btnSound.classList.add('active');
+            iconSoundOn.style.display = 'block';
+            iconSoundOff.style.display = 'none';
             updateSoundIconColor();
         } else {
             isSoundEnabled = false;
             currentSoundProfile = settings.soundProfile || 'relax';
-            const soundBtn = document.getElementById('btn-sound');
-            const soundOn = document.getElementById('icon-sound-on');
-            const soundOff = document.getElementById('icon-sound-off');
-            if (soundBtn) {
-                soundBtn.classList.remove('active');
-                soundBtn.style.color = '';
-            }
-            if (soundOn) soundOn.style.display = 'none';
-            if (soundOff) soundOff.style.display = 'block';
+            btnSound.classList.remove('active');
+            iconSoundOn.style.display = 'none';
+            iconSoundOff.style.display = 'block';
+            btnSound.style.color = '';
         }
 
         // Background Image
-        if (settings.bgImageIndex !== undefined) {
-            const bgImg = document.getElementById('bg-image');
-            if (bgImg && bgImages && bgImages.length > 0) {
-                currentBgImageIndex = settings.bgImageIndex;
-                bgImg.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
-            }
+        if (settings.bgImageIndex !== undefined && bgImage) {
+            currentBgImageIndex = settings.bgImageIndex;
+            bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
         }
     }
-}
-
-// saveNoteLocally function for sync manager
-async function saveNoteLocally(noteId, noteData) {
-    if (!window.db) {
-        console.warn('[app] DB not initialized yet');
-        return;
-    }
-    
-    try {
-        const existingNote = await window.db.notes.get(noteId);
-        if (existingNote) {
-            await window.db.notes.update(noteId, {
-                text: noteData.text || '',
-                updated: noteData.updatedAt ? new Date(noteData.updatedAt).getTime() : Date.now(),
-                favorite: noteData.favorite || 0,
-                deleted: noteData.deleted || null
-            });
-        } else {
-            await window.db.notes.add({
-                id: noteId,
-                text: noteData.text || '',
-                created: noteData.createdAt ? new Date(noteData.createdAt).getTime() : Date.now(),
-                updated: noteData.updatedAt ? new Date(noteData.updatedAt).getTime() : Date.now(),
-                favorite: noteData.favorite || 0,
-                deleted: noteData.deleted || null
-            });
-        }
-    } catch (error) {
-        console.error('[app] Error saving note locally:', error);
-    }
-}
-
-// Expose functions to window
-window.saveNoteLocally = saveNoteLocally;
-window.updateNoteList = updateNoteList;
-
-// Initialize sidebar buttons
-function initSidebarButtons() {
-    console.log('[app] Initializing sidebar buttons...');
-    
-    // 要素を再取得（DOMContentLoaded後に確実に存在するように）
-    const floatingMenuBtn = document.getElementById('btn-floating-menu');
-    const closeSidebarBtn = document.getElementById('btn-close-sidebar');
-    const sidebarOverlayEl = document.getElementById('sidebar-overlay');
-    const sidebarNewBtn = document.getElementById('btn-sidebar-new');
-
-    console.log('[app] Elements found:', {
-        floatingMenu: !!floatingMenuBtn,
-        closeSidebar: !!closeSidebarBtn,
-        sidebarOverlay: !!sidebarOverlayEl,
-        sidebarNew: !!sidebarNewBtn
-    });
-
-    // Sidebar toggle - カーソルの内蔵ブラウザ対応の堅牢なイベントリスナー設定
-    if (floatingMenuBtn) {
-        // 既存のイベントリスナーを削除（重複防止）
-        const oldClickHandler = floatingMenuBtn.onclick;
-        if (oldClickHandler) {
-            floatingMenuBtn.onclick = null;
-        }
-        
-        // CSSでpointer-eventsを確実に有効化
-        floatingMenuBtn.style.pointerEvents = 'auto';
-        floatingMenuBtn.style.zIndex = '2500';
-        floatingMenuBtn.style.position = 'fixed';
-        
-        // 複数のイベントタイプでリスナーを追加（カーソルの内蔵ブラウザ対応）
-        const handleToggle = function(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-            console.log('[app] Floating menu button clicked!', e?.type || 'unknown');
-            toggleSidebar();
-            return false;
-        };
-        
-        // pointerdown イベント（最も低レベル、カーソルの内蔵ブラウザで確実に動作）
-        floatingMenuBtn.addEventListener('pointerdown', handleToggle, { passive: false, capture: true });
-        
-        // click イベント
-        floatingMenuBtn.addEventListener('click', handleToggle, { passive: false, capture: true });
-        
-        // mousedown イベント（フォールバック）
-        floatingMenuBtn.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('[app] Floating menu button mousedown!');
-            toggleSidebar();
-            return false;
-        }, { passive: false, capture: true });
-        
-        // touchstart イベント（モバイル対応）
-        floatingMenuBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('[app] Floating menu button touchstart!');
-            toggleSidebar();
-            return false;
-        }, { passive: false, capture: true });
-        
-        // 直接onclickも設定（フォールバック）
-        floatingMenuBtn.onclick = function(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-            console.log('[app] Floating menu button onclick!');
-            toggleSidebar();
-            return false;
-        };
-        
-        // テスト用：ボタンがクリック可能か確認
-        console.log('[app] Button element:', floatingMenuBtn);
-        console.log('[app] Button onclick:', typeof floatingMenuBtn.onclick);
-        console.log('[app] Button addEventListener:', typeof floatingMenuBtn.addEventListener);
-        
-        console.log('✔ Sidebar button initialized with multiple event listeners');
-    } else {
-        console.error('[app] btn-floating-menu not found!');
-        console.error('[app] Available buttons:', document.querySelectorAll('button'));
-    }
-
-    if (closeSidebarBtn) {
-        closeSidebarBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleSidebar();
-        });
-    }
-
-    if (sidebarOverlayEl) {
-        sidebarOverlayEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleSidebar();
-        });
-    }
-
-    // New note button
-    if (sidebarNewBtn) {
-        sidebarNewBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            createNote();
-            if (isMobile()) {
-                toggleSidebar();
-            }
-            if (editor) editor.focus();
-        });
-    }
-    
-    console.log('✔ Sidebar working');
-    
-    // カーソルの内蔵ブラウザ対応：初期化後に再確認
-    setTimeout(() => {
-        const btn = document.getElementById('btn-floating-menu');
-        if (btn) {
-            // ボタンがクリック可能か確認
-            const rect = btn.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(btn);
-            console.log('[app] Button check after init:', {
-                exists: !!btn,
-                visible: computedStyle.display !== 'none',
-                pointerEvents: computedStyle.pointerEvents,
-                zIndex: computedStyle.zIndex,
-                position: computedStyle.position,
-                rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
-            });
-            
-            // もう一度イベントリスナーを設定（念のため）
-            if (!btn.onclick) {
-                console.log('[app] Re-initializing button onclick handler');
-                btn.onclick = function(e) {
-                    if (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                    console.log('[app] Floating menu button clicked (re-init)!');
-                    toggleSidebar();
-                    return false;
-                };
-            }
-        }
-    }, 1000);
 }
 
 // Initialize
-function initializeApp() {
-    console.log('[app] Initializing app...');
+window.addEventListener('DOMContentLoaded', () => {
     loadSettings(); // Load settings first
     
     // Initialize background image (if not loaded from settings)
@@ -985,81 +708,25 @@ function initializeApp() {
         bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
     }
     
-    // Initialize scroll area
-    initScrollArea();
-    
-    // Initialize toolbar buttons
-    initFontButton();
-    initToolbarButtons();
-    
     initDB();
     initHistoryModalEvents();
-    initSidebarButtons(); // Initialize sidebar buttons
-    
-    console.log('[app] App initialization complete');
-}
 
-// Firebase Auth / Firestore 同期の初期化
-function initFirebaseAfterLoad() {
-    // Wait for Firebase to be ready
-    const initFirebaseAuth = setInterval(() => {
-        if (window.firebaseAuth && typeof initAuth === 'function') {
-            clearInterval(initFirebaseAuth);
-            try {
-                initAuth();
-                console.log('✔ Auth working');
-            } catch (e) {
-                console.warn('initAuth failed:', e);
-            }
+    // Firebase Auth / Firestore 同期の初期化
+    if (typeof initAuth === 'function') {
+        try {
+            initAuth();
+        } catch (e) {
+            console.warn('initAuth failed:', e);
         }
-    }, 50);
-    
-    // Timeout after 5 seconds
-    setTimeout(() => {
-        clearInterval(initFirebaseAuth);
-    }, 5000);
-}
-
-// 初期化関数をグローバルに公開（動的読み込み対応）
-window.initializeApp = initializeApp;
-window.initFirebaseAfterLoad = initFirebaseAfterLoad;
-
-// DOMContentLoadedイベント（スクリプトが静的に読み込まれる場合）
-if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', () => {
-        if (!window.appInitialized) {
-            initializeApp();
-            initFirebaseAfterLoad();
-            window.appInitialized = true;
-            
-            // Initialize mobile/responsive behavior
-            handleResize();
-
-            if (editor) {
-                editor.focus();
-            }
-        }
-    });
-} else {
-    // DOMContentLoadedが既に発火している場合（動的読み込みの場合）
-    // この場合は、スクリプト読み込み後に直接呼び出される
-    // 重複実行を防ぐため、フラグでチェック
-    if (!window.appInitialized) {
-        // 少し待ってから実行（DOM要素が確実に存在するように）
-        setTimeout(function() {
-            initializeApp();
-            initFirebaseAfterLoad();
-            window.appInitialized = true;
-            
-            // Initialize mobile/responsive behavior
-            handleResize();
-
-            if (editor) {
-                editor.focus();
-            }
-        }, 100);
     }
-}
+
+    // Initialize mobile/responsive behavior
+    handleResize();
+
+    if (editor) {
+        editor.focus();
+    }
+});
 
 
 // --- Helper: Prevent Default & Play Sound ---
@@ -1070,7 +737,7 @@ function handleAction(e, action) {
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
-        editor.focus(); // Ensure focus
+    editor.focus(); // Ensure focus
 }
 
 function bindToolbarAction(button, action) {
@@ -1078,24 +745,24 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-    
+
     try {
         // mousedownでフォーカス維持（デスクトップ用）
-    button.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Keep focus on editor
-    });
+        button.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Keep focus on editor
+        });
 
         // 標準クリックイベントのみ使用
         // ブラウザのネイティブな動作に任せる：
         // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
         // - タップのみの場合は click イベントが発火する
         // - スクロールの場合は click イベントは発火しない
-    button.addEventListener('click', (e) => {
+        button.addEventListener('click', (e) => {
             e.preventDefault();
             try {
-        action();
-        playSound('click');
-        editor.focus();
+                action();
+                playSound('click');
+                editor.focus();
             } catch (error) {
                 console.error('Error in toolbar action:', error);
             }
@@ -1111,17 +778,17 @@ function updateHighlights() {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-    
+
     try {
-    let text = editor.value;
+        let text = editor.value;
 
-    // Escape HTML to prevent XSS and rendering issues
+        // Escape HTML to prevent XSS and rendering issues
         // Do this first, but we'll handle quotes specially
-    text = text.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        text = text.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 
-    // Apply Markdown Styling
+        // Apply Markdown Styling
         // Process in order: Quote -> Heading -> Bullet -> Bold -> Symbols
         
         // Quote: > at start of line (after escaping, so we match &gt;)
@@ -1136,17 +803,17 @@ function updateHighlights() {
         // Bullet list: - or * at start of line
         text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
 
-    // Bold: **text** -> **<span class="md-bold">text</span>**
-    // We want to underline ONLY the text inside.
-    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+        // Bold: **text** -> **<span class="md-bold">text</span>**
+        // We want to underline ONLY the text inside.
+        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
         // Markdown symbols (#, **) - color the symbols themselves
         // Only process standalone symbols that weren't already processed
         text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
         text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
 
-    // Heading: # text (at start of line)
-    // Support # through ######
+        // Heading: # text (at start of line)
+        // Support # through ######
         // # symbol gets colored, only the text part gets underlined
         text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
 
@@ -1164,12 +831,12 @@ function updateHighlights() {
 
         // Convert all newlines to <br> tags
         // This ensures line breaks are properly rendered in HTML
-    text = text.replace(/\n/g, '<br>');
+        text = text.replace(/\n/g, '<br>');
 
-    highlightLayer.innerHTML = text;
-    } catch (error) {
-        console.error('Error in updateHighlights:', error);
-    }
+	    highlightLayer.innerHTML = text;
+	} catch (error) {
+	    console.error('Error in updateHighlights:', error);
+	}
 }
 
 function syncHighlightTypography() {
@@ -1224,22 +891,22 @@ function syncHeight() {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-    
+
     try {
         syncHighlightTypography();
         // Reset height to get correct scrollHeight
-    editor.style.height = 'auto';
-    highlightLayer.style.height = 'auto';
+        editor.style.height = 'auto';
+        highlightLayer.style.height = 'auto';
 
         // Calculate height - ensure it's at least the scroll area height
         const scrollAreaHeight = scrollArea.clientHeight;
         const editorScrollHeight = editor.scrollHeight;
         const height = Math.max(editorScrollHeight, scrollAreaHeight);
-        
+
         // Set heights
-    editor.style.height = height + 'px';
-    highlightLayer.style.height = height + 'px';
-        
+        editor.style.height = height + 'px';
+        highlightLayer.style.height = height + 'px';
+
         // #editorと#highlight-layerは同じパディングを持っているので、
         // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
         // 幅も同じにする
@@ -1409,7 +1076,7 @@ function toggleSelectionMode() {
     }
 }
 
-    bindToolbarAction(btnSelectMode, toggleSelectionMode);
+bindToolbarAction(btnSelectMode, toggleSelectionMode);
 
 function moveCursor(direction) {
     const start = editor.selectionStart;
@@ -1735,7 +1402,7 @@ function toggleFullscreen() {
 const handleFullscreenButton = (e) => {
     e.preventDefault();
     toggleFullscreen();
-        editor.focus();
+    editor.focus();
 };
 btnFullscreen.addEventListener('click', handleFullscreenButton);
 // attachTouchAction removed
@@ -1745,12 +1412,12 @@ function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
 
-        if (isLight) {
-            iconThemeSun.style.display = 'none';
-            iconThemeMoon.style.display = 'block';
-        } else {
-            iconThemeSun.style.display = 'block';
-            iconThemeMoon.style.display = 'none';
+    if (isLight) {
+        iconThemeSun.style.display = 'none';
+        iconThemeMoon.style.display = 'block';
+    } else {
+        iconThemeSun.style.display = 'block';
+        iconThemeMoon.style.display = 'none';
     }
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
@@ -1760,7 +1427,7 @@ function toggleTheme() {
 const handleThemeButton = (e) => {
     e.preventDefault();
     toggleTheme();
-        editor.focus();
+    editor.focus();
 };
 btnTheme.addEventListener('click', handleThemeButton);
 // attachTouchAction removed
@@ -1882,7 +1549,7 @@ function initAuth() {
         console.warn('Firebase Auth not available');
         return;
     }
-    
+
     try {
         // 認証状態の変更を監視
         window.firebaseAuth.onAuthStateChanged(async (user) => {
@@ -1890,22 +1557,21 @@ function initAuth() {
                 if (user) {
                     // ログイン済み
                     updateAuthUI(user);
-                    
+
                     // 同期状態のリスナーを設定
                     if (window.syncManager) {
                         window.syncManager.onSyncStatusChange(updateSyncStatusUI);
-                        
+
                         // Firestoreリスナーを設定
                         window.syncManager.setupFirestoreListener();
-                        
+
                         // 初回同期
                         await window.syncManager.syncFromFirestore();
-                        console.log('✔ Firestore sync working');
                     }
                 } else {
                     // ログアウト済み
                     updateAuthUI(null);
-                    
+
                     // 同期を停止
                     if (window.syncManager) {
                         window.syncManager.stopSync();
@@ -1915,13 +1581,13 @@ function initAuth() {
                 console.error('Auth state change error:', error);
             }
         });
-        
+
         // ログインボタンのイベントリスナー
         const btnLoginGoogle = document.getElementById('btn-login-google');
         if (btnLoginGoogle) {
             btnLoginGoogle.addEventListener('click', handleGoogleLogin);
         }
-        
+
         // ログアウトボタンのイベントリスナー
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
@@ -1938,14 +1604,13 @@ async function handleGoogleLogin() {
         showToast('Firebaseが設定されていません');
         return;
     }
-    
+
     try {
-        const provider = window.firebaseProvider || new firebase.auth.GoogleAuthProvider();
+        const provider = new firebase.auth.GoogleAuthProvider();
         showToast('ログイン中...');
         await window.firebaseAuth.signInWithPopup(provider);
         showToast('ログインしました');
         playSound('click');
-        console.log('✔ Google login popup working');
     } catch (error) {
         console.error('Login error:', error);
         showToast('ログインに失敗しました: ' + error.message);
@@ -1954,13 +1619,13 @@ async function handleGoogleLogin() {
 
 async function handleLogout() {
     if (!window.firebaseAuth) return;
-    
+
     try {
         // 同期を停止
         if (window.syncManager) {
             window.syncManager.stopSync();
         }
-        
+
         await window.firebaseAuth.signOut();
         showToast('ログアウトしました');
         playSound('click');
@@ -1973,20 +1638,20 @@ async function handleLogout() {
 function updateAuthUI(user) {
     const authStatus = document.getElementById('auth-status');
     const authLogin = document.getElementById('auth-login');
-    
+
     if (!authStatus || !authLogin) return;
-    
+
     try {
         if (user) {
             // ログイン済みUIを表示
             authLogin.style.display = 'none';
             authStatus.style.display = 'block';
-            
+
             // ユーザー情報を表示
             const userName = document.getElementById('user-name');
             const userEmail = document.getElementById('user-email');
             const userAvatar = document.getElementById('user-avatar');
-            
+
             if (userName) userName.textContent = user.displayName || 'ユーザー';
             if (userEmail) userEmail.textContent = user.email || '';
             if (userAvatar) {
@@ -2009,32 +1674,18 @@ function updateAuthUI(user) {
     }
 }
 
-function updateSyncStatusUI(status) {
+function updateSyncStatusUI(status, message, progress = null) {
     const syncIndicator = document.getElementById('sync-indicator');
     const syncText = document.getElementById('sync-text');
-    
+
     if (!syncIndicator || !syncText) return;
-    
+
     try {
-        let message = '';
-        switch (status) {
-            case 'syncing':
-                message = '同期中...';
-                break;
-            case 'synced':
-                message = '同期済み';
-                break;
-            case 'error':
-                message = '同期エラー';
-                break;
-            case 'disconnected':
-                message = '未接続';
-                break;
-            default:
-                message = '待機中...';
-        }
-        syncText.textContent = message;
-        
+        const hasProgress = progress !== null && progress !== undefined;
+        const progressText = hasProgress ? ` (${progress}%)` : '';
+        const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
+        syncText.textContent = displayMessage;
+
         // ステータスに応じてインジケーターの色を変更
         switch (status) {
             case 'syncing':

@@ -1,72 +1,50 @@
-// Firebase設定ファイル (compat SDK)
-console.log('[firebase-config] loading...');
+// Firebase設定ファイル
+// Firebase Console (https://console.firebase.google.com/) でプロジェクトを作成し、
+// 設定情報をここに記入してください。
 
-(function() {
-    // Firebaseが読み込まれているかチェック
+(function () {
+    const firebaseConfig = {
+        apiKey: "AIzaSyBJigwHKoOImGZlurOVi4Pi56aPL2HBA28",
+        authDomain: "nongkhai-editor.firebaseapp.com",
+        projectId: "nongkhai-editor",
+        storageBucket: "nongkhai-editor.firebasestorage.app",
+        messagingSenderId: "1092923123338",
+        appId: "1:1092923123338:web:13b32439817f029d132f73"
+    };
+
     if (typeof firebase === 'undefined') {
-        console.warn('[firebase-config] Firebase SDK not loaded. Waiting for scripts...');
-        // 少し待ってから再試行
-        setTimeout(function() {
-            if (typeof firebase === 'undefined') {
-                console.error('[firebase-config] Firebase SDK still not available');
-                window.firebaseAuth = null;
-                window.firebaseFirestore = null;
-                return;
-            }
-            initializeFirebase();
-        }, 100);
+        console.warn('Firebase SDK not loaded. Skipping Firebase initialization.');
         return;
     }
 
-    initializeFirebase();
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+        console.warn('Firebase not configured. Please set up firebase-config.js with your Firebase project credentials.');
+        window.firebaseAuth = null;
+        window.firebaseDb = null;
+        return;
+    }
 
-    function initializeFirebase() {
-        try {
-            // Firebase設定
-            const firebaseConfig = {
-                apiKey: "AIzaSyBJigwHKoOImGZlurOVi4Pi56aPL2HBA28",
-                authDomain: "nongkhai-editor.firebaseapp.com",
-                projectId: "nongkhai-editor",
-                storageBucket: "nongkhai-editor.firebasestorage.app",
-                messagingSenderId: "1092923123338",
-                appId: "1:1092923123338:web:13b32439817f029d132f73",
-                measurementId: "G-L7R4TR1MNC"
-            };
+    try {
+        const firebaseApp = firebase.initializeApp(firebaseConfig);
+        const firebaseAuth = firebase.auth();
+        const firestore = firebase.firestore();
 
-            // Firebase App初期化
-            const firebaseApp = firebase.initializeApp(firebaseConfig);
-            
-            // Firebase Auth初期化
-            const firebaseAuth = firebase.auth();
-            
-            // Firebase Firestore初期化
-            const firestore = firebase.firestore();
-            
-            // 永続化を有効化
-            firestore.enablePersistence().catch((err) => {
-                if (err.code === 'failed-precondition') {
-                    console.warn('[firebase-config] Firestore persistence failed: Multiple tabs open');
-                } else if (err.code === 'unimplemented') {
-                    console.warn('[firebase-config] Firestore persistence not available');
-                } else {
-                    console.warn('[firebase-config] Firestore persistence error:', err);
-                }
-            });
+        firestore.enablePersistence().catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Firestore persistence failed: Multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Firestore persistence not available');
+            }
+        });
 
-            // グローバルに公開
-            window.firebaseApp = firebaseApp;
-            window.firebaseAuth = firebaseAuth;
-            window.firebaseFirestore = firestore;
-            window.firebaseProvider = new firebase.auth.GoogleAuthProvider();
+        window.firebaseApp = firebaseApp;
+        window.firebaseAuth = firebaseAuth;
+        window.firebaseDb = firestore;
 
-            console.log('[firebase-config] Firebase initialized successfully', {
-                hasAuth: !!window.firebaseAuth,
-                hasFirestore: !!window.firebaseFirestore,
-            });
-        } catch (error) {
-            console.error('[firebase-config] Firebase initialization error:', error);
-            window.firebaseAuth = null;
-            window.firebaseFirestore = null;
-        }
+        console.log('Firebase initialized successfully');
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        window.firebaseAuth = null;
+        window.firebaseDb = null;
     }
 })();

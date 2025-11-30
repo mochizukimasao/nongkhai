@@ -195,29 +195,11 @@ body.light-mode #bg-image {
     font-size: 16px;
     line-height: 1;
     transition: color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.note-action-btn svg {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
 }
 
 .note-action-btn:hover {
     color: #ff4444;
     background-color: rgba(255, 68, 68, 0.1);
-}
-
-.note-action-btn.favorite-active {
-    color: #ffd700;
-}
-
-.note-action-btn.favorite-active:hover {
-    color: #ffed4e;
-    background-color: rgba(255, 215, 0, 0.1);
 }
 
 .note-action-btn.restore:hover {
@@ -724,8 +706,8 @@ body.light-mode .md-quote {
     position: fixed;
     top: 15px;
     left: 20px;
-    z-index: 2500;
-    /* Above everything including toast and sidebar overlay */
+    z-index: 1500;
+    /* Above editor, below overlay/toast */
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.3);
@@ -733,14 +715,6 @@ body.light-mode .md-quote {
     cursor: pointer;
     padding: 5px;
     transition: color 0.3s ease;
-    pointer-events: auto !important;
-    /* Explicitly enable pointer events for Cursor's built-in browser */
-    user-select: none;
-    /* Prevent text selection */
-    touch-action: manipulation;
-    /* Optimize touch handling */
-    -webkit-tap-highlight-color: transparent;
-    /* Remove tap highlight on mobile */
 }
 
 #btn-floating-menu:hover {
