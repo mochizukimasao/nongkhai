@@ -1,53 +1,47 @@
 <!DOCTYPE html>
 <html lang="ja">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nongkhai - Mindfulness Text Editor</title>
-    <link rel="stylesheet" href="css/style.css">
-
-    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <!-- diff-match-patch for delta sync -->
-    <script src="https://cdn.jsdelivr.net/npm/diff-match-patch@1.0.5/diff_match_patch.js"></script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="js/firebase-config.js"></script>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nongkhai - Mindfulness Text Editor</title>
+        <link rel="stylesheet" href="css/style.css">
+    
+        <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/diff-match-patch@1.0.5/diff_match_patch.js"></script>
+    </head>
+    
+    
 
 <body>
-
     <div id="app">
-        <!-- Background Image -->
+
         <div id="bg-image"></div>
 
-        <!-- Floating Menu Button -->
         <button id="btn-floating-menu" aria-label="Open Menu">
             <svg viewBox="0 0 24 24">
                 <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
             </svg>
         </button>
 
-        <!-- Sidebar -->
         <div id="sidebar">
             <div id="sidebar-header">
                 <div style="display:flex; align-items:center; gap:5px;">
                     <span style="margin-right: 5px;">Notes</span>
+
                     <button id="btn-sidebar-new" class="tool-btn" title="New Note"
                         style="margin:0; width:30px; height:30px;">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                         </svg>
                     </button>
+
                     <button id="btn-toggle-favorites" class="tool-btn" title="Show Favorites"
                         style="margin:0; width:30px; height:30px;">
                         <svg viewBox="0 0 24 24">
-                            <path
-                                d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                         </svg>
                     </button>
+
                     <button id="btn-toggle-trash" class="tool-btn" title="Toggle Trash"
                         style="margin:0; width:30px; height:30px;">
                         <svg viewBox="0 0 24 24">
@@ -55,13 +49,14 @@
                         </svg>
                     </button>
                 </div>
+
                 <button id="btn-close-sidebar" class="tool-btn" style="margin: 0;">
                     <svg viewBox="0 0 24 24">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                     </svg>
                 </button>
             </div>
-            <!-- Auth Section -->
+
             <div id="auth-section" style="padding: 15px; border-bottom: 1px solid #333;">
                 <div id="auth-status" style="display: none;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -77,49 +72,27 @@
                             </div>
                         </div>
                     </div>
+
                     <div id="sync-status" style="font-size: 12px; color: #888; margin-bottom: 10px;">
                         <span id="sync-indicator">●</span> <span id="sync-text">同期中...</span>
                     </div>
+
                     <button id="btn-logout" class="tool-btn"
                         style="width: 100%; padding: 8px; font-size: 14px;">ログアウト</button>
                 </div>
+
                 <div id="auth-login" style="display: block;">
                     <button id="btn-login-google" class="tool-btn"
                         style="width: 100%; padding: 10px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <svg width="18" height="18" viewBox="0 0 18 18">
-                            <path fill="#4285F4"
-                                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-                            <path fill="#34A853"
-                                d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" />
-                            <path fill="#FBBC05"
-                                d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.712 0-.595.102-1.172.282-1.712V4.956H.957C.348 6.175 0 7.55 0 9c0 1.45.348 2.825.957 4.044l3.007-2.332z" />
-                            <path fill="#EA4335"
-                                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.956L3.964 7.288C4.672 5.163 6.656 3.58 9 3.58z" />
-                        </svg>
                         Googleでログイン
                     </button>
                 </div>
             </div>
-            <ul id="note-list">
-                <!-- Notes will be injected here -->
-            </ul>
+
+            <ul id="note-list"></ul>
         </div>
+
         <div id="sidebar-overlay"></div>
-        <div id="history-modal"
-            style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 3000; align-items: center; justify-content: center; padding: 20px;">
-            <div
-                style="background: var(--bg-color); color: var(--text-color); width: 90%; max-width: 720px; max-height: 80vh; border: 1px solid #333; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-                <div
-                    style="display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #333;">
-                    <div>
-                        <div style="font-weight: bold;">ノート履歴</div>
-                        <div id="history-modal-title" style="font-size: 12px; color: #888; margin-top: 2px;"></div>
-                    </div>
-                    <button id="btn-close-history" class="tool-btn" style="margin: 0;">×</button>
-                </div>
-                <div id="history-list" style="overflow-y: auto; padding: 10px 15px;"></div>
-            </div>
-        </div>
 
         <div id="editor-container">
             <div id="editor-scroll-area">
@@ -127,183 +100,82 @@
                 <textarea id="editor" class="editor-layer" placeholder="Type here..." autofocus></textarea>
             </div>
         </div>
+
         <div id="toast">Copied!</div>
-        <div id="toolbar">
-            <!-- Main Menu / New / Star -->
-            <div id="toolbar">
-                <!-- Navigation & Selection -->
-                <button class="tool-btn" id="btn-up" aria-label="Move Cursor Up">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-down" aria-label="Move Cursor Down">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-left" aria-label="Move Cursor Left">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-right" aria-label="Move Cursor Right">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-select-mode" aria-label="Selection Mode">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h1v2H5v14h14v-1h2zM11 6.83l1.59 1.58L8 13l1.41 1.41 4.59-4.59L15.59 11.41V6.83z" />
-                    </svg>
-                </button>
 
-                <div class="separator"></div>
+    </div>
 
-                <!-- Main Menu / New / Star -->
-                <!-- Menu button removed -->
-                <button class="tool-btn" id="btn-new" aria-label="New Note">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-star" aria-label="Favorite">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                    </svg>
-                </button>
+    <!-- Firebase SDK (compat版) - DOMContentLoaded後に読み込み -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Firebase SDKを順番に読み込む
+            const scripts = [
+                'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+                'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js',
+                'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js'
+            ];
 
-                <div class="separator"></div>
+            function loadScript(src) {
+                return new Promise(function(resolve, reject) {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
 
-                <!-- Undo/Redo -->
-                <button class="tool-btn" id="btn-undo" aria-label="Undo">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-redo" aria-label="Redo">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" />
-                    </svg>
-                </button>
-
-                <div class="separator"></div>
-
-                <!-- Markdown Tools -->
-                <button class="tool-btn" id="btn-h1" aria-label="Heading 1">
-                    <span>#</span>
-                </button>
-                <button class="tool-btn" id="btn-bold" aria-label="Bold">
-                    <span>B</span>
-                </button>
-                <button class="tool-btn" id="btn-quote" aria-label="Quote">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-list" aria-label="Bullet List">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="4" cy="6" r="1.5" />
-                        <circle cx="4" cy="12" r="1.5" />
-                        <circle cx="4" cy="18" r="1.5" />
-                        <line x1="7" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                        <line x1="7" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                        <line x1="7" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-ordered-list" aria-label="Ordered List">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z" />
-                    </svg>
-                </button>
-
-                <div class="separator"></div>
-
-                <!-- Clipboard Tools -->
-                <button class="tool-btn" id="btn-copy" aria-label="Copy All">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-paste" aria-label="Paste Plain">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z" />
-                    </svg>
-                </button>
-
-                <!-- Font Toggle -->
-                <button class="tool-btn" id="btn-font" aria-label="Toggle Font">
-                    <span style="font-family: serif; font-size: 16px;">T</span>
-                </button>
-
-                <!-- Theme Toggle -->
-                <button class="tool-btn" id="btn-theme" aria-label="Toggle Theme">
-                    <svg id="icon-theme-sun" viewBox="0 0 24 24">
-                        <path
-                            d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z" />
-                    </svg>
-                    <svg id="icon-theme-moon" viewBox="0 0 24 24" style="display: none;">
-                        <path
-                            d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 18.59 14.42 21 10.75 21c-5.1 0-9.25-4.15-9.25-9.25 0-3.67 2.41-6.71 7.87-7.74z" />
-                    </svg>
-                </button>
-
-                <!-- Sound Toggle -->
-                <button class="tool-btn" id="btn-sound" aria-label="Toggle Sound">
-                    <svg id="icon-sound-on" viewBox="0 0 24 24" style="display: none;">
-                        <path
-                            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                    </svg>
-                    <svg id="icon-sound-off" viewBox="0 0 24 24">
-                        <path
-                            d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-                    </svg>
-                </button>
-
-                <!-- BGM Toggle -->
-                <button class="tool-btn" id="btn-bgm" aria-label="Toggle BGM">
-                    <svg id="icon-bgm-on" viewBox="0 0 24 24" style="display: none;">
-                        <!-- Open Umbrella -->
-                        <path d="M12 6c4.42 0 8 3.58 8 8H4c0-4.42 3.58-8 8-8z" />
-                        <path d="M13 14v4c0 1.1-.9 2-2 2s-2-.9-2-2h2c0 .55.45 1 1 1s1-.45 1-1v-4h-2z" />
-                    </svg>
-                    <svg id="icon-bgm-off" viewBox="0 0 24 24">
-                        <!-- Umbrella (same as on, color will differentiate) -->
-                        <path d="M12 6c4.42 0 8 3.58 8 8H4c0-4.42 3.58-8 8-8z" />
-                        <path d="M13 14v4c0 1.1-.9 2-2 2s-2-.9-2-2h2c0 .55.45 1 1 1s1-.45 1-1v-4h-2z" />
-                    </svg>
-                </button>
-
-                <!-- Background Image Toggle -->
-                <button class="tool-btn" id="btn-bg-image" aria-label="Toggle Background Image">
-                    <svg viewBox="0 0 24 24">
-                        <!-- Image/Photo icon -->
-                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-                    </svg>
-                </button>
-
-                <!-- Fullscreen Toggle -->
-                <button class="tool-btn" id="btn-fullscreen" aria-label="Toggle Fullscreen">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-
-        <script src="js/sync.js"></script>
-        <script src="js/app.js"></script>
+            // スクリプトを順番に読み込む
+            Promise.all(scripts.map(loadScript))
+                .then(function() {
+                    // Firebase設定を読み込む
+                    return loadScript('js/firebase-config.js');
+                })
+                .then(function() {
+                    // Firebase初期化を待つ
+                    const checkFirebase = setInterval(function() {
+                        if (window.firebaseAuth && window.firebaseFirestore) {
+                            clearInterval(checkFirebase);
+                            console.log('✔ Firebase initialized');
+                            
+                            // アプリスクリプトを読み込む
+                            loadScript('js/sync.js').then(function() {
+                                return loadScript('js/app.js');
+                            }).then(function() {
+                                console.log('✔ All scripts loaded');
+                                // アプリの初期化を確実に実行
+                                if (typeof initializeApp === 'function') {
+                                    initializeApp();
+                                }
+                                // 最終確認
+                                setTimeout(function() {
+                                    if (window.firebaseAuth && window.firebaseFirestore) {
+                                        console.log('✔ Firebase initialized');
+                                        console.log('✔ Auth working');
+                                        console.log('✔ Firestore sync working');
+                                        console.log('✔ Sidebar working');
+                                        console.log('✔ Google login popup working');
+                                    }
+                                }, 500);
+                            }).catch(function(err) {
+                                console.error('Error loading app scripts:', err);
+                            });
+                        }
+                    }, 50);
+                    
+                    // タイムアウト（5秒）
+                    setTimeout(function() {
+                        clearInterval(checkFirebase);
+                        if (!window.firebaseAuth || !window.firebaseFirestore) {
+                            console.error('Firebase initialization timeout');
+                        }
+                    }, 5000);
+                })
+                .catch(function(err) {
+                    console.error('Error loading Firebase SDK:', err);
+                });
+        });
+    </script>
 </body>
 
-</html>```
+</html>
