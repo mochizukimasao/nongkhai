@@ -114,6 +114,7 @@ let db;
 let currentNoteId = null;
 let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
+let lastSyncedAt = null;
 
 // --- Initialize DB ---
 async function initDB() {
@@ -281,7 +282,8 @@ async function deleteNote(id, event) {
 
     if (note.deleted === null) {
         // Move to Trash
-        await db.notes.update(id, { deleted: Date.now() });
+        const now = Date.now();
+        await db.notes.update(id, { deleted: now, updated: now });
         showToast('Moved to Trash');
         if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
             window.syncManager.queueNoteSync(id);
@@ -296,6 +298,13 @@ async function deleteNote(id, event) {
         // "ゴミ箱に入れて...自動的に削除" implies temporary storage.
         // Let's assume clicking delete in trash = Permanent Delete for manual cleanup
         if (confirm('Delete permanently?')) {
+            if (note.firestoreId && window.syncManager && typeof window.syncManager.deleteNoteFromFirestore === 'function') {
+                try {
+                    window.syncManager.deleteNoteFromFirestore(note.firestoreId);
+                } catch (err) {
+                    console.warn('Failed to delete from Firestore', err);
+                }
+            }
             await db.notes.delete(id);
             showToast('Deleted Permanently');
             if (currentNoteId === id) {
@@ -306,18 +315,17 @@ async function deleteNote(id, event) {
         }
     }
     updateNoteList();
-    playSound('delete');
 }
 
 async function restoreNote(id, event) {
     if (event) event.stopPropagation();
-    await db.notes.update(id, { deleted: null });
+    const now = Date.now();
+    await db.notes.update(id, { deleted: null, updated: now });
     showToast('Restored from Trash');
     if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
         window.syncManager.queueNoteSync(id);
     }
     updateNoteList();
-    playSound('click');
 }
 
 async function getNoteHistory(noteId) {
@@ -670,7 +678,6 @@ async function updateNoteList() {
                             updateStarState(newFav);
                         }
                         showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
-                        playSound('click');
                     }
                 }
             });
@@ -694,10 +701,10 @@ async function updateNoteList() {
     // リストの差し替え時に軽い「入れ替わり」感を出すトランジションを付与
     const items = Array.from(noteList.querySelectorAll('.note-item')).slice(0, 20); // 上位だけで十分
     requestAnimationFrame(() => {
-        items.forEach((item) => {
-            item.style.transition = 'transform 160ms ease, opacity 160ms ease';
-            item.style.transform = 'translateY(-10px)';
-            item.style.opacity = '0.85';
+        items.forEach((item, idx) => {
+            item.style.transition = 'transform 220ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 220ms ease';
+            item.style.transform = 'translateY(-14px)';
+            item.style.opacity = '0.75';
             item.getBoundingClientRect(); // force reflow
             requestAnimationFrame(() => {
                 item.style.transform = 'translateY(0)';
@@ -706,7 +713,7 @@ async function updateNoteList() {
                     item.style.transition = '';
                     item.style.transform = '';
                     item.style.opacity = '';
-                }, 200);
+                }, 260);
             });
         });
     });
@@ -2058,9 +2065,25 @@ function updateSyncStatusUI(status, message, progress = null) {
     if (!syncIndicator || !syncText) return;
     
     try {
+        if (status === 'synced') {
+            lastSyncedAt = Date.now();
+        }
+
+        const formatTime = (ts) => {
+            if (!ts) return '';
+            const d = new Date(ts);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            const mon = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}/${mon}/${dd} ${hh}:${mm}`;
+        };
+
         const hasProgress = progress !== null && progress !== undefined;
         const progressText = hasProgress ? ` (${progress}%)` : '';
-        const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
+        const timeText = status === 'synced' && lastSyncedAt ? ` | 最終同期 ${formatTime(lastSyncedAt)}` : '';
+        const displayMessage = message ? `${message}${progressText}${timeText}` : (hasProgress ? `${progress}%${timeText}` : timeText || '');
         syncText.textContent = displayMessage;
         
         // ステータスに応じてインジケーターの色を変更

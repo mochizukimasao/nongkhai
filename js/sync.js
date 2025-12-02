@@ -369,7 +369,7 @@ async function uploadLocalOrphanNotes() {
 //    各端末の IndexedDB は毎回ここから再構築する方針にする。
 //    これにより「端末ごとに Trash 状態がずれる」「重複ノートが端末ごとに違う」
 //    といった状態をリセットして常に揃える。
-async function syncFromFirestore() {
+async function syncFromFirestore({ allowUploadWhenEmpty = true } = {}) {
     if (!isAuthenticated() || !window.db) return;
 
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -394,8 +394,16 @@ async function syncFromFirestore() {
 
         const snapshot = await notesCollection.get();
 
-        // リモートが空の場合はローカルを消さずに終了
+        // リモートが空の場合、ローカルにデータがあれば一度アップロードして再取得を試みる
         if (snapshot.empty) {
+            const localCount = await window.db.notes.count();
+            if (allowUploadWhenEmpty && localCount > 0) {
+                notifySyncStatus('syncing', 'クラウドが空です。ローカルをアップロードします...');
+                await syncAllToFirestore();
+                // 再取得（無限ループ防止にフラグを下げる）
+                await syncFromFirestore({ allowUploadWhenEmpty: false });
+                return;
+            }
             notifySyncStatus('synced', 'クラウドにデータがありません');
             return;
         }
