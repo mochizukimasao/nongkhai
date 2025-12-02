@@ -104,6 +104,65 @@ const bgImages = [
     { name: 'trees', path: '../assets/bg-trees.webp' }
 ];
 let currentBgImageIndex = 0;
+const NOTE_FADE_DURATION_MS = 220;
+let noteLoadSequence = 0;
+
+function prefersReducedMotion() {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return false;
+    }
+    try {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (error) {
+        return false;
+    }
+}
+
+function canAnimateNoteTransition() {
+    if (typeof document === 'undefined') return false;
+    return !document.hidden && !prefersReducedMotion();
+}
+
+function getNoteLayers() {
+    const layers = [];
+    if (editor) layers.push(editor);
+    if (highlightLayer) layers.push(highlightLayer);
+    return layers;
+}
+
+function ensureNoteLayerTransitionStyles() {
+    const layers = getNoteLayers();
+    layers.forEach(layer => {
+        if (!layer) return;
+        if (!layer.dataset.noteFadeConfigured) {
+            layer.style.transition = `opacity ${NOTE_FADE_DURATION_MS}ms ease`;
+            layer.dataset.noteFadeConfigured = '1';
+        }
+    });
+}
+
+function setNoteLayerOpacity(opacity) {
+    const layers = getNoteLayers();
+    layers.forEach(layer => {
+        if (layer) {
+            layer.style.opacity = String(opacity);
+        }
+    });
+}
+
+function animateNoteLayers(targetOpacity) {
+    const layers = getNoteLayers();
+    if (!layers.length) return Promise.resolve();
+
+    if (!canAnimateNoteTransition()) {
+        setNoteLayerOpacity(targetOpacity);
+        return Promise.resolve();
+    }
+
+    ensureNoteLayerTransitionStyles();
+    setNoteLayerOpacity(targetOpacity);
+    return new Promise(resolve => setTimeout(resolve, NOTE_FADE_DURATION_MS));
+}
 
 // --- Touch/Scroll Detection for Toolbar ---
 // Global scroll detection removed to improve responsiveness.
@@ -243,31 +302,36 @@ async function createNote() {
 }
 
 async function loadNote(id) {
+    const loadToken = ++noteLoadSequence;
     const note = await db.notes.get(id);
-    if (note) {
-        currentNoteId = id;
-        window.currentNoteId = currentNoteId;
-        // 軽いフェード演出（CSSを触らず JS だけで適用）
-        if (editor) {
-            editor.style.transition = 'opacity 140ms ease';
-            editor.style.opacity = '0';
+    if (!note || loadToken !== noteLoadSequence) return;
+
+    const shouldAnimate = currentNoteId !== null && currentNoteId !== id && canAnimateNoteTransition();
+    if (shouldAnimate) {
+        await animateNoteLayers(0);
+        if (loadToken !== noteLoadSequence) return;
+    }
+
+    currentNoteId = id;
+    window.currentNoteId = currentNoteId;
+
+    if (editor) {
+        editor.value = note.text;
+    }
+
+    updateHighlights();
+    syncHeight();
+    updateStarState(note.favorite);
+    if (scrollArea) {
+        scrollArea.scrollTop = 0;
+    }
+
+    if (shouldAnimate) {
+        if (loadToken === noteLoadSequence) {
+            await animateNoteLayers(1);
         }
-            editor.value = note.text;
-            // If viewing a deleted note, maybe show a warning or disable editing?
-            // For now, allow viewing.
-                updateHighlights();
-            syncHeight();
-        updateStarState(note.favorite);
-            scrollArea.scrollTop = 0;
-        if (editor) {
-            // 2フレーム待ってからフェードインし、確実にトランジションを効かせる
-            requestAnimationFrame(() => {
-                editor.getBoundingClientRect(); // force reflow
-                requestAnimationFrame(() => {
-                    editor.style.opacity = '1';
-                });
-            });
-        }
+    } else {
+        setNoteLayerOpacity(1);
     }
 }
 
@@ -1851,13 +1915,83 @@ btnTheme.addEventListener('click', handleThemeButton);
 
 // --- Typing Event & List Continuation ---
 
-let saveTimeout;
+const AUTO_SAVE_DEBOUNCE_MS = 600;
+const AUTO_SAVE_MAX_WAIT_MS = 4000;
+let saveDebounceTimer = null;
+let saveMaxWaitTimer = null;
+let pendingAutoSave = null;
+let editorDirty = false;
+
+function scheduleAutoSave() {
+    editorDirty = true;
+
+    if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer);
+    }
+    saveDebounceTimer = setTimeout(runAutoSave, AUTO_SAVE_DEBOUNCE_MS);
+
+    // Ensure we eventually save even if the user keeps typing without pausing.
+    if (!saveMaxWaitTimer) {
+        saveMaxWaitTimer = setTimeout(runAutoSave, AUTO_SAVE_MAX_WAIT_MS);
+    }
+}
+
+async function runAutoSave() {
+    const hasPending = Boolean(pendingAutoSave);
+
+    if (!editorDirty && !hasPending) {
+        return Promise.resolve();
+    }
+
+    if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer);
+        saveDebounceTimer = null;
+    }
+    if (saveMaxWaitTimer) {
+        clearTimeout(saveMaxWaitTimer);
+        saveMaxWaitTimer = null;
+    }
+
+    if (hasPending) {
+        try {
+            await pendingAutoSave;
+        } catch (error) {
+            console.error('Auto-save promise rejected', error);
+        }
+    }
+
+    if (!editorDirty) {
+        return Promise.resolve();
+    }
+
+    editorDirty = false;
+
+    pendingAutoSave = (async () => {
+        try {
+            await saveCurrentNote();
+        } catch (error) {
+            console.error('Auto-save failed', error);
+            if (typeof showToast === 'function') {
+                showToast('Auto-save failed');
+            }
+        } finally {
+            pendingAutoSave = null;
+        }
+    })();
+
+    return pendingAutoSave;
+}
+
+function flushPendingAutoSave() {
+    if (saveDebounceTimer || saveMaxWaitTimer || editorDirty) {
+        return runAutoSave();
+    }
+    return pendingAutoSave || Promise.resolve();
+}
 
 // Handle IME input for sound AND Auto-save
 editor.addEventListener('input', (e) => {
-    // Auto-save (Debounced)
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveCurrentNote, 500);
+    scheduleAutoSave();
 
     // Update UI
     updateHighlights();
@@ -1867,6 +2001,20 @@ editor.addEventListener('input', (e) => {
     if (e.inputType === 'insertCompositionText' || e.isComposing) {
         playSound('click');
     }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
+    }
+});
+
+window.addEventListener('pagehide', () => {
+    flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
+});
+
+window.addEventListener('beforeunload', () => {
+    flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
 });
 
 editor.addEventListener('keydown', (e) => {
