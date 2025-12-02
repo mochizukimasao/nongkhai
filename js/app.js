@@ -115,6 +115,7 @@ let currentNoteId = null;
 let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
 let lastSyncedAt = null;
+const TRASH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // --- Firestore Helpers (Web版はクラウド直アクセスを優先) ---
 function getFirestoreNotesCollection() {
@@ -186,11 +187,17 @@ async function initDB() {
     // Cleanup old trash
     await cleanupTrash();
 
-    // Web版はFirestoreをソース・オブ・トゥルースとし、リモートを優先してロード
-    const remoteNotes = await fetchAllNotesFromFirestore();
-    if (remoteNotes.length > 0) {
-        loadNote(remoteNotes[0].id);
+    // Load last edited note or create new (only if not deleted)
+    const lastNote = await db.notes
+        .filter(n => !n.deleted) // Robust check for null/undefined
+        .reverse()
+        .sortBy('updated');
+
+    if (lastNote.length > 0 && lastNote[0].text.trim() === '') {
+        // Reuse the last note if it's empty
+        loadNote(lastNote[0].id);
     } else {
+        // Otherwise, start with a fresh note
         createNote();
     }
 
@@ -219,27 +226,24 @@ function escapeForHTML(text = '') {
 
 // --- Note Logic ---
 async function createNote() {
-    const col = getFirestoreNotesCollection();
-    if (!col) {
-        showToast('ログインしていません');
-        return;
-    }
-    const now = Date.now();
-    const firestoreId = await upsertNoteToFirestore(null, {
+    const id = await db.notes.add({
         text: '',
-        created: now,
-        updated: now,
+        created: Date.now(),
+        updated: Date.now(),
         favorite: 0,
         deleted: null
     });
-    loadNote(firestoreId);
+    loadNote(id);
     showToast('New Note Created');
     playSound('click');
+    if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+        window.syncManager.queueNoteSync(id);
+    }
     if (sidebar.classList.contains('open')) toggleSidebar();
 }
 
 async function loadNote(id) {
-    const note = await fetchNoteFromFirestore(id);
+    const note = await db.notes.get(id);
     if (note) {
         currentNoteId = id;
         window.currentNoteId = currentNoteId;
@@ -272,16 +276,28 @@ async function saveCurrentNote() {
 
     const text = editor.value;
     try {
-        const existing = await fetchNoteFromFirestore(currentNoteId);
-        if (!existing) return;
+        const currentNote = await db.notes.get(currentNoteId);
+        if (!currentNote) return;
 
-        if (existing.text !== text) {
-            const now = Date.now();
-            await upsertNoteToFirestore(currentNoteId, {
-                text,
-                updated: now
+        if (currentNote.text !== text) {
+            // 保存前の状態を履歴として保存
+            await db.noteHistory.add({
+                noteId: currentNoteId,
+                timestamp: Date.now(),
+                text: currentNote.text || '',
+                title: getNoteTitle(currentNote.text)
             });
-            updateNoteList();
+
+        await db.notes.update(currentNoteId, {
+            text: text,
+            updated: Date.now()
+        });
+        updateNoteList();
+
+        // ローカル保存が完了したらクラウド同期を要求（実処理はsyncManager側でキュー制御）
+        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+            window.syncManager.queueNoteSync(currentNoteId);
+        }
         }
     } catch (e) {
         console.error("Save failed", e);
@@ -291,53 +307,35 @@ async function saveCurrentNote() {
 
 async function toggleFavorite() {
     if (currentNoteId === null) return;
-    const note = await fetchNoteFromFirestore(currentNoteId);
-    if (!note) return;
+    const note = await db.notes.get(currentNoteId);
     const newFav = note.favorite ? 0 : 1;
-    await upsertNoteToFirestore(currentNoteId, { favorite: newFav, updated: Date.now() });
-    updateStarState(newFav);
+    await db.notes.update(currentNoteId, { favorite: newFav });
+        updateStarState(newFav);
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
+    if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+        window.syncManager.queueNoteSync(currentNoteId);
+    }
 }
 
 async function deleteNote(id, event) {
     if (event) event.stopPropagation();
 
-    const note = await fetchNoteFromFirestore(id);
+    const note = await db.notes.get(id);
     if (!note) return;
 
     if (note.deleted === null) {
         // Move to Trash
         const now = Date.now();
-        await upsertNoteToFirestore(id, { deleted: now, updated: now });
+        await db.notes.update(id, { deleted: now, updated: now });
         showToast('Moved to Trash');
-    } else {
-        // Restore or Permanently Delete? 
-        // Let's implement Restore for now if clicking delete in trash
-        // Or maybe a separate restore button?
-        // User asked for "Trash", usually implies Restore capability.
-        // Let's make this button "Restore" if in trash?
-        // Or "Delete Permanently"?
-        // "ゴミ箱に入れて...自動的に削除" implies temporary storage.
-        // Let's assume clicking delete in trash = Permanent Delete for manual cleanup
-        if (confirm('Delete permanently?')) {
-            if (note.firestoreId && window.syncManager && typeof window.syncManager.deleteNoteFromFirestore === 'function') {
-                try {
-                    window.syncManager.deleteNoteFromFirestore(note.firestoreId);
-                } catch (err) {
-                    console.warn('Failed to delete from Firestore', err);
-                }
-            }
-            const col = getFirestoreNotesCollection();
-            if (col) await col.doc(id).delete();
-            showToast('Deleted Permanently');
-            if (currentNoteId === id) {
-                editor.value = '';
-                currentNoteId = null;
-                window.currentNoteId = currentNoteId;
-            }
+        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+            window.syncManager.queueNoteSync(id);
         }
+    } else {
+        // すでにゴミ箱の場合はそのままにする（自動クリーンアップに任せる）
+        showToast('Already in Trash');
     }
     updateNoteList();
 }
@@ -345,8 +343,11 @@ async function deleteNote(id, event) {
 async function restoreNote(id, event) {
     if (event) event.stopPropagation();
     const now = Date.now();
-    await upsertNoteToFirestore(id, { deleted: null, updated: now });
+    await db.notes.update(id, { deleted: null, updated: now });
     showToast('Restored from Trash');
+    if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+        window.syncManager.queueNoteSync(id);
+    }
     updateNoteList();
 }
 
@@ -594,13 +595,25 @@ function initHistoryModalEvents() {
 }
 
 async function updateNoteList() {
-    let notes = await fetchAllNotesFromFirestore();
+    let notes;
     if (showTrash) {
-        notes = notes.filter(n => !!n.deleted).sort((a, b) => (b.deleted || 0) - (a.deleted || 0));
+        // Show deleted notes (deleted is a timestamp)
+        notes = await db.notes
+            .filter(n => !!n.deleted)
+            .reverse()
+            .sortBy('deleted');
     } else if (showFavorites) {
-        notes = notes.filter(n => !n.deleted && n.favorite).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+        // Show favorite notes only (active notes with favorite flag)
+        notes = await db.notes
+            .filter(n => !n.deleted && n.favorite)
+            .reverse()
+            .sortBy('updated');
     } else {
-        notes = notes.filter(n => !n.deleted).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+        // Show active notes (deleted is null or undefined)
+        notes = await db.notes
+            .filter(n => !n.deleted)
+            .reverse()
+            .sortBy('updated');
     }
 
     noteList.innerHTML = '';
@@ -683,17 +696,20 @@ async function updateNoteList() {
         if (btnFavorite) {
             btnFavorite.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const noteId = e.currentTarget.getAttribute('data-note-id');
+                const noteId = parseInt(e.currentTarget.getAttribute('data-note-id'));
                 if (noteId) {
-                    const note = await fetchNoteFromFirestore(noteId);
+                    const note = await db.notes.get(noteId);
                     if (note) {
                         const newFav = note.favorite ? 0 : 1;
-                        await upsertNoteToFirestore(noteId, { favorite: newFav, updated: Date.now() });
+                        await db.notes.update(noteId, { favorite: newFav });
                         updateNoteList();
                         if (noteId === currentNoteId) {
                             updateStarState(newFav);
                         }
                         showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
+                        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+                            window.syncManager.queueNoteSync(noteId);
+                        }
                     }
                 }
             });

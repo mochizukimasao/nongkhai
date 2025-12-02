@@ -7,7 +7,7 @@
         apiKey: "AIzaSyBJigwHKoOImGZlurOVi4Pi56aPL2HBA28",
         authDomain: "nongkhai-editor.firebaseapp.com",
         projectId: "nongkhai-editor",
-        storageBucket: "nongkhai-editor.firebasestorage.app",
+        storageBucket: "nongkhai-editor.appspot.com",
         messagingSenderId: "1092923123338",
         appId: "1:1092923123338:web:13b32439817f029d132f73"
     };
@@ -28,6 +28,12 @@
         const firebaseApp = firebase.initializeApp(firebaseConfig);
         const firebaseAuth = firebase.auth();
         const firestore = firebase.firestore();
+
+        // ネットワーク環境や一部ブラウザでWebChannelがブロックされる場合に備えてロングポーリングを自動検知
+        firestore.settings({
+            experimentalAutoDetectLongPolling: true,
+            useFetchStreams: false
+        });
 
         firestore.enablePersistence().catch((err) => {
             if (err.code === 'failed-precondition') {
