@@ -501,10 +501,8 @@ async function syncAllToFirestore() {
         let syncedCount = 0;
         
         for (const note of localNotes) {
-            if (!note.deleted) {
-                const success = await syncNoteToFirestore(note.id, note);
-                if (success) syncedCount++;
-            }
+            const success = await syncNoteToFirestore(note.id, note);
+            if (success) syncedCount++;
         }
         
         notifySyncStatus('synced', `${syncedCount}件のノートを同期しました`);

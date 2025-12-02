@@ -204,6 +204,11 @@ async function loadNote(id) {
     if (note) {
         currentNoteId = id;
         window.currentNoteId = currentNoteId;
+        // 軽いフェード演出（CSSを触らず JS だけで適用）
+        if (editor) {
+            editor.style.transition = 'opacity 140ms ease';
+            editor.style.opacity = '0';
+        }
             editor.value = note.text;
             // If viewing a deleted note, maybe show a warning or disable editing?
             // For now, allow viewing.
@@ -211,6 +216,15 @@ async function loadNote(id) {
             syncHeight();
         updateStarState(note.favorite);
             scrollArea.scrollTop = 0;
+        if (editor) {
+            // 2フレーム待ってからフェードインし、確実にトランジションを効かせる
+            requestAnimationFrame(() => {
+                editor.getBoundingClientRect(); // force reflow
+                requestAnimationFrame(() => {
+                    editor.style.opacity = '1';
+                });
+            });
+        }
     }
 }
 
@@ -269,6 +283,9 @@ async function deleteNote(id, event) {
         // Move to Trash
         await db.notes.update(id, { deleted: Date.now() });
         showToast('Moved to Trash');
+        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+            window.syncManager.queueNoteSync(id);
+        }
     } else {
         // Restore or Permanently Delete? 
         // Let's implement Restore for now if clicking delete in trash
@@ -296,6 +313,9 @@ async function restoreNote(id, event) {
     if (event) event.stopPropagation();
     await db.notes.update(id, { deleted: null });
     showToast('Restored from Trash');
+    if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+        window.syncManager.queueNoteSync(id);
+    }
     updateNoteList();
     playSound('click');
 }
@@ -419,12 +439,7 @@ function toggleSidebar() {
             }
         }
         
-        // playSound()はエラーが発生してもサイドバーの動作には影響しない
-        try {
-    playSound('click');
-        } catch (error) {
-            console.warn('[toggleSidebar] Error playing sound:', error);
-        }
+        // サイドメニューでは効果音を鳴らさない
     } catch (error) {
         console.error('[toggleSidebar] Unexpected error:', error);
         // エラーが発生した場合、サイドバーの状態をリセット
@@ -674,6 +689,26 @@ async function updateNoteList() {
         });
 
         noteList.appendChild(li);
+    });
+
+    // リストの差し替え時に軽い「入れ替わり」感を出すトランジションを付与
+    const items = Array.from(noteList.querySelectorAll('.note-item')).slice(0, 20); // 上位だけで十分
+    requestAnimationFrame(() => {
+        items.forEach((item) => {
+            item.style.transition = 'transform 160ms ease, opacity 160ms ease';
+            item.style.transform = 'translateY(-10px)';
+            item.style.opacity = '0.85';
+            item.getBoundingClientRect(); // force reflow
+            requestAnimationFrame(() => {
+                item.style.transform = 'translateY(0)';
+                item.style.opacity = '1';
+                setTimeout(() => {
+                    item.style.transition = '';
+                    item.style.transform = '';
+                    item.style.opacity = '';
+                }, 200);
+            });
+        });
     });
 }
 
