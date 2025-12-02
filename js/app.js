@@ -4,11 +4,11 @@ const highlightLayer = document.getElementById('highlight-layer');
 const scrollArea = document.getElementById('editor-scroll-area');
 const toast = document.getElementById('toast');
 
-// Check if elements are available
-if (!editor) console.error('Editor element not found');
-if (!highlightLayer) console.error('Highlight layer element not found');
-if (!scrollArea) console.error('Scroll area element not found');
-if (!toast) console.warn('Toast element not found');
+    // Check if elements are available
+    if (!editor) console.error('Editor element not found');
+    if (!highlightLayer) console.error('Highlight layer element not found');
+    if (!scrollArea) console.error('Scroll area element not found');
+    if (!toast) console.warn('Toast element not found');
 
 // --- Toolbar Buttons ---
 // --- Toolbar Buttons ---
@@ -53,14 +53,14 @@ const toolbar = document.getElementById('toolbar');
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
-scrollArea.addEventListener('scroll', () => {
-    scrollArea.classList.add('scrolling');
+    scrollArea.addEventListener('scroll', () => {
+        scrollArea.classList.add('scrolling');
 
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-        scrollArea.classList.remove('scrolling');
-    }, 500); // Hide after 0.5 second of inactivity
-});
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            scrollArea.classList.remove('scrolling');
+        }, 500); // Hide after 0.5 second of inactivity
+    });
 
 // --- Font Toggle Logic ---
 function toggleFont() {
@@ -83,7 +83,7 @@ function toggleFont() {
 const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
-    editor.focus();
+        editor.focus();
 };
 
 btnFont.addEventListener('click', handleFontButton);
@@ -122,13 +122,25 @@ async function initDB() {
         notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
     }).upgrade(tx => {
         // Upgrade existing notes to have deleted: null
-        return tx.notes.toCollection().modify(note => {
-            note.deleted = null;
+            return tx.notes.toCollection().modify(note => {
+                    note.deleted = null;
         });
     });
     db.version(3).stores({
         notes: '++id, text, created, updated, favorite, deleted',
         noteHistory: '++id, noteId, timestamp, title, text'
+    });
+    // 新しいバージョンを追加してfirestoreIdインデックスを追加
+    db.version(4).stores({
+        notes: '++id, text, created, updated, favorite, deleted, firestoreId',
+        noteHistory: '++id, noteId, timestamp, title, text'
+    }).upgrade(tx => {
+        // 既存のノートにfirestoreIdフィールドを追加（nullで初期化）
+            return tx.notes.toCollection().modify(note => {
+            if (!note.firestoreId) {
+                    note.firestoreId = null;
+                }
+            });
     });
     window.db = db;
 
@@ -192,13 +204,13 @@ async function loadNote(id) {
     if (note) {
         currentNoteId = id;
         window.currentNoteId = currentNoteId;
-        editor.value = note.text;
-        // If viewing a deleted note, maybe show a warning or disable editing?
-        // For now, allow viewing.
-        updateHighlights();
-        syncHeight();
+            editor.value = note.text;
+            // If viewing a deleted note, maybe show a warning or disable editing?
+            // For now, allow viewing.
+                updateHighlights();
+            syncHeight();
         updateStarState(note.favorite);
-        scrollArea.scrollTop = 0;
+            scrollArea.scrollTop = 0;
     }
 }
 
@@ -219,11 +231,16 @@ async function saveCurrentNote() {
                 title: getNoteTitle(currentNote.text)
             });
 
-            await db.notes.update(currentNoteId, {
-                text: text,
-                updated: Date.now()
-            });
-            updateNoteList();
+        await db.notes.update(currentNoteId, {
+            text: text,
+            updated: Date.now()
+        });
+        updateNoteList();
+
+        // ローカル保存が完了したらクラウド同期を要求（実処理はsyncManager側でキュー制御）
+        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+            window.syncManager.queueNoteSync(currentNoteId);
+        }
         }
     } catch (e) {
         console.error("Save failed", e);
@@ -236,7 +253,7 @@ async function toggleFavorite() {
     const note = await db.notes.get(currentNoteId);
     const newFav = note.favorite ? 0 : 1;
     await db.notes.update(currentNoteId, { favorite: newFav });
-    updateStarState(newFav);
+        updateStarState(newFav);
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
@@ -358,38 +375,71 @@ function handleResize() {
 
 // --- Sidebar Logic ---
 function toggleSidebar() {
-    const isOpening = !sidebar.classList.contains('open');
-    sidebar.classList.toggle('open');
-    sidebarOverlay.classList.toggle('visible');
+    try {
+        // 要素の存在確認
+        const sidebarEl = document.getElementById('sidebar');
+        const sidebarOverlayEl = document.getElementById('sidebar-overlay');
+        const floatingMenuBtn = document.getElementById('btn-floating-menu');
+        
+        if (!sidebarEl || !sidebarOverlayEl) {
+            console.error('[toggleSidebar] Sidebar elements not found');
+            return;
+        }
+        
+        const isOpening = !sidebarEl.classList.contains('open');
+        
+        // 状態を確実に切り替え
+        sidebarEl.classList.toggle('open');
+        sidebarOverlayEl.classList.toggle('visible');
 
     // Hide/show floating menu button when sidebar opens/closes
-    if (sidebar.classList.contains('open')) {
+        if (sidebarEl.classList.contains('open')) {
         document.body.classList.add('sidebar-open');
         // Force hide button with multiple methods
-        if (btnFloatingMenu) {
-            btnFloatingMenu.style.display = 'none';
-            btnFloatingMenu.style.visibility = 'hidden';
-            btnFloatingMenu.style.opacity = '0';
-            btnFloatingMenu.style.pointerEvents = 'none';
-        }
+            if (floatingMenuBtn) {
+                floatingMenuBtn.style.display = 'none';
+                floatingMenuBtn.style.visibility = 'hidden';
+                floatingMenuBtn.style.opacity = '0';
+                floatingMenuBtn.style.pointerEvents = 'none';
+            }
+            // updateNoteList()はエラーが発生してもサイドバーは開いたままにする
+            try {
         updateNoteList();
+            } catch (error) {
+                console.error('[toggleSidebar] Error updating note list:', error);
+            }
     } else {
         document.body.classList.remove('sidebar-open');
         // Restore button visibility - always restore, CSS will handle mobile/desktop display
-        if (btnFloatingMenu) {
-            btnFloatingMenu.style.display = '';
-            btnFloatingMenu.style.visibility = '';
-            btnFloatingMenu.style.opacity = '';
-            btnFloatingMenu.style.pointerEvents = '';
+            if (floatingMenuBtn) {
+                floatingMenuBtn.style.display = '';
+                floatingMenuBtn.style.visibility = '';
+                floatingMenuBtn.style.opacity = '';
+                floatingMenuBtn.style.pointerEvents = '';
+            }
         }
-    }
+        
+        // playSound()はエラーが発生してもサイドバーの動作には影響しない
+        try {
     playSound('click');
+        } catch (error) {
+            console.warn('[toggleSidebar] Error playing sound:', error);
+        }
+    } catch (error) {
+        console.error('[toggleSidebar] Unexpected error:', error);
+        // エラーが発生した場合、サイドバーの状態をリセット
+        const sidebarEl = document.getElementById('sidebar');
+        const sidebarOverlayEl = document.getElementById('sidebar-overlay');
+        if (sidebarEl) sidebarEl.classList.remove('open');
+        if (sidebarOverlayEl) sidebarOverlayEl.classList.remove('visible');
+        document.body.classList.remove('sidebar-open');
+    }
 }
 
 function toggleFavoritesView() {
     showFavorites = !showFavorites;
     const btn = document.getElementById('btn-toggle-favorites');
-    btn.classList.toggle('active', showFavorites);
+        btn.classList.toggle('active', showFavorites);
     // Disable trash view when showing favorites
     if (showFavorites) {
         showTrash = false;
@@ -402,7 +452,7 @@ function toggleFavoritesView() {
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
-    btn.classList.toggle('active', showTrash);
+        btn.classList.toggle('active', showTrash);
     // Disable favorites view when showing trash
     if (showTrash) {
         showFavorites = false;
@@ -541,14 +591,28 @@ async function updateNoteList() {
         if (showTrash) {
             // Restore & Delete
             actionBtns = `
-            <button class="note-action-btn history" title="履歴">🕘</button>
+            <button class="note-action-btn history" title="履歴" data-note-id="${note.id}">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: currentColor;">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                </svg>
+            </button>
             <button class="note-action-btn restore" title="Restore">↩</button>
             <button class="note-action-btn delete" title="Delete Permanently">×</button>
         `;
         } else {
-            // Delete (Move to Trash)
+            // Favorite, History & Delete
+            const favoriteClass = note.favorite ? 'favorite favorite-active' : 'favorite';
             actionBtns = `
-            <button class="note-action-btn history" title="履歴">🕘</button>
+            <button class="note-action-btn ${favoriteClass}" title="Toggle Favorite" data-note-id="${note.id}">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: currentColor;">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+            </button>
+            <button class="note-action-btn history" title="履歴" data-note-id="${note.id}">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: currentColor;">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                </svg>
+            </button>
             <button class="note-action-btn delete" title="Move to Trash">×</button>
         `;
         }
@@ -576,6 +640,27 @@ async function updateNoteList() {
         });
 
         // Button Events
+        const btnFavorite = li.querySelector('.favorite');
+        if (btnFavorite) {
+            btnFavorite.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const noteId = parseInt(e.currentTarget.getAttribute('data-note-id'));
+                if (noteId) {
+                    const note = await db.notes.get(noteId);
+                    if (note) {
+                        const newFav = note.favorite ? 0 : 1;
+                        await db.notes.update(noteId, { favorite: newFav });
+                        updateNoteList();
+                        if (noteId === currentNoteId) {
+                            updateStarState(newFav);
+                        }
+                        showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
+                        playSound('click');
+                    }
+                }
+            });
+        }
+
         const btnDelete = li.querySelector('.delete');
         if (btnDelete) btnDelete.addEventListener('click', (e) => deleteNote(note.id, e));
 
@@ -593,49 +678,7 @@ async function updateNoteList() {
 }
 
 // --- Event Listeners for New Features ---
-
-
-
-btnFloatingMenu.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSidebar();
-});
-// btnMenu.addEventListener('click', ...); // Removed
-
-btnSidebarNew.addEventListener('click', (e) => {
-    e.preventDefault();
-    createNote();
-    // Keep sidebar open? Yes, usually.
-    // editor.focus(); // Focus editor?
-});
-
-btnNew.addEventListener('click', (e) => {
-    e.preventDefault();
-    createNote();
-    editor.focus();
-});
-btnStar.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleFavorite();
-});
-
-// Favorites Toggle
-document.getElementById('btn-toggle-favorites').addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleFavoritesView();
-});
-
-// Trash Toggle
-document.getElementById('btn-toggle-trash').addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleTrashView();
-});
-
-btnCloseSidebar.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleSidebar();
-});
-sidebarOverlay.addEventListener('click', toggleSidebar);
+// イベントリスナーは initSidebarEventListeners() で初期化される
 
 // --- Settings Persistence ---
 function saveSettings() {
@@ -644,7 +687,8 @@ function saveSettings() {
         font: document.body.classList.contains('font-gothic') ? 'gothic' : 'serif',
         soundEnabled: isSoundEnabled,
         soundProfile: currentSoundProfile,
-        bgImageIndex: currentBgImageIndex
+        bgImageIndex: currentBgImageIndex,
+        bgmEnabled: isBgmEnabled
     };
     localStorage.setItem('editorSettings', JSON.stringify(settings));
 }
@@ -654,7 +698,7 @@ function loadSettings() {
     if (saved) {
         const settings = JSON.parse(saved);
 
-        // Theme
+    // Theme
         if (settings.theme === 'light') {
             document.body.classList.add('light-mode');
             iconThemeSun.style.display = 'none';
@@ -663,18 +707,18 @@ function loadSettings() {
             document.body.classList.remove('light-mode');
             iconThemeSun.style.display = 'block';
             iconThemeMoon.style.display = 'none';
-        }
+    }
 
-        // Font
-        if (settings.font === 'gothic') {
-            document.body.classList.add('font-gothic');
+    // Font
+            if (settings.font === 'gothic') {
+                document.body.classList.add('font-gothic');
             btnFont.querySelector('span').style.fontFamily = 'sans-serif';
-        } else {
-            document.body.classList.remove('font-gothic');
+            } else {
+                document.body.classList.remove('font-gothic');
             btnFont.querySelector('span').style.fontFamily = 'serif';
-        }
+    }
 
-        // Sound
+    // Sound
         if (settings.soundEnabled) {
             isSoundEnabled = true;
             currentSoundProfile = settings.soundProfile || 'relax';
@@ -696,11 +740,164 @@ function loadSettings() {
             currentBgImageIndex = settings.bgImageIndex;
             bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
         }
+        
+        // BGM
+        if (settings.bgmEnabled) {
+            // Delay BGM start slightly to avoid autoplay restrictions
+            setTimeout(() => {
+                startBGM();
+            }, 500);
+        } else {
+            updateBgmUI();
+        }
     }
 }
 
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
+// --- Initialize Sidebar Event Listeners ---
+function initSidebarEventListeners() {
+    console.log('[initSidebarEventListeners] Starting initialization...');
+    
+    // フローティングメニューボタン
+    const floatingMenuBtn = document.getElementById('btn-floating-menu');
+    console.log('[initSidebarEventListeners] Floating menu button found:', !!floatingMenuBtn);
+    
+    if (floatingMenuBtn) {
+        // 既存のイベントリスナーを削除（重複防止）
+        floatingMenuBtn.onclick = null;
+        
+        // 複数の方法でイベントリスナーを設定（カーソルの内蔵ブラウザ対応）
+        const handleToggle = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            console.log('[initSidebarEventListeners] Button clicked!', e?.type || 'unknown');
+            toggleSidebar();
+            return false;
+        };
+        
+        // addEventListener（標準的な方法）
+        floatingMenuBtn.addEventListener('click', handleToggle, { capture: true });
+        
+        // onclick（フォールバック、カーソルの内蔵ブラウザ対応）
+        floatingMenuBtn.onclick = handleToggle;
+        
+        // mousedown（より低レベルのイベント）
+        floatingMenuBtn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[initSidebarEventListeners] Button mousedown!');
+            toggleSidebar();
+            return false;
+        }, { capture: true });
+        
+        // pointerdown（ポインターイベント）
+        if (floatingMenuBtn.addEventListener) {
+            floatingMenuBtn.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[initSidebarEventListeners] Button pointerdown!');
+                toggleSidebar();
+                return false;
+            }, { capture: true });
+        }
+        
+        // ボタンの状態を確認
+        const rect = floatingMenuBtn.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(floatingMenuBtn);
+        console.log('[initSidebarEventListeners] Button state:', {
+            visible: computedStyle.display !== 'none',
+            pointerEvents: computedStyle.pointerEvents,
+            zIndex: computedStyle.zIndex,
+            position: computedStyle.position,
+            rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+        });
+        
+        // CSSで確実にクリック可能にする
+        floatingMenuBtn.style.pointerEvents = 'auto';
+        floatingMenuBtn.style.zIndex = '2500';
+        floatingMenuBtn.style.position = 'fixed';
+        floatingMenuBtn.style.cursor = 'pointer';
+    } else {
+        console.error('[initSidebarEventListeners] Floating menu button NOT FOUND!');
+    }
+
+    // サイドバー内の新規作成ボタン
+    const sidebarNewBtn = document.getElementById('btn-sidebar-new');
+    if (sidebarNewBtn) {
+        sidebarNewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            createNote();
+        });
+    }
+
+    // サイドバーを閉じるボタン
+    const closeSidebarBtn = document.getElementById('btn-close-sidebar');
+    if (closeSidebarBtn) {
+        closeSidebarBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSidebar();
+        });
+    }
+
+    // オーバーレイのクリック処理（オーバーレイ自体のみをクリックした場合に閉じる）
+    const sidebarOverlayEl = document.getElementById('sidebar-overlay');
+    if (sidebarOverlayEl) {
+        sidebarOverlayEl.addEventListener('click', (e) => {
+            // オーバーレイ自体をクリックした場合のみ閉じる（子要素のクリックは無視）
+            if (e.target === sidebarOverlayEl) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSidebar();
+            }
+        });
+    }
+
+    // お気に入り/ゴミ箱トグルボタン
+    const toggleFavoritesBtn = document.getElementById('btn-toggle-favorites');
+    if (toggleFavoritesBtn) {
+        toggleFavoritesBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavoritesView();
+        });
+    }
+
+    const toggleTrashBtn = document.getElementById('btn-toggle-trash');
+    if (toggleTrashBtn) {
+        toggleTrashBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleTrashView();
+        });
+    }
+}
+
+// --- Initialize Other Event Listeners ---
+function initOtherEventListeners() {
+    // 新規作成ボタン
+    if (btnNew) {
+        btnNew.addEventListener('click', (e) => {
+            e.preventDefault();
+            createNote();
+            if (editor) editor.focus();
+        });
+    }
+
+    // お気に入りボタン
+    if (btnStar) {
+        btnStar.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleFavorite();
+        });
+    }
+}
+
+// Initialize - 複数のタイミングで初期化を試みる（カーソルの内蔵ブラウザ対応）
+function initializeApp() {
+    console.log('[initializeApp] Starting app initialization...');
     loadSettings(); // Load settings first
     
     // Initialize background image (if not loaded from settings)
@@ -708,8 +905,15 @@ window.addEventListener('DOMContentLoaded', () => {
         bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
     }
     
+    // Initialize event listeners
+    initSidebarEventListeners();
+    initOtherEventListeners();
+    
     initDB();
     initHistoryModalEvents();
+    
+    // Initialize BGM (but don't auto-start, wait for user interaction)
+    initBgm();
 
     // Firebase Auth / Firestore 同期の初期化
     if (typeof initAuth === 'function') {
@@ -726,7 +930,60 @@ window.addEventListener('DOMContentLoaded', () => {
     if (editor) {
         editor.focus();
     }
+    
+    console.log('[initializeApp] App initialization complete');
+}
+
+// 複数のタイミングで初期化を試みる
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => {
+        if (!window.appInitialized) {
+            initializeApp();
+            window.appInitialized = true;
+        }
+    });
+} else {
+    // DOMContentLoadedが既に発火している場合
+    if (!window.appInitialized) {
+        setTimeout(() => {
+            initializeApp();
+            window.appInitialized = true;
+        }, 100);
+    }
+}
+
+// 念のため、window.onloadでも初期化を試みる
+window.addEventListener('load', () => {
+    if (!window.appInitialized) {
+        console.log('[initializeApp] Initializing on window.load (fallback)');
+        initializeApp();
+        window.appInitialized = true;
+    }
 });
+
+// さらに念のため、少し遅延させて再初期化を試みる
+setTimeout(() => {
+    const btn = document.getElementById('btn-floating-menu');
+    if (btn) {
+        console.log('[initializeApp] Re-initializing button (delayed fallback)');
+        // ボタンの状態を再確認
+        const rect = btn.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(btn);
+        console.log('[initializeApp] Button check:', {
+            exists: !!btn,
+            onclick: typeof btn.onclick,
+            visible: computedStyle.display !== 'none',
+            pointerEvents: computedStyle.pointerEvents,
+            zIndex: computedStyle.zIndex,
+            rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+        });
+        
+        // まだonclickが設定されていない場合、再初期化
+        if (!btn.onclick) {
+            initSidebarEventListeners();
+        }
+    }
+}, 1000);
 
 
 // --- Helper: Prevent Default & Play Sound ---
@@ -737,7 +994,7 @@ function handleAction(e, action) {
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
-    editor.focus(); // Ensure focus
+        editor.focus(); // Ensure focus
 }
 
 function bindToolbarAction(button, action) {
@@ -745,24 +1002,24 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-
+    
     try {
         // mousedownでフォーカス維持（デスクトップ用）
-        button.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Keep focus on editor
-        });
+    button.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Keep focus on editor
+    });
 
         // 標準クリックイベントのみ使用
         // ブラウザのネイティブな動作に任せる：
         // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
         // - タップのみの場合は click イベントが発火する
         // - スクロールの場合は click イベントは発火しない
-        button.addEventListener('click', (e) => {
+    button.addEventListener('click', (e) => {
             e.preventDefault();
             try {
-                action();
-                playSound('click');
-                editor.focus();
+        action();
+        playSound('click');
+        editor.focus();
             } catch (error) {
                 console.error('Error in toolbar action:', error);
             }
@@ -778,17 +1035,17 @@ function updateHighlights() {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-
+    
     try {
-        let text = editor.value;
+    let text = editor.value;
 
-        // Escape HTML to prevent XSS and rendering issues
+    // Escape HTML to prevent XSS and rendering issues
         // Do this first, but we'll handle quotes specially
-        text = text.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
+    text = text.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
-        // Apply Markdown Styling
+    // Apply Markdown Styling
         // Process in order: Quote -> Heading -> Bullet -> Bold -> Symbols
         
         // Quote: > at start of line (after escaping, so we match &gt;)
@@ -803,17 +1060,17 @@ function updateHighlights() {
         // Bullet list: - or * at start of line
         text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
 
-        // Bold: **text** -> **<span class="md-bold">text</span>**
-        // We want to underline ONLY the text inside.
-        text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
+    // Bold: **text** -> **<span class="md-bold">text</span>**
+    // We want to underline ONLY the text inside.
+    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
         // Markdown symbols (#, **) - color the symbols themselves
         // Only process standalone symbols that weren't already processed
         text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
         text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
 
-        // Heading: # text (at start of line)
-        // Support # through ######
+    // Heading: # text (at start of line)
+    // Support # through ######
         // # symbol gets colored, only the text part gets underlined
         text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
 
@@ -831,12 +1088,12 @@ function updateHighlights() {
 
         // Convert all newlines to <br> tags
         // This ensures line breaks are properly rendered in HTML
-        text = text.replace(/\n/g, '<br>');
+    text = text.replace(/\n/g, '<br>');
 
-	    highlightLayer.innerHTML = text;
-	} catch (error) {
-	    console.error('Error in updateHighlights:', error);
-	}
+    highlightLayer.innerHTML = text;
+    } catch (error) {
+        console.error('Error in updateHighlights:', error);
+    }
 }
 
 function syncHighlightTypography() {
@@ -891,22 +1148,22 @@ function syncHeight() {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-
+    
     try {
         syncHighlightTypography();
         // Reset height to get correct scrollHeight
-        editor.style.height = 'auto';
-        highlightLayer.style.height = 'auto';
+    editor.style.height = 'auto';
+    highlightLayer.style.height = 'auto';
 
         // Calculate height - ensure it's at least the scroll area height
         const scrollAreaHeight = scrollArea.clientHeight;
         const editorScrollHeight = editor.scrollHeight;
         const height = Math.max(editorScrollHeight, scrollAreaHeight);
-
+        
         // Set heights
-        editor.style.height = height + 'px';
-        highlightLayer.style.height = height + 'px';
-
+    editor.style.height = height + 'px';
+    highlightLayer.style.height = height + 'px';
+        
         // #editorと#highlight-layerは同じパディングを持っているので、
         // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
         // 幅も同じにする
@@ -1076,7 +1333,7 @@ function toggleSelectionMode() {
     }
 }
 
-bindToolbarAction(btnSelectMode, toggleSelectionMode);
+    bindToolbarAction(btnSelectMode, toggleSelectionMode);
 
 function moveCursor(direction) {
     const start = editor.selectionStart;
@@ -1351,6 +1608,91 @@ function toggleSound() {
 const handleSoundButton = (e) => { e.preventDefault(); toggleSound(); };
 btnSound.addEventListener('click', handleSoundButton);
 
+// --- BGM Logic ---
+let bgmAudio = null;
+let isBgmEnabled = false;
+const btnBgm = document.getElementById('btn-bgm');
+const iconBgmOn = document.getElementById('icon-bgm-on');
+const iconBgmOff = document.getElementById('icon-bgm-off');
+
+function initBgm() {
+    if (bgmAudio) return; // Already initialized
+    
+    bgmAudio = new Audio('../assets/rain_full.ogg');
+    bgmAudio.loop = true;
+    bgmAudio.volume = 0.3; // 30% volume
+    
+    // Handle audio errors
+    bgmAudio.addEventListener('error', (e) => {
+        console.error('BGM audio error:', e);
+        showToast('BGM読み込みエラー');
+    });
+    
+    // Handle audio ended (shouldn't happen with loop, but just in case)
+    bgmAudio.addEventListener('ended', () => {
+        if (isBgmEnabled) {
+            bgmAudio.play().catch(err => console.error('BGM play error:', err));
+        }
+    });
+}
+
+function startBGM() {
+    if (!bgmAudio) initBgm();
+    
+    if (bgmAudio) {
+        bgmAudio.play().catch(err => {
+            console.error('BGM play error:', err);
+            showToast('BGM再生エラー');
+        });
+        isBgmEnabled = true;
+        updateBgmUI();
+    }
+}
+
+function stopBGM() {
+    if (bgmAudio) {
+        bgmAudio.pause();
+        bgmAudio.currentTime = 0; // Reset to beginning
+        isBgmEnabled = false;
+        updateBgmUI();
+    }
+}
+
+function toggleBGM() {
+    if (!isBgmEnabled) {
+        startBGM();
+        showToast('BGM: ON');
+    } else {
+        stopBGM();
+        showToast('BGM: OFF');
+    }
+    playSound('click');
+    saveSettings();
+}
+
+function updateBgmUI() {
+    if (!btnBgm || !iconBgmOn || !iconBgmOff) return;
+    
+    if (isBgmEnabled) {
+        btnBgm.classList.add('active');
+        iconBgmOn.style.display = 'block';
+        iconBgmOff.style.display = 'none';
+    } else {
+        btnBgm.classList.remove('active');
+        iconBgmOn.style.display = 'none';
+        iconBgmOff.style.display = 'block';
+    }
+}
+
+// Initialize BGM button event listener
+if (btnBgm) {
+    btnBgm.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleBGM();
+        editor.focus();
+    });
+}
+
 // --- Background Image Toggle Logic ---
 function toggleBackgroundImage() {
     if (!bgImage) return;
@@ -1402,7 +1744,7 @@ function toggleFullscreen() {
 const handleFullscreenButton = (e) => {
     e.preventDefault();
     toggleFullscreen();
-    editor.focus();
+        editor.focus();
 };
 btnFullscreen.addEventListener('click', handleFullscreenButton);
 // attachTouchAction removed
@@ -1412,12 +1754,12 @@ function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
 
-    if (isLight) {
-        iconThemeSun.style.display = 'none';
-        iconThemeMoon.style.display = 'block';
-    } else {
-        iconThemeSun.style.display = 'block';
-        iconThemeMoon.style.display = 'none';
+        if (isLight) {
+            iconThemeSun.style.display = 'none';
+            iconThemeMoon.style.display = 'block';
+        } else {
+            iconThemeSun.style.display = 'block';
+            iconThemeMoon.style.display = 'none';
     }
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
@@ -1427,7 +1769,7 @@ function toggleTheme() {
 const handleThemeButton = (e) => {
     e.preventDefault();
     toggleTheme();
-    editor.focus();
+        editor.focus();
 };
 btnTheme.addEventListener('click', handleThemeButton);
 // attachTouchAction removed
@@ -1549,7 +1891,7 @@ function initAuth() {
         console.warn('Firebase Auth not available');
         return;
     }
-
+    
     try {
         // 認証状態の変更を監視
         window.firebaseAuth.onAuthStateChanged(async (user) => {
@@ -1557,21 +1899,21 @@ function initAuth() {
                 if (user) {
                     // ログイン済み
                     updateAuthUI(user);
-
+                    
                     // 同期状態のリスナーを設定
                     if (window.syncManager) {
                         window.syncManager.onSyncStatusChange(updateSyncStatusUI);
-
+                        
                         // Firestoreリスナーを設定
                         window.syncManager.setupFirestoreListener();
-
+                        
                         // 初回同期
                         await window.syncManager.syncFromFirestore();
                     }
                 } else {
                     // ログアウト済み
                     updateAuthUI(null);
-
+                    
                     // 同期を停止
                     if (window.syncManager) {
                         window.syncManager.stopSync();
@@ -1581,13 +1923,13 @@ function initAuth() {
                 console.error('Auth state change error:', error);
             }
         });
-
+        
         // ログインボタンのイベントリスナー
         const btnLoginGoogle = document.getElementById('btn-login-google');
         if (btnLoginGoogle) {
             btnLoginGoogle.addEventListener('click', handleGoogleLogin);
         }
-
+        
         // ログアウトボタンのイベントリスナー
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
@@ -1604,7 +1946,7 @@ async function handleGoogleLogin() {
         showToast('Firebaseが設定されていません');
         return;
     }
-
+    
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         showToast('ログイン中...');
@@ -1619,13 +1961,13 @@ async function handleGoogleLogin() {
 
 async function handleLogout() {
     if (!window.firebaseAuth) return;
-
+    
     try {
         // 同期を停止
         if (window.syncManager) {
             window.syncManager.stopSync();
         }
-
+        
         await window.firebaseAuth.signOut();
         showToast('ログアウトしました');
         playSound('click');
@@ -1638,20 +1980,20 @@ async function handleLogout() {
 function updateAuthUI(user) {
     const authStatus = document.getElementById('auth-status');
     const authLogin = document.getElementById('auth-login');
-
+    
     if (!authStatus || !authLogin) return;
-
+    
     try {
         if (user) {
             // ログイン済みUIを表示
             authLogin.style.display = 'none';
             authStatus.style.display = 'block';
-
+            
             // ユーザー情報を表示
             const userName = document.getElementById('user-name');
             const userEmail = document.getElementById('user-email');
             const userAvatar = document.getElementById('user-avatar');
-
+            
             if (userName) userName.textContent = user.displayName || 'ユーザー';
             if (userEmail) userEmail.textContent = user.email || '';
             if (userAvatar) {
@@ -1677,15 +2019,15 @@ function updateAuthUI(user) {
 function updateSyncStatusUI(status, message, progress = null) {
     const syncIndicator = document.getElementById('sync-indicator');
     const syncText = document.getElementById('sync-text');
-
+    
     if (!syncIndicator || !syncText) return;
-
+    
     try {
         const hasProgress = progress !== null && progress !== undefined;
         const progressText = hasProgress ? ` (${progress}%)` : '';
         const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
         syncText.textContent = displayMessage;
-
+        
         // ステータスに応じてインジケーターの色を変更
         switch (status) {
             case 'syncing':

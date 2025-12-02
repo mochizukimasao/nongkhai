@@ -8,6 +8,18 @@ let unsubscribeNotes = null;
 // デバウンス用のタイマー
 let syncDebounceTimer = null;
 const SYNC_DEBOUNCE_MS = 500; // 500ms待機
+const NOTE_SYNC_DEBOUNCE_MS = 500;
+const MAX_SYNC_RETRY = 3;
+const RETRY_BASE_DELAY_MS = 500;
+
+// ローカル→クラウド同期のキュー
+let pendingLocalNoteSyncs = new Set();
+let localSyncTimer = null;
+let localSyncInFlight = false;
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // 同期状態のリスナーを登録
 function onSyncStatusChange(callback) {
@@ -88,6 +100,11 @@ function firestoreNoteToLocal(firestoreId, firestoreData, localText = null) {
 // 単一のノートをFirestoreに保存（フェーズ2: 差分対応）
 async function syncNoteToFirestore(noteId, note, delta = null) {
     if (!isAuthenticated() || !window.db) return false;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        notifySyncStatus('disconnected', 'オフラインのため同期待機中');
+        return false;
+    }
+    if (!note) return false;
     
     try {
         const notesCollection = getNotesCollection();
@@ -113,6 +130,24 @@ async function syncNoteToFirestore(noteId, note, delta = null) {
     }
 }
 
+async function syncNoteToFirestoreWithRetry(noteId, note) {
+    let delayMs = RETRY_BASE_DELAY_MS;
+    for (let attempt = 1; attempt <= MAX_SYNC_RETRY; attempt++) {
+        const currentNote = note || await window.db.notes.get(noteId);
+        if (!currentNote) return false;
+
+        const success = await syncNoteToFirestore(noteId, currentNote);
+        if (success) return true;
+
+        if (attempt < MAX_SYNC_RETRY) {
+            await delay(delayMs);
+            delayMs *= 2;
+            notifySyncStatus('syncing', `再試行中... (${attempt}/${MAX_SYNC_RETRY})`);
+        }
+    }
+    return false;
+}
+
 // Firestoreからノートを削除
 async function deleteNoteFromFirestore(firestoreId) {
     if (!isAuthenticated() || !firestoreId) return false;
@@ -129,6 +164,78 @@ async function deleteNoteFromFirestore(firestoreId) {
     }
 }
 
+// ローカル保存済みノートの同期をキューイング
+function queueNoteSync(noteId) {
+    if (!noteId || !window.db) return;
+    pendingLocalNoteSyncs.add(noteId);
+    if (localSyncTimer) clearTimeout(localSyncTimer);
+    localSyncTimer = setTimeout(processLocalSyncQueue, NOTE_SYNC_DEBOUNCE_MS);
+}
+
+async function processLocalSyncQueue() {
+    if (localSyncInFlight) return;
+    if (pendingLocalNoteSyncs.size === 0) return;
+
+    if (localSyncTimer) {
+        clearTimeout(localSyncTimer);
+        localSyncTimer = null;
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        notifySyncStatus('disconnected', 'オフラインのため同期待機中');
+        return;
+    }
+
+    if (!isAuthenticated()) {
+        localSyncTimer = setTimeout(processLocalSyncQueue, RETRY_BASE_DELAY_MS * 4);
+        return;
+    }
+
+    // 他の同期処理と競合しそうなら少し後でリトライ
+    if (syncInProgress) {
+        if (localSyncTimer) clearTimeout(localSyncTimer);
+        localSyncTimer = setTimeout(processLocalSyncQueue, SYNC_DEBOUNCE_MS);
+        return;
+    }
+
+    localSyncInFlight = true;
+    const noteIds = Array.from(pendingLocalNoteSyncs);
+    pendingLocalNoteSyncs.clear();
+
+    try {
+        for (const noteId of noteIds) {
+            const synced = await syncNoteToFirestoreWithRetry(noteId);
+            if (!synced) {
+                // 再試行のために戻す
+                pendingLocalNoteSyncs.add(noteId);
+            }
+        }
+    } catch (error) {
+        console.error('Error processing local sync queue:', error);
+        notifySyncStatus('error', 'ローカル変更の同期に失敗しました');
+    } finally {
+        localSyncInFlight = false;
+        if (pendingLocalNoteSyncs.size > 0) {
+            if (localSyncTimer) clearTimeout(localSyncTimer);
+            localSyncTimer = setTimeout(processLocalSyncQueue, RETRY_BASE_DELAY_MS * 2);
+        }
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+        notifySyncStatus('syncing', 'オンラインに復帰しました。同期を再開します。');
+        processLocalSyncQueue();
+        // ネット復帰後に最新を取り直す
+        if (typeof syncFromFirestore === 'function') {
+            syncFromFirestore();
+        }
+    });
+    window.addEventListener('offline', () => {
+        notifySyncStatus('disconnected', 'オフラインになりました');
+    });
+}
+
 // 変更差分を処理する関数（最適化版）
 async function syncFromFirestoreChanges(changes) {
     if (!isAuthenticated() || !window.db) return;
@@ -142,6 +249,7 @@ async function syncFromFirestoreChanges(changes) {
         let hasChanges = false;
         const totalChanges = changes.length;
         let processedChanges = 0;
+        let conflictNotified = false;
         const currentNoteId = window.currentNoteId || null;
         
         // 変更されたノートだけを処理
@@ -163,9 +271,16 @@ async function syncFromFirestoreChanges(changes) {
                 
                 // 現在編集中のノートは、リモート変更を即座に適用しない（競合を避ける）
                 if (localNote && localNote.id === currentNoteId) {
+                    const editorDirty = typeof editor !== 'undefined' && editor && editor.value !== localNote.text;
                     // 編集中のノートは、更新時刻を比較してリモートの方が新しい場合のみ更新
                     // フェーズ2: 編集中のノートは差分を適用せず、テキスト全体を使用（安全性のため）
-                    if (firestoreData.updated > localNote.updated) {
+                    if (editorDirty && firestoreData.updated > localNote.updated) {
+                        if (!conflictNotified && typeof showToast === 'function') {
+                            showToast('他の端末で更新がありました。保存後に再読み込みしてください。');
+                        }
+                        conflictNotified = true;
+                        notifySyncStatus('error', '編集中のノートにリモート更新があり、上書きを保留しました');
+                    } else if (firestoreData.updated > localNote.updated) {
                         await window.db.notes.update(localNote.id, {
                             text: firestoreData.text,
                             updated: firestoreData.updated,
@@ -218,6 +333,9 @@ async function syncFromFirestoreChanges(changes) {
             if (typeof updateNoteList === 'function') {
                 updateNoteList();
             }
+        } else {
+            // 変更がなくても進捗表示をリセット
+            notifySyncStatus('synced', '同期完了 (変更なし)', 100);
         }
         
     } catch (error) {
@@ -228,6 +346,24 @@ async function syncFromFirestoreChanges(changes) {
     }
 }
 
+// ローカルに存在する未同期ノート（firestoreIdがないもの）をクラウドへアップロード
+async function uploadLocalOrphanNotes() {
+    if (!isAuthenticated() || !window.db) return;
+    // Dexie 3.x does not allow equals(null) on indexed fields; use filter instead
+    const orphanNotes = await window.db.notes.filter(note => !note.firestoreId).toArray();
+    if (orphanNotes.length === 0) return;
+
+    notifySyncStatus('syncing', `ローカル未同期ノート ${orphanNotes.length} 件をアップロード中...`);
+    let uploaded = 0;
+
+    for (const note of orphanNotes) {
+        const success = await syncNoteToFirestoreWithRetry(note.id, note);
+        if (success) uploaded++;
+    }
+
+    notifySyncStatus('syncing', `ローカル未同期ノート ${uploaded}/${orphanNotes.length} 件をアップロード完了`);
+}
+
 // Firestoreからすべてのノートを取得してローカルDBを「サーバー状態で上書き」する
 // 👉 Firestore を唯一のソース・オブ・トゥルースとみなし、
 //    各端末の IndexedDB は毎回ここから再構築する方針にする。
@@ -235,11 +371,19 @@ async function syncFromFirestoreChanges(changes) {
 //    といった状態をリセットして常に揃える。
 async function syncFromFirestore() {
     if (!isAuthenticated() || !window.db) return;
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        notifySyncStatus('disconnected', 'オフラインのためクラウド同期を保留しました');
+        return;
+    }
     
     if (syncInProgress) return;
     syncInProgress = true;
     
     try {
+        // クリア前にローカルのみ存在するノートをアップロードして消失を防ぐ
+        await uploadLocalOrphanNotes();
+
         notifySyncStatus('syncing', 'Firestoreから同期中...');
         
         const notesCollection = getNotesCollection();
@@ -342,6 +486,10 @@ function setupFirestoreListener() {
 // すべてのローカルノートをFirestoreに同期
 async function syncAllToFirestore() {
     if (!isAuthenticated() || !window.db) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        notifySyncStatus('disconnected', 'オフラインのため全件同期を保留しました');
+        return;
+    }
     
     if (syncInProgress) return;
     syncInProgress = true;
@@ -388,5 +536,6 @@ window.syncManager = {
     setupFirestoreListener,
     stopSync,
     onSyncStatusChange,
-    isAuthenticated
+    isAuthenticated,
+    queueNoteSync
 };
