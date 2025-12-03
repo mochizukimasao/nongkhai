@@ -140,6 +140,12 @@ body.light-mode #bg-image {
     transform: translateX(0);
 }
 
+body.sidebar-pinned #sidebar {
+    position: fixed;
+    transform: translateX(0);
+    box-shadow: none;
+}
+
 #sidebar-header {
     padding: 20px;
     padding-top: 60px;
@@ -169,7 +175,7 @@ body.light-mode #bg-image {
     padding: 15px 20px;
     border-bottom: 1px solid #333;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
     display: flex;
     /* Flex layout for delete btn */
     justify-content: space-between;
@@ -178,6 +184,13 @@ body.light-mode #bg-image {
 
 .note-item:hover {
     background-color: #333;
+}
+
+.note-item.note-removing {
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
 }
 
 .note-actions {
@@ -291,6 +304,34 @@ body.light-mode .note-action-btn.favorite.favorite-active:hover {
 #sidebar-overlay.visible {
     opacity: 1;
     pointer-events: auto;
+}
+
+body.sidebar-pinned #sidebar-overlay {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.sidebar-pinned #btn-floating-menu {
+    display: none !important;
+}
+
+body.sidebar-pinned #editor-container,
+body.sidebar-pinned #toolbar {
+    margin-left: 300px;
+}
+
+body.sidebar-pinned #toolbar #toolbar {
+    margin-left: 0;
+}
+
+@media (max-width: 900px) {
+    body.sidebar-pinned #editor-container,
+    body.sidebar-pinned #toolbar {
+        margin-left: 0;
+    }
+    body.sidebar-pinned #sidebar {
+        position: absolute;
+    }
 }
 
 /* Editor Container */
@@ -921,6 +962,25 @@ body.light-mode #btn-floating-menu:hover {
 #sync-indicator {
     font-size: 8px;
     transition: color 0.3s ease;
+}
+
+#sync-indicator.syncing {
+    animation: syncPulse 1s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.3);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
 }
 
 body.light-mode #auth-section {

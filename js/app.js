@@ -46,6 +46,7 @@ const bgImage = document.getElementById('bg-image');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+const btnPinSidebar = document.getElementById('btn-pin-sidebar');
 const noteList = document.getElementById('note-list');
 
 // --- Toolbar Element ---
@@ -97,6 +98,7 @@ const soundProfiles = ['cute', 'relax', 'bubble'];
 let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
+let isSidebarPinned = false;
 
 // Background image state
 const bgImages = [
@@ -256,8 +258,8 @@ async function initDB() {
         // Reuse the last note if it's empty
         loadNote(lastNote[0].id);
     } else {
-        // Otherwise, start with a fresh note
-        createNote();
+        // Start with a blank editor until the user begins typing
+        startBlankEditorSession();
     }
 
     updateNoteList();
@@ -298,7 +300,7 @@ async function createNote() {
     if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
         window.syncManager.queueNoteSync(id);
     }
-    if (sidebar.classList.contains('open')) toggleSidebar();
+    if (sidebar.classList.contains('open') && !isSidebarPinActive()) toggleSidebar();
 }
 
 async function loadNote(id) {
@@ -335,16 +337,59 @@ async function loadNote(id) {
     }
 }
 
-async function saveCurrentNote() {
-    if (currentNoteId === null) return;
+function startBlankEditorSession() {
+    noteLoadSequence++;
+    currentNoteId = null;
+    window.currentNoteId = null;
+    if (editor) {
+        editor.value = '';
+    }
+    setNoteLayerOpacity(1);
+    updateHighlights();
+    syncHeight();
+    updateStarState(0);
+    if (scrollArea) {
+        scrollArea.scrollTop = 0;
+    }
+}
 
-    const text = editor.value;
+async function saveCurrentNote() {
+    if (!editor) return;
+    const text = editor.value || '';
+    const trimmed = text.trim();
+
     try {
+        if (currentNoteId === null) {
+            if (!trimmed) return;
+
+            const now = Date.now();
+            const newId = await db.notes.add({
+                text,
+                created: now,
+                updated: now,
+                favorite: 0,
+                deleted: null
+            });
+
+            currentNoteId = newId;
+            window.currentNoteId = newId;
+            updateStarState(0);
+            updateNoteList();
+
+            if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+                window.syncManager.queueNoteSync(newId);
+            }
+            return;
+        }
+
         const currentNote = await db.notes.get(currentNoteId);
-        if (!currentNote) return;
+        if (!currentNote) {
+            currentNoteId = null;
+            window.currentNoteId = null;
+            return;
+        }
 
         if (currentNote.text !== text) {
-            // 保存前の状態を履歴として保存
             await db.noteHistory.add({
                 noteId: currentNoteId,
                 timestamp: Date.now(),
@@ -352,16 +397,15 @@ async function saveCurrentNote() {
                 title: getNoteTitle(currentNote.text)
             });
 
-        await db.notes.update(currentNoteId, {
-            text: text,
-            updated: Date.now()
-        });
-        updateNoteList();
+            await db.notes.update(currentNoteId, {
+                text: text,
+                updated: Date.now()
+            });
+            updateNoteList();
 
-        // ローカル保存が完了したらクラウド同期を要求（実処理はsyncManager側でキュー制御）
-        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
-            window.syncManager.queueNoteSync(currentNoteId);
-        }
+            if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+                window.syncManager.queueNoteSync(currentNoteId);
+            }
         }
     } catch (e) {
         console.error("Save failed", e);
@@ -383,11 +427,37 @@ async function toggleFavorite() {
     }
 }
 
+function getNoteListItemFromEvent(event) {
+    if (!event) return null;
+    const target = event.currentTarget || event.target;
+    if (!target || typeof target.closest !== 'function') return null;
+    return target.closest('.note-item');
+}
+
+function animateNoteRemoval(event) {
+    const listItem = getNoteListItemFromEvent(event);
+    if (!listItem) return Promise.resolve();
+    listItem.classList.add('note-removing');
+    return new Promise(resolve => {
+        let resolved = false;
+        const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            listItem.removeEventListener('transitionend', finish);
+            resolve();
+        };
+        listItem.addEventListener('transitionend', finish);
+        setTimeout(finish, 240);
+    });
+}
+
 async function deleteNote(id, event) {
     if (event) event.stopPropagation();
 
     const note = await db.notes.get(id);
     if (!note) return;
+
+    await animateNoteRemoval(event);
 
     if (note.deleted === null) {
         // Move to Trash
@@ -473,6 +543,45 @@ function isMobile() {
     return window.innerWidth <= 768;
 }
 
+function isSidebarPinActive() {
+    return isSidebarPinned && !isMobile();
+}
+
+function refreshSidebarPinState() {
+    const pinned = isSidebarPinActive();
+    document.body.classList.toggle('sidebar-pinned', pinned);
+    if (pinned) {
+        if (sidebar && !sidebar.classList.contains('open')) {
+            sidebar.classList.add('open');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('visible');
+        }
+        document.body.classList.add('sidebar-open');
+    } else if (sidebar && !sidebar.classList.contains('open')) {
+        document.body.classList.remove('sidebar-open');
+    }
+    if (btnPinSidebar) {
+        btnPinSidebar.classList.toggle('active', pinned);
+        btnPinSidebar.setAttribute('title', pinned ? 'Unpin Sidebar' : 'Pin Sidebar');
+    }
+}
+
+function setSidebarPinned(pinned, { save = true, silent = false } = {}) {
+    let resolvedPinned = pinned;
+    if (resolvedPinned && isMobile()) {
+        resolvedPinned = false;
+        if (!silent) {
+            showToast('サイドバー固定は大きな画面で利用できます');
+        }
+    }
+    isSidebarPinned = resolvedPinned;
+    refreshSidebarPinState();
+    if (save) {
+        saveSettings();
+    }
+}
+
 function handleResize() {
     // If resizing from mobile to desktop and sidebar is open, keep it open
     // If resizing from desktop to mobile and sidebar is open, close it to prevent layout issues
@@ -486,6 +595,7 @@ function handleResize() {
 
     // Sync height on resize
     syncHeight();
+    refreshSidebarPinState();
 }
 
 // --- Sidebar Logic ---
@@ -501,6 +611,10 @@ function toggleSidebar() {
             return;
         }
         
+        if (isSidebarPinActive()) {
+            return;
+        }
+
         const isOpening = !sidebarEl.classList.contains('open');
         
         // 状態を確実に切り替え
@@ -826,7 +940,8 @@ function saveSettings() {
         soundEnabled: isSoundEnabled,
         soundProfile: currentSoundProfile,
         bgImageIndex: currentBgImageIndex,
-        bgmEnabled: isBgmEnabled
+        bgmEnabled: isBgmEnabled,
+        sidebarPinned: isSidebarPinned
     };
     localStorage.setItem('editorSettings', JSON.stringify(settings));
 }
@@ -888,6 +1003,14 @@ function loadSettings() {
         } else {
             updateBgmUI();
         }
+
+        if (typeof settings.sidebarPinned === 'boolean') {
+            setSidebarPinned(settings.sidebarPinned, { save: false, silent: true });
+        } else {
+            refreshSidebarPinState();
+        }
+    } else {
+        refreshSidebarPinState();
     }
 }
 
@@ -977,6 +1100,18 @@ function initSidebarEventListeners() {
             e.preventDefault();
             e.stopPropagation();
             toggleSidebar();
+        });
+    }
+
+    if (btnPinSidebar) {
+        btnPinSidebar.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const previous = isSidebarPinned;
+            setSidebarPinned(!isSidebarPinned);
+            if (previous !== isSidebarPinned) {
+                showToast(isSidebarPinned ? 'サイドバーを固定しました' : 'サイドバー固定を解除しました');
+            }
         });
     }
 
@@ -2245,6 +2380,7 @@ function updateSyncStatusUI(status, message, progress = null) {
     if (!syncIndicator || !syncText) return;
     
     try {
+        syncIndicator.classList.toggle('syncing', status === 'syncing');
         if (status === 'synced') {
             lastSyncedAt = Date.now();
         }
