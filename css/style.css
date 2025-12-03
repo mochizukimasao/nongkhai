@@ -163,6 +163,21 @@ body.sidebar-pinned #sidebar {
     z-index: 1;
 }
 
+/* Ensure buttons in sidebar header are visible */
+#sidebar-header .tool-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sidebar-header .tool-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 #note-list {
     flex: 1;
     overflow-y: auto;
