@@ -63,6 +63,18 @@ let scrollTimeout;
         }, 500); // Hide after 0.5 second of inactivity
     });
 
+// Sidebar note list scrollbar auto-hide
+let noteListScrollTimeout;
+if (noteList) {
+    noteList.addEventListener('scroll', () => {
+        noteList.classList.add('scrolling');
+        clearTimeout(noteListScrollTimeout);
+        noteListScrollTimeout = setTimeout(() => {
+            noteList.classList.remove('scrolling');
+        }, 500);
+    });
+}
+
 // --- Font Toggle Logic ---
 function toggleFont() {
     document.body.classList.toggle('font-gothic');
