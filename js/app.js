@@ -15,8 +15,8 @@ const toast = document.getElementById('toast');
 const btnFloatingMenu = document.getElementById('btn-floating-menu');
 const btnSidebarNew = document.getElementById('btn-sidebar-new');
 // const btnMenu = document.getElementById('btn-menu'); // Removed
-const btnNew = document.getElementById('btn-new');
-const btnStar = document.getElementById('btn-star');
+// const btnNew = document.getElementById('btn-new'); // Removed
+// const btnStar = document.getElementById('btn-star'); // Removed
 const btnUndo = document.getElementById('btn-undo');
 const btnRedo = document.getElementById('btn-redo');
 const btnH1 = document.getElementById('btn-h1');
@@ -26,6 +26,7 @@ const btnList = document.getElementById('btn-list');
 const btnOrderedList = document.getElementById('btn-ordered-list');
 const btnCopy = document.getElementById('btn-copy');
 const btnPaste = document.getElementById('btn-paste');
+const btnCharCount = document.getElementById('btn-char-count');
 const btnSelectMode = document.getElementById('btn-select-mode');
 const btnUp = document.getElementById('btn-up');
 const btnDown = document.getElementById('btn-down');
@@ -41,6 +42,7 @@ const iconSoundOff = document.getElementById('icon-sound-off');
 const btnFullscreen = document.getElementById('btn-fullscreen');
 const btnBgImage = document.getElementById('btn-bg-image');
 const bgImage = document.getElementById('bg-image');
+const charCountIndicator = document.getElementById('char-count-indicator');
 
 // --- Sidebar Elements ---
 const sidebar = document.getElementById('sidebar');
@@ -111,6 +113,7 @@ let isSelectionMode = false;
 let selectionAnchor = 0;
 let audioCtx = null;
 let isSidebarPinned = false;
+let isCharCountMode = false;
 
 // Background image state
 const bgImages = [
@@ -335,6 +338,7 @@ async function loadNote(id) {
 
     updateHighlights();
     syncHeight();
+    updateCharCountDisplay();
     updateStarState(note.favorite);
     if (scrollArea) {
         scrollArea.scrollTop = 0;
@@ -359,6 +363,7 @@ function startBlankEditorSession() {
     setNoteLayerOpacity(1);
     updateHighlights();
     syncHeight();
+    updateCharCountDisplay();
     updateStarState(0);
     if (scrollArea) {
         scrollArea.scrollTop = 0;
@@ -543,11 +548,15 @@ async function restoreNoteFromHistory(noteId, historyId) {
 }
 
 function updateStarState(isFav) {
-    if (isFav) {
-        btnStar.classList.add('favorite-active');
-    } else {
-        btnStar.classList.remove('favorite-active');
-    }
+    // btnStarボタンは削除されたため、この関数は何もしない
+    // const btnStar = document.getElementById('btn-star');
+    // if (btnStar) {
+    //     if (isFav) {
+    //         btnStar.classList.add('favorite-active');
+    //     } else {
+    //         btnStar.classList.remove('favorite-active');
+    //     }
+    // }
 }
 
 // --- Mobile Detection & Responsive Helpers ---
@@ -579,7 +588,37 @@ function refreshSidebarPinState() {
     }
 }
 
+function hideFloatingMenuButton() {
+    const floatingMenuBtn = document.getElementById('btn-floating-menu');
+    if (!floatingMenuBtn) return;
+    floatingMenuBtn.style.display = 'none';
+    floatingMenuBtn.style.visibility = 'hidden';
+    floatingMenuBtn.style.opacity = '0';
+    floatingMenuBtn.style.pointerEvents = 'none';
+}
+
+function showFloatingMenuButton() {
+    const floatingMenuBtn = document.getElementById('btn-floating-menu');
+    if (!floatingMenuBtn) return;
+    floatingMenuBtn.style.display = '';
+    floatingMenuBtn.style.visibility = '';
+    floatingMenuBtn.style.opacity = '';
+    floatingMenuBtn.style.pointerEvents = '';
+}
+
+function closeSidebarUI() {
+    if (sidebar) {
+        sidebar.classList.remove('open');
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.classList.remove('visible');
+    }
+    document.body.classList.remove('sidebar-open');
+    showFloatingMenuButton();
+}
+
 function setSidebarPinned(pinned, { save = true, silent = false } = {}) {
+    const wasPinnedActive = isSidebarPinActive();
     let resolvedPinned = pinned;
     if (resolvedPinned && isMobile()) {
         resolvedPinned = false;
@@ -589,6 +628,9 @@ function setSidebarPinned(pinned, { save = true, silent = false } = {}) {
     }
     isSidebarPinned = resolvedPinned;
     refreshSidebarPinState();
+    if (wasPinnedActive && !isSidebarPinActive()) {
+        closeSidebarUI();
+    }
     if (save) {
         saveSettings();
     }
@@ -616,7 +658,6 @@ function toggleSidebar() {
         // 要素の存在確認
         const sidebarEl = document.getElementById('sidebar');
         const sidebarOverlayEl = document.getElementById('sidebar-overlay');
-        const floatingMenuBtn = document.getElementById('btn-floating-menu');
         
         if (!sidebarEl || !sidebarOverlayEl) {
             console.error('[toggleSidebar] Sidebar elements not found');
@@ -628,38 +669,25 @@ function toggleSidebar() {
         }
 
         const isOpening = !sidebarEl.classList.contains('open');
-        
-        // 状態を確実に切り替え
-        sidebarEl.classList.toggle('open');
-        sidebarOverlayEl.classList.toggle('visible');
 
-    // Hide/show floating menu button when sidebar opens/closes
-        if (sidebarEl.classList.contains('open')) {
-        document.body.classList.add('sidebar-open');
-        // Force hide button with multiple methods
-            if (floatingMenuBtn) {
-                floatingMenuBtn.style.display = 'none';
-                floatingMenuBtn.style.visibility = 'hidden';
-                floatingMenuBtn.style.opacity = '0';
-                floatingMenuBtn.style.pointerEvents = 'none';
-            }
+        if (isOpening) {
+            sidebarEl.classList.add('open');
+            sidebarOverlayEl.classList.add('visible');
+            document.body.classList.add('sidebar-open');
+            hideFloatingMenuButton();
             // updateNoteList()はエラーが発生してもサイドバーは開いたままにする
             try {
-        updateNoteList();
+                updateNoteList();
             } catch (error) {
                 console.error('[toggleSidebar] Error updating note list:', error);
             }
-    } else {
-        document.body.classList.remove('sidebar-open');
-        // Restore button visibility - always restore, CSS will handle mobile/desktop display
-            if (floatingMenuBtn) {
-                floatingMenuBtn.style.display = '';
-                floatingMenuBtn.style.visibility = '';
-                floatingMenuBtn.style.opacity = '';
-                floatingMenuBtn.style.pointerEvents = '';
-            }
+        } else {
+            sidebarEl.classList.remove('open');
+            sidebarOverlayEl.classList.remove('visible');
+            document.body.classList.remove('sidebar-open');
+            showFloatingMenuButton();
         }
-        
+
         // サイドメニューでは効果音を鳴らさない
     } catch (error) {
         console.error('[toggleSidebar] Unexpected error:', error);
@@ -953,7 +981,8 @@ function saveSettings() {
         soundProfile: currentSoundProfile,
         bgImageIndex: currentBgImageIndex,
         bgmEnabled: isBgmEnabled,
-        sidebarPinned: isSidebarPinned
+        sidebarPinned: isSidebarPinned,
+        charCount: isCharCountMode
     };
     localStorage.setItem('editorSettings', JSON.stringify(settings));
 }
@@ -982,6 +1011,12 @@ function loadSettings() {
                 document.body.classList.remove('font-gothic');
             btnFont.querySelector('span').style.fontFamily = 'serif';
     }
+
+    // Char Count
+        isCharCountMode = Boolean(settings.charCount);
+        if (btnCharCount) {
+            btnCharCount.classList.toggle('active', isCharCountMode);
+        }
 
     // Sound
         if (settings.soundEnabled) {
@@ -1021,9 +1056,13 @@ function loadSettings() {
         } else {
             refreshSidebarPinState();
         }
+
+        updateCharCountDisplay();
     } else {
         refreshSidebarPinState();
     }
+
+    updateCharCountDisplay();
 }
 
 // --- Initialize Sidebar Event Listeners ---
@@ -1162,22 +1201,8 @@ function initSidebarEventListeners() {
 
 // --- Initialize Other Event Listeners ---
 function initOtherEventListeners() {
-    // 新規作成ボタン
-    if (btnNew) {
-        btnNew.addEventListener('click', (e) => {
-            e.preventDefault();
-            createNote();
-            if (editor) editor.focus();
-        });
-    }
-
-    // お気に入りボタン
-    if (btnStar) {
-        btnStar.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleFavorite();
-        });
-    }
+    // 新規作成ボタンとお気に入りボタンは削除されました
+    // サイドバーのボタン（btn-sidebar-new）を使用してください
 }
 
 // Initialize - 複数のタイミングで初期化を試みる（カーソルの内蔵ブラウザ対応）
@@ -1555,6 +1580,7 @@ function insertMarkdown(type) {
     }
     updateHighlights();
     syncHeight();
+    updateCharCountDisplay();
 }
 
 bindToolbarAction(btnH1, () => insertMarkdown('h1'));
@@ -1592,6 +1618,7 @@ function pastePlain() {
         }
         updateHighlights();
         syncHeight();
+        updateCharCountDisplay();
         showToast('Pasted!');
     }).catch(err => {
         console.error('Failed to read clipboard: ', err);
@@ -1599,9 +1626,40 @@ function pastePlain() {
     });
 }
 
+function getCharCount(text = '') {
+    // Array.from handles surrogate pairs so Japanese characters are counted correctly
+    return Array.from(text || '').length;
+}
+
+function updateCharCountDisplay() {
+    if (!charCountIndicator) return;
+
+    if (!isCharCountMode) {
+        charCountIndicator.classList.remove('visible');
+        return;
+    }
+
+    const count = getCharCount(editor ? editor.value : '');
+    charCountIndicator.textContent = `${count}文字`;
+    charCountIndicator.classList.add('visible');
+}
+
+function toggleCharCountMode() {
+    isCharCountMode = !isCharCountMode;
+
+    if (btnCharCount) {
+        btnCharCount.classList.toggle('active', isCharCountMode);
+    }
+
+    updateCharCountDisplay();
+    showToast(isCharCountMode ? '文字数カウント: ON' : '文字数カウント: OFF');
+    saveSettings();
+}
+
 bindToolbarAction(btnCopy, copyAll);
 
 bindToolbarAction(btnPaste, pastePlain);
+bindToolbarAction(btnCharCount, toggleCharCountMode);
 
 
 // --- Navigation & Selection Logic ---
@@ -2143,6 +2201,7 @@ editor.addEventListener('input', (e) => {
     // Update UI
     updateHighlights();
     syncHeight();
+    updateCharCountDisplay();
 
     // Sound for IME
     if (e.inputType === 'insertCompositionText' || e.isComposing) {
@@ -2408,11 +2467,15 @@ function updateSyncStatusUI(status, message, progress = null) {
             return `${yyyy}/${mon}/${dd} ${hh}:${mm}`;
         };
 
-        const hasProgress = progress !== null && progress !== undefined;
-        const progressText = hasProgress ? ` (${progress}%)` : '';
-        const timeText = status === 'synced' && lastSyncedAt ? ` | 最終同期 ${formatTime(lastSyncedAt)}` : '';
-        const displayMessage = message ? `${message}${progressText}${timeText}` : (hasProgress ? `${progress}%${timeText}` : timeText || '');
-        syncText.textContent = displayMessage;
+        // 同期完了時は「Sync completed 2025/12/04 11:50」形式で表示
+        if (status === 'synced' && lastSyncedAt) {
+            syncText.textContent = `Sync completed ${formatTime(lastSyncedAt)}`;
+        } else {
+            const hasProgress = progress !== null && progress !== undefined;
+            const progressText = hasProgress ? ` (${progress}%)` : '';
+            const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
+            syncText.textContent = displayMessage;
+        }
         
         // ステータスに応じてインジケーターの色を変更
         switch (status) {

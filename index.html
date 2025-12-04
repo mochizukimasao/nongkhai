@@ -34,7 +34,6 @@
         <div id="sidebar">
             <div id="sidebar-header">
                 <div style="display:flex; align-items:center; gap:5px;">
-                    <span style="margin-right: 5px;">Notes</span>
                     <button id="btn-sidebar-new" class="tool-btn" title="New Note"
                         style="margin:0; width:30px; height:30px;">
                         <svg viewBox="0 0 24 24">
@@ -85,7 +84,7 @@
                         </div>
                     </div>
                     <div id="sync-status" style="font-size: 12px; color: #888; margin-bottom: 10px;">
-                        <span id="sync-indicator">●</span> <span id="sync-text">同期中...</span>
+                        <span id="sync-indicator">●</span> <span id="sync-text">Syncing...</span>
                     </div>
                     <button id="btn-logout" class="tool-btn"
                         style="width: 100%; padding: 8px; font-size: 14px;">ログアウト</button>
@@ -162,23 +161,7 @@
                 <button class="tool-btn" id="btn-select-mode" aria-label="Selection Mode">
                     <svg viewBox="0 0 24 24">
                         <path
-                            d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h1v2H5v14h14v-1h2zM11 6.83l1.59 1.58L8 13l1.41 1.41 4.59-4.59L15.59 11.41V6.83z" />
-                    </svg>
-                </button>
-
-                <div class="separator"></div>
-
-                <!-- Main Menu / New / Star -->
-                <!-- Menu button removed -->
-                <button class="tool-btn" id="btn-new" aria-label="New Note">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                    </svg>
-                </button>
-                <button class="tool-btn" id="btn-star" aria-label="Favorite">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2z" />
                     </svg>
                 </button>
 
@@ -248,6 +231,12 @@
                     </svg>
                 </button>
 
+                <!-- Char Count Toggle -->
+                <button class="tool-btn" id="btn-char-count" aria-label="Toggle Character Count">
+                    <span
+                        style="font-family: sans-serif; font-size: 12px; font-weight: bold; letter-spacing: -1px;">123</span>
+                </button>
+
                 <!-- Font Toggle -->
                 <button class="tool-btn" id="btn-font" aria-label="Toggle Font">
                     <span style="font-family: serif; font-size: 16px;">T</span>
@@ -295,7 +284,8 @@
                 <button class="tool-btn" id="btn-bg-image" aria-label="Toggle Background Image">
                     <svg viewBox="0 0 24 24">
                         <!-- Image/Photo icon -->
-                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                        <path
+                            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                     </svg>
                 </button>
 
@@ -308,9 +298,10 @@
             </div>
         </div>
 
+        <div id="char-count-indicator" aria-live="polite"></div>
 
         <script src="js/sync.js"></script>
         <script src="js/app.js"></script>
 </body>
 
-</html>```
+</html>

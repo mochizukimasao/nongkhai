@@ -327,7 +327,7 @@ async function syncFromFirestoreChanges(changes) {
         }
         
         if (hasChanges) {
-            notifySyncStatus('synced', '同期完了', 100);
+            notifySyncStatus('synced', 'Sync completed', 100);
             
             // ノートリストを更新
             if (typeof updateNoteList === 'function') {
@@ -335,7 +335,7 @@ async function syncFromFirestoreChanges(changes) {
             }
         } else {
             // 変更がなくても進捗表示をリセット
-            notifySyncStatus('synced', '同期完了 (変更なし)', 100);
+            notifySyncStatus('synced', 'Sync completed', 100);
         }
         
     } catch (error) {

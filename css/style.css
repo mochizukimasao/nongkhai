@@ -322,6 +322,12 @@ body.light-mode .note-action-btn.favorite.favorite-active:hover {
     pointer-events: auto;
 }
 
+/* Keep overlay off the sidebar area on desktop so the panel doesn't darken */
+body.sidebar-open #sidebar-overlay {
+    left: 300px;
+    width: calc(100% - 300px);
+}
+
 body.sidebar-pinned #sidebar-overlay {
     opacity: 0 !important;
     pointer-events: none !important;
@@ -347,6 +353,10 @@ body.sidebar-pinned #toolbar #toolbar {
     }
     body.sidebar-pinned #sidebar {
         position: absolute;
+    }
+    body.sidebar-open #sidebar-overlay {
+        left: 0;
+        width: 100%;
     }
 }
 
@@ -663,6 +673,19 @@ body.light-mode .tool-btn.active {
     background-color: rgba(0, 122, 255, 0.1);
 }
 
+/* Pin Sidebar Button - Active state matches # button color */
+#btn-pin-sidebar.active {
+    color: #5dade2 !important;
+    /* Light blue (cyan) for dark mode - same as # button */
+    background-color: rgba(93, 173, 226, 0.1) !important;
+}
+
+body.light-mode #btn-pin-sidebar.active {
+    color: #dc3545 !important;
+    /* Red for light mode - same as # button */
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
 .tool-btn.favorite-active {
     color: #ffd700 !important;
 }
@@ -734,6 +757,34 @@ body.light-mode #toast {
     background-color: rgba(255, 255, 255, 0.9);
     color: #333;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#char-count-indicator {
+    position: fixed;
+    left: 50%;
+    bottom: 62px;
+    transform: translateX(-50%) translateY(8px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--text-color);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 1500;
+    backdrop-filter: blur(8px);
+}
+
+#char-count-indicator.visible {
+    opacity: 0.75;
+    transform: translateX(-50%) translateY(0);
+}
+
+body.light-mode #char-count-indicator {
+    background: rgba(255, 255, 255, 0.65);
+    color: #333;
 }
 
 /* Markdown Styles - Restored */
