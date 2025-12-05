@@ -43,6 +43,9 @@ const btnFullscreen = document.getElementById('btn-fullscreen');
 const btnBgImage = document.getElementById('btn-bg-image');
 const bgImage = document.getElementById('bg-image');
 const charCountIndicator = document.getElementById('char-count-indicator');
+const btnOpenHelp = document.getElementById('btn-open-help');
+const helpModal = document.getElementById('help-modal');
+const btnCloseHelp = document.getElementById('btn-close-help');
 
 // --- Sidebar Elements ---
 const sidebar = document.getElementById('sidebar');
@@ -820,6 +823,42 @@ function initHistoryModalEvents() {
     }
 }
 
+// --- Help Modal ---
+function openHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.add('active');
+    helpModal.removeAttribute('hidden');
+    helpModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+}
+
+function closeHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.remove('active');
+    helpModal.setAttribute('aria-hidden', 'true');
+    helpModal.setAttribute('hidden', 'true');
+    document.body.classList.remove('modal-open');
+}
+
+function initHelpModalEvents() {
+    if (!helpModal) return;
+    const backdrop = helpModal.querySelector('.help-backdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', closeHelpModal);
+    }
+    if (btnCloseHelp) {
+        btnCloseHelp.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeHelpModal();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.classList.contains('active')) {
+            closeHelpModal();
+        }
+    });
+}
+
 async function updateNoteList() {
     let notes;
     if (showTrash) {
@@ -1212,6 +1251,14 @@ function initSidebarEventListeners() {
             toggleTrashView();
         });
     }
+
+    // Help modal open
+    if (btnOpenHelp) {
+        btnOpenHelp.addEventListener('click', (e) => {
+            e.preventDefault();
+            openHelpModal();
+        });
+    }
 }
 
 // --- Initialize Other Event Listeners ---
@@ -1236,6 +1283,7 @@ function initializeApp() {
     
     initDB();
     initHistoryModalEvents();
+    initHelpModalEvents();
     
     // Initialize BGM (but don't auto-start, wait for user interaction)
     initBgm();
@@ -2284,6 +2332,20 @@ editor.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
         e.preventDefault();
         editor.select();
+        return;
+    }
+
+    // Toggle heading (Cmd+Shift+H)
+    if (e.metaKey && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault();
+        insertMarkdown('h1');
+        return;
+    }
+
+    // Toggle list (Ctrl/Cmd+L)
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        insertMarkdown('list');
         return;
     }
 

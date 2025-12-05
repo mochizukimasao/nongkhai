@@ -190,6 +190,210 @@ body.sidebar-pinned #sidebar {
     list-style: none;
 }
 
+.sidebar-footnote,
+#sidebar-footer-links {
+    padding: 8px 14px 12px;
+    font-size: 11px;
+    color: #777;
+    font-family: "Helvetica Neue", Arial, system-ui, -apple-system, sans-serif;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.01em;
+}
+
+#sidebar-footer-links a,
+#sidebar-footer-links button {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+#sidebar-footer-links a:hover,
+#sidebar-footer-links a:focus-visible,
+#sidebar-footer-links button:hover,
+#sidebar-footer-links button:focus-visible {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+body.light-mode #sidebar-footer-links {
+    color: #555;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Help modal */
+#help-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+}
+
+#help-modal[aria-hidden="true"],
+#help-modal[hidden] {
+    display: none;
+}
+
+#help-modal.active {
+    display: flex;
+}
+
+#help-modal .help-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+#help-modal .help-dialog {
+    position: relative;
+    width: min(900px, 92vw);
+    max-height: 86vh;
+    overflow: hidden;
+    background: rgba(18, 18, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    border-radius: 18px;
+    padding: 20px 20px 14px;
+    color: #e6e6e6;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+body.light-mode #help-modal .help-dialog {
+    background: rgba(255, 255, 255, 0.94);
+    color: #222;
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+.help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#help-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.help-sub {
+    font-size: 0.82rem;
+    color: #9aa0aa;
+}
+
+body.light-mode .help-sub {
+    color: #555;
+}
+
+#btn-close-help {
+    min-width: 32px;
+    height: 32px;
+    padding: 6px;
+}
+
+.help-body {
+    overflow-y: auto;
+    padding-right: 4px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.help-body section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.help-body section h2 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    color: inherit;
+}
+
+.help-body ul {
+    padding-left: 16px;
+    margin: 0;
+    list-style: disc;
+}
+
+.help-body li {
+    margin-bottom: 4px;
+}
+
+.help-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 4px 0 6px;
+}
+
+.help-body th,
+.help-body td {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.help-body th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+}
+
+.help-body .muted {
+    color: #8f95a3;
+    margin: 6px 0 0;
+    font-size: 12px;
+}
+
+body.light-mode .help-body section {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+body.light-mode .help-body th,
+body.light-mode .help-body td {
+    border-color: rgba(0, 0, 0, 0.07);
+}
+
+body.light-mode .help-body th {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .help-body .muted {
+    color: #555;
+}
+
+@media (max-width: 640px) {
+    #help-modal .help-dialog {
+        padding: 16px 14px 12px;
+        gap: 8px;
+    }
+    .help-body {
+        grid-template-columns: 1fr;
+    }
+}
+
 .note-item {
     padding: 15px 20px;
     border-bottom: 1px solid #333;
