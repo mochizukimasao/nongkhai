@@ -56,6 +56,7 @@ const toolbar = document.getElementById('toolbar');
 
 // --- Auto-hide Scrollbar Logic ---
 let scrollTimeout;
+if (scrollArea) {
     scrollArea.addEventListener('scroll', () => {
         scrollArea.classList.add('scrolling');
 
@@ -68,6 +69,9 @@ let scrollTimeout;
         // syncHeight()は高さと位置を同期するので、スクロール時にも呼び出す
         syncHeight();
     });
+} else {
+    console.error('Scroll area element not found');
+}
     
 // Sidebar note list scrollbar auto-hide
 let noteListScrollTimeout;
@@ -857,7 +861,7 @@ async function updateNoteList() {
         if (note.id === currentNoteId) li.classList.add('active');
         if (note.favorite) li.classList.add('favorite');
 
-        const title = getNoteTitle(note.text);
+        const title = escapeForHTML(getNoteTitle(note.text));
         const date = new Date(showTrash ? note.deleted : note.updated).toLocaleString();
 
         // Action Buttons
@@ -994,7 +998,14 @@ function saveSettings() {
 function loadSettings() {
     const saved = localStorage.getItem('editorSettings');
     if (saved) {
-        const settings = JSON.parse(saved);
+        let settings = {};
+        try {
+            settings = JSON.parse(saved) || {};
+        } catch (error) {
+            console.warn('Invalid editorSettings found in localStorage; resetting to defaults.', error);
+            localStorage.removeItem('editorSettings');
+            settings = {};
+        }
 
     // Theme
         if (settings.theme === 'light') {

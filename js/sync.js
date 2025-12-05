@@ -408,12 +408,6 @@ async function syncFromFirestore({ allowUploadWhenEmpty = true } = {}) {
             return;
         }
 
-        // --- 重要方針 ---
-        // Firestore 上の状態をそのままローカルにミラーするため、
-        // いったんローカル notes テーブルをクリアしてから
-        // Firestore の内容で再構築する。
-        await window.db.notes.clear();
-
         const docs = [];
         snapshot.forEach((doc) => {
             docs.push(doc);
@@ -422,19 +416,28 @@ async function syncFromFirestore({ allowUploadWhenEmpty = true } = {}) {
         const total = docs.length;
         let processed = 0;
 
-        for (const doc of docs) {
-            const firestoreId = doc.id;
-            const data = doc.data();
-            const localNoteData = firestoreNoteToLocal(firestoreId, data);
-            delete localNoteData.id; // idは自動生成される
-            await window.db.notes.add(localNoteData);
+        // --- 重要方針 ---
+        // Firestore 上の状態をそのままローカルにミラーするため、
+        // いったんローカル notes テーブルをクリアしてから
+        // Firestore の内容で再構築する。
+        // 失敗時に部分的な消失を防ぐためトランザクションで行う。
+        await window.db.transaction('rw', window.db.notes, async () => {
+            await window.db.notes.clear();
 
-            processed++;
-            if (total > 0 && (processed === total || processed % 10 === 0)) {
-                const progress = Math.round((processed / total) * 100);
-                notifySyncStatus('syncing', `Firestoreから ${processed}/${total} 件を同期中...`, progress);
+            for (const doc of docs) {
+                const firestoreId = doc.id;
+                const data = doc.data();
+                const localNoteData = firestoreNoteToLocal(firestoreId, data);
+                delete localNoteData.id; // idは自動生成される
+                await window.db.notes.add(localNoteData);
+
+                processed++;
+                if (total > 0 && (processed === total || processed % 10 === 0)) {
+                    const progress = Math.round((processed / total) * 100);
+                    notifySyncStatus('syncing', `Firestoreから ${processed}/${total} 件を同期中...`, progress);
+                }
             }
-        }
+        });
         
         notifySyncStatus('synced', '同期完了', 100);
         
