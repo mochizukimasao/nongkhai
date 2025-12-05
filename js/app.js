@@ -46,6 +46,10 @@ const charCountIndicator = document.getElementById('char-count-indicator');
 const btnOpenHelp = document.getElementById('btn-open-help');
 const helpModal = document.getElementById('help-modal');
 const btnCloseHelp = document.getElementById('btn-close-help');
+const btnSearch = document.getElementById('btn-search');
+const searchBar = document.getElementById('search-bar');
+const searchInput = document.getElementById('search-input');
+const btnClearSearch = document.getElementById('btn-clear-search');
 
 // --- Sidebar Elements ---
 const sidebar = document.getElementById('sidebar');
@@ -203,6 +207,7 @@ let showTrash = false; // Toggle state for sidebar
 let showFavorites = false; // Toggle state for favorites filter
 let lastSyncedAt = null;
 const TRASH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+let searchQuery = '';
 
 // --- Firestore Helpers (Web版はクラウド直アクセスを優先) ---
 function getFirestoreNotesCollection() {
@@ -628,6 +633,24 @@ function closeSidebarUI() {
     showFloatingMenuButton();
 }
 
+function toggleSearchBar() {
+    if (!searchBar) return;
+    const isHidden = searchBar.classList.contains('hidden');
+    searchBar.classList.toggle('hidden', !isHidden);
+    if (isHidden && searchInput) {
+        // Opening: focus and select current query
+        requestAnimationFrame(() => {
+            searchInput.focus();
+            searchInput.select();
+        });
+    } else if (!isHidden) {
+        // Closing: clear query
+        searchQuery = '';
+        if (searchInput) searchInput.value = '';
+        updateNoteList();
+    }
+}
+
 function setSidebarPinned(pinned, { save = true, silent = false } = {}) {
     const wasPinnedActive = isSidebarPinActive();
     let resolvedPinned = pinned;
@@ -881,6 +904,14 @@ async function updateNoteList() {
             .sortBy('updated');
     }
 
+    if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        notes = notes.filter(note => {
+            const text = (note.text || '').toLowerCase();
+            return text.includes(q);
+        });
+    }
+
     noteList.innerHTML = '';
 
     if (notes.length === 0) {
@@ -889,6 +920,8 @@ async function updateNoteList() {
             message = 'Trash is empty';
         } else if (showFavorites) {
             message = 'No favorites';
+        } else if (searchQuery.trim()) {
+            message = 'No matches';
         }
         noteList.innerHTML = `<li style="padding:20px; color:#666; text-align:center;">${message}</li>`;
         return;
@@ -1257,6 +1290,31 @@ function initSidebarEventListeners() {
         btnOpenHelp.addEventListener('click', (e) => {
             e.preventDefault();
             openHelpModal();
+        });
+    }
+
+    // Search toggle
+    if (btnSearch) {
+        btnSearch.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleSearchBar();
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value || '';
+            updateNoteList();
+        });
+    }
+
+    if (btnClearSearch) {
+        btnClearSearch.addEventListener('click', (e) => {
+            e.preventDefault();
+            searchQuery = '';
+            if (searchInput) searchInput.value = '';
+            updateNoteList();
+            searchInput?.focus();
         });
     }
 }

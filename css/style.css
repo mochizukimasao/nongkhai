@@ -182,6 +182,64 @@ body.sidebar-pinned #sidebar {
     height: 16px;
 }
 
+#search-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-bottom: 1px solid #333;
+}
+
+#search-bar.hidden {
+    display: none;
+}
+
+#search-input {
+    flex: 1;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: inherit;
+    font: inherit;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+body.light-mode #search-bar {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode #search-input {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+#btn-clear-search {
+    min-width: 28px;
+    height: 28px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+}
+
+#btn-clear-search:hover,
+#btn-clear-search:focus-visible {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.light-mode #btn-clear-search {
+    border-color: rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.03);
+}
+
 #note-list {
     flex: 1;
     overflow-y: auto;
