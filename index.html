@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nongkhai - Mindfulness Text Editor</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="shortcut icon" href="favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="favicon.png">
     <link rel="stylesheet" href="css/style.css">
 
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
@@ -109,6 +112,9 @@
             <ul id="note-list">
                 <!-- Notes will be injected here -->
             </ul>
+            <div id="sidebar-footer-links">
+                <button id="btn-open-help" type="button">Manual / Info</button>
+            </div>
         </div>
         <div id="sidebar-overlay"></div>
         <div id="history-modal"
@@ -299,6 +305,77 @@
         </div>
 
         <div id="char-count-indicator" aria-live="polite"></div>
+
+        <div id="help-modal" aria-modal="true" role="dialog" aria-labelledby="help-title" hidden>
+            <div class="help-backdrop"></div>
+            <div class="help-dialog">
+                <div class="help-header">
+                    <div>
+                        <div id="help-title">Manual / Info</div>
+                        <div class="help-sub">Nongkhai Editor</div>
+                    </div>
+                    <button id="btn-close-help" class="tool-btn" aria-label="Close help">×</button>
+                </div>
+                <div class="help-body">
+                    <section>
+                        <h2>基本操作</h2>
+                        <ul>
+                            <li>新規ノート: サイドバー上部の「＋」ボタン</li>
+                            <li>ノート切替: サイドバーから選択（モバイルは選択で閉じる）</li>
+                            <li>お気に入り/ゴミ箱: ★・ゴミ箱トグルで切替</li>
+                            <li>履歴: ノート行の時計アイコンから復元/参照</li>
+                            <li>テーマ・フォント・文字数: ツールバー右側で切替</li>
+                            <li>効果音/BGM: スピーカー/傘アイコンでON/OFF</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>ショートカット</h2>
+                        <table aria-label="keyboard shortcuts">
+                            <thead>
+                                <tr><th>キー</th><th>動作</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Ctrl/Cmd + A</td><td>全選択</td></tr>
+                                <tr><td>Enter（リスト/引用行）</td><td>箇条書き・番号リスト・引用の継続/解除</td></tr>
+                                <tr><td>Ctrl/Cmd + Z</td><td>取り消し</td></tr>
+                                <tr><td>Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y</td><td>やり直し</td></tr>
+                                <tr><td>Ctrl/Cmd + C / V</td><td>コピー / ペースト</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="muted">独自ホットキーは上記のみです。他はブラウザ標準を利用します。</p>
+                    </section>
+
+                    <section>
+                        <h2>Tips</h2>
+                        <ul>
+                            <li>入力は自動保存（最長4秒以内）。離脱時も保留保存をフラッシュ。</li>
+                            <li>文字数カウントは右下トグルで表示。</li>
+                            <li>背景画像・BGM・設定は次回起動時に復元。</li>
+                            <li>モバイルは左上の三本線でサイドバーを開閉。</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>データと同期</h2>
+                        <ul>
+                            <li>ローカル: IndexedDB に保存。オフライン編集可。</li>
+                            <li>クラウド: Firebase ログインで Firestore とミラー同期。</li>
+                            <li>ゴミ箱: 30日で自動削除。ゴミ箱表示から復元可。</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Copyright / Credits</h2>
+                        <ul>
+                            <li>Nongkhai Editor — © 2025 soi24.com All rights reserved.</li>
+                            <li>データはブラウザ（IndexedDB）と接続先 Firebase に保存。バックアップは各自で管理。</li>
+                            <li>外部: Dexie, Firebase SDK, diff-match-patch。音源/画像は <code>assets/</code> に格納。</li>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+        </div>
 
         <script src="js/sync.js"></script>
         <script src="js/app.js"></script>
