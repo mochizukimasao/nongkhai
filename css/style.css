@@ -315,6 +315,16 @@ body.light-mode .help-sub {
     gap: 12px;
 }
 
+.help-body .help-intro {
+    grid-column: 1 / -1;
+    font-size: 13.5px;
+    line-height: 1.7;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    padding: 12px;
+}
+
 .help-body section {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -369,6 +379,11 @@ body.light-mode .help-sub {
 body.light-mode .help-body section {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(0, 0, 0, 0.07);
+}
+
+body.light-mode .help-body .help-intro {
+    border-color: rgba(0, 0, 0, 0.07);
+    background: rgba(0, 0, 0, 0.02);
 }
 
 body.light-mode .help-body th,
