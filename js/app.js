@@ -63,8 +63,12 @@ let scrollTimeout;
         scrollTimeout = setTimeout(() => {
             scrollArea.classList.remove('scrolling');
         }, 500); // Hide after 0.5 second of inactivity
+        
+        // スクロール時にも位置を同期（必要に応じて）
+        // syncHeight()は高さと位置を同期するので、スクロール時にも呼び出す
+        syncHeight();
     });
-
+    
 // Sidebar note list scrollbar auto-hide
 let noteListScrollTimeout;
 if (noteList) {
@@ -329,20 +333,20 @@ async function loadNote(id) {
         if (loadToken !== noteLoadSequence) return;
     }
 
-    currentNoteId = id;
+        currentNoteId = id;
     window.currentNoteId = currentNoteId;
 
-    if (editor) {
-        editor.value = note.text;
-    }
+        if (editor) {
+            editor.value = note.text;
+            }
 
     updateHighlights();
-    syncHeight();
+            syncHeight();
     updateCharCountDisplay();
-    updateStarState(note.favorite);
-    if (scrollArea) {
-        scrollArea.scrollTop = 0;
-    }
+        updateStarState(note.favorite);
+        if (scrollArea) {
+            scrollArea.scrollTop = 0;
+        }
 
     if (shouldAnimate) {
         if (loadToken === noteLoadSequence) {
@@ -414,12 +418,12 @@ async function saveCurrentNote() {
                 title: getNoteTitle(currentNote.text)
             });
 
-            await db.notes.update(currentNoteId, {
-                text: text,
-                updated: Date.now()
-            });
-            updateNoteList();
-
+        await db.notes.update(currentNoteId, {
+            text: text,
+            updated: Date.now()
+        });
+        updateNoteList();
+        
             if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
                 window.syncManager.queueNoteSync(currentNoteId);
             }
@@ -677,14 +681,14 @@ function toggleSidebar() {
             hideFloatingMenuButton();
             // updateNoteList()はエラーが発生してもサイドバーは開いたままにする
             try {
-                updateNoteList();
+        updateNoteList();
             } catch (error) {
                 console.error('[toggleSidebar] Error updating note list:', error);
             }
-        } else {
+    } else {
             sidebarEl.classList.remove('open');
             sidebarOverlayEl.classList.remove('visible');
-            document.body.classList.remove('sidebar-open');
+        document.body.classList.remove('sidebar-open');
             showFloatingMenuButton();
         }
 
@@ -1016,7 +1020,7 @@ function loadSettings() {
         isCharCountMode = Boolean(settings.charCount);
         if (btnCharCount) {
             btnCharCount.classList.toggle('active', isCharCountMode);
-        }
+    }
 
     // Sound
         if (settings.soundEnabled) {
@@ -1340,67 +1344,50 @@ function bindToolbarAction(button, action) {
 }
 
 // --- Syntax Highlighting ---
+const TAB_ENTITY = '&nbsp;&nbsp;&nbsp;&nbsp;';
+
 function updateHighlights() {
     if (!editor || !highlightLayer) {
         console.warn('updateHighlights: editor or highlightLayer is not available');
         return;
     }
-    
+
     try {
-    let text = editor.value;
+        let text = editor.value || '';
 
-    // Escape HTML to prevent XSS and rendering issues
-        // Do this first, but we'll handle quotes specially
-    text = text.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        // Normalize Windows line endings to avoid mismatched rows when syncing content
+        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Apply Markdown Styling
-        // Process in order: Quote -> Heading -> Bullet -> Bold -> Symbols
-        
+        // Escape HTML to prevent XSS and rendering issues
+        text = text.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Tabs should render with the same visual width as the textarea
+        text = text.replace(/\t/g, TAB_ENTITY);
+
+        // Apply Markdown Styling (Quote -> Heading -> Bullet -> Bold -> Symbols)
+
         // Quote: > at start of line (after escaping, so we match &gt;)
-        // > symbol gets colored, text part is not styled
         text = text.replace(/^(&gt;)\s+(.*)$/gm, '<span class="md-mark">&gt;</span> $2');
 
         // Heading: # text (at start of line)
-        // Support # through ######
-        // # symbol gets colored, only the text part gets underlined
-        text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
-
-        // Bullet list: - or * at start of line
-        text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
-
-    // Bold: **text** -> **<span class="md-bold">text</span>**
-    // We want to underline ONLY the text inside.
-    text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
-
-        // Markdown symbols (#, **) - color the symbols themselves
-        // Only process standalone symbols that weren't already processed
-        text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
-        text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
-
-    // Heading: # text (at start of line)
-    // Support # through ######
-        // # symbol gets colored, only the text part gets underlined
         text = text.replace(/^(#{1,6})\s+(.*)$/gm, '<span class="md-mark">$1</span> <span class="md-heading">$2</span>');
 
         // Bullet list: - or * at start of line
         text = text.replace(/^([-*])\s+(.*)$/gm, '<span class="md-mark">$1</span> $2');
 
         // Bold: **text** -> **<span class="md-bold">text</span>**
-        // We want to underline ONLY the text inside.
         text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
-        // Markdown symbols (#, **) - color the symbols themselves
-        // Only process standalone symbols that weren't already processed
+        // Markdown symbols (#, **) - color the symbols themselves when they are not already wrapped
         text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
         text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
 
-        // Convert all newlines to <br> tags
-        // This ensures line breaks are properly rendered in HTML
-    text = text.replace(/\n/g, '<br>');
+        // Convert all newlines to <br> tags to mirror textarea rendering
+        text = text.replace(/\n/g, '<br>');
 
-    highlightLayer.innerHTML = text;
+        highlightLayer.innerHTML = text;
     } catch (error) {
         console.error('Error in updateHighlights:', error);
     }
@@ -1424,10 +1411,37 @@ function syncHighlightTypography() {
         // Use CSS default (2.0 from .editor-layer)
         highlightLayer.style.lineHeight = '';
     }
-    highlightLayer.style.fontFamily = editorStyle.fontFamily;
-    highlightLayer.style.fontWeight = editorStyle.fontWeight;
-    highlightLayer.style.letterSpacing = editorStyle.letterSpacing;
-    highlightLayer.style.wordSpacing = editorStyle.wordSpacing;
+    const typographyProps = [
+        'fontFamily',
+        'fontWeight',
+        'fontStyle',
+        'letterSpacing',
+        'wordSpacing',
+        'textTransform',
+        'textIndent',
+        'textRendering',
+        'fontFeatureSettings',
+        'fontVariationSettings',
+        'whiteSpace',
+        'wordWrap',
+        'overflowWrap',
+        'wordBreak',
+        'textAlign',
+        'direction'
+    ];
+    typographyProps.forEach(prop => {
+        if (editorStyle[prop] !== undefined) {
+            highlightLayer.style[prop] = editorStyle[prop];
+        }
+    });
+    // Tab size for consistent indentation
+    if (editorStyle.tabSize) {
+        highlightLayer.style.tabSize = editorStyle.tabSize;
+    }
+    const paddingProps = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
+    paddingProps.forEach(prop => {
+        highlightLayer.style[prop] = editorStyle[prop];
+    });
 }
 
 editor.addEventListener('input', updateHighlights);
@@ -1474,9 +1488,12 @@ function syncHeight() {
     editor.style.height = height + 'px';
     highlightLayer.style.height = height + 'px';
         
-        // #editorと#highlight-layerは同じパディングを持っているので、
-        // position: absoluteでtop: 0; left: 0;に設定すれば同じ位置になる
-        // 幅も同じにする
+        // #editorと#highlight-layerの位置を完全に一致させる
+        // #editorはposition: relativeなので、offsetTop/offsetLeftで親要素からの相対位置を取得
+        highlightLayer.style.top = editor.offsetTop + 'px';
+        highlightLayer.style.left = editor.offsetLeft + 'px';
+        
+        // 幅も同じにする（offsetWidthはパディングとボーダーを含む幅）
         highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
         console.error('Error in syncHeight:', error);
@@ -1489,6 +1506,28 @@ function syncHeight() {
 
 editor.addEventListener('input', syncHeight);
 window.addEventListener('resize', handleResize);
+
+if (window.ResizeObserver && scrollArea) {
+    const scrollAreaObserver = new ResizeObserver(() => {
+        requestAnimationFrame(() => {
+            syncHeight();
+        });
+    });
+    scrollAreaObserver.observe(scrollArea);
+}
+
+if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
+    document.fonts.ready.then(() => {
+        updateHighlights();
+        syncHeight();
+    }).catch((error) => {
+        console.warn('Font readiness sync failed:', error);
+    });
+}
+
+window.addEventListener('load', () => {
+    syncHeight();
+});
 
 // Initial call for editor setup
 // Note: This is separate from main DOMContentLoaded to ensure editor elements are ready
@@ -1656,13 +1695,13 @@ function toggleCharCountMode() {
     saveSettings();
 }
 
-bindToolbarAction(btnCopy, copyAll);
+    bindToolbarAction(btnCopy, copyAll);
 
-bindToolbarAction(btnPaste, pastePlain);
+    bindToolbarAction(btnPaste, pastePlain);
 bindToolbarAction(btnCharCount, toggleCharCountMode);
 
 
-// --- Navigation & Selection Logic ---
+    // --- Navigation & Selection Logic ---
 function toggleSelectionMode() {
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
@@ -2107,6 +2146,7 @@ function toggleTheme() {
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
     saveSettings();
+    syncHeight();
 }
 
 const handleThemeButton = (e) => {
@@ -2212,13 +2252,13 @@ editor.addEventListener('input', (e) => {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
-    }
+}
 });
 
 window.addEventListener('pagehide', () => {
     flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
 });
-
+    
 window.addEventListener('beforeunload', () => {
     flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
 });
@@ -2227,6 +2267,13 @@ editor.addEventListener('keydown', (e) => {
     // CRITICAL: Check for IME composition
     if (e.isComposing || e.keyCode === 229) {
         return; // Do nothing if IME is active
+    }
+
+    // Handle Select All (Cmd+A on Mac, Ctrl+A on Windows/Linux)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        editor.select();
+        return;
     }
 
     // List Continuation Logic
