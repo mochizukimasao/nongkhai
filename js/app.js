@@ -1324,17 +1324,17 @@ function initOtherEventListeners() {
     // 新規作成ボタンとお気に入りボタンは削除されました
     // サイドバーのボタン（btn-sidebar-new）を使用してください
     
-    // モバイル限定: Textwell風カーソル追従機能
+    // タッチデバイス限定: Textwell風カーソル追従機能
     initTextwellCursorTracking();
 }
 
-// Textwell風カーソル追従機能（モバイル限定）
+// Textwell風カーソル追従機能（タッチデバイス限定）
 function initTextwellCursorTracking() {
     if (!highlightLayer || !editor) return;
     
-    // モバイル判定（タッチデバイスかつ画面幅が768px以下）
-    const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
-    if (!isMobile) return;
+    // タッチデバイス判定（画面幅の制限なし - iPadなど大きいタッチデバイスでも動作）
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) return;
     
     let isTracking = false;
     

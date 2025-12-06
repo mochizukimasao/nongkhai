@@ -806,8 +806,9 @@ body.light-mode #note-list.scrolling::-webkit-scrollbar-thumb {
     word-break: inherit;
 }
 
-/* モバイル時: Textwell風カーソル追従機能のため、タッチイベントを有効化 */
-@media (max-width: 768px) {
+/* タッチデバイス時: Textwell風カーソル追従機能のため、タッチイベントを有効化 */
+/* マウス操作ではカーソルは追従しない（JavaScript側でタッチイベントのみ処理） */
+@media (hover: none) and (pointer: coarse) {
     #highlight-layer {
         pointer-events: auto;
         /* タッチイベントを有効化して、なぞり操作でカーソルを移動できるようにする */
