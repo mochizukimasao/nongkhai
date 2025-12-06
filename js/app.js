@@ -1335,6 +1335,7 @@ function initTextwellCursorTracking() {
     // タッチデバイス判定（画面幅の制限なし - iPadなど大きいタッチデバイスでも動作）
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
+    document.body.classList.add('touch-device');
     
     let isTracking = false;
     
@@ -1357,7 +1358,7 @@ function initTextwellCursorTracking() {
         if (!editor || !highlightLayer) return null;
         
         const editorRect = editor.getBoundingClientRect();
-        const scrollTop = editor.scrollTop || 0;
+        const scrollTop = (scrollArea && scrollArea.scrollTop) || 0;
         
         // タッチ位置をエディタ内の相対座標に変換
         const relativeX = touchX - editorRect.left;

@@ -815,6 +815,10 @@ body.light-mode #note-list.scrolling::-webkit-scrollbar-thumb {
     }
 }
 
+.touch-device #highlight-layer {
+    pointer-events: auto;
+}
+
 /* Light Mode Overrides */
 body.light-mode {
     /* Background gradient is set in body.light-mode above */
