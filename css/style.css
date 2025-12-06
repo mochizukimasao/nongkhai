@@ -806,6 +806,14 @@ body.light-mode #note-list.scrolling::-webkit-scrollbar-thumb {
     word-break: inherit;
 }
 
+/* モバイル時: Textwell風カーソル追従機能のため、タッチイベントを有効化 */
+@media (max-width: 768px) {
+    #highlight-layer {
+        pointer-events: auto;
+        /* タッチイベントを有効化して、なぞり操作でカーソルを移動できるようにする */
+    }
+}
+
 /* Light Mode Overrides */
 body.light-mode {
     /* Background gradient is set in body.light-mode above */

@@ -1323,6 +1323,179 @@ function initSidebarEventListeners() {
 function initOtherEventListeners() {
     // 新規作成ボタンとお気に入りボタンは削除されました
     // サイドバーのボタン（btn-sidebar-new）を使用してください
+    
+    // モバイル限定: Textwell風カーソル追従機能
+    initTextwellCursorTracking();
+}
+
+// Textwell風カーソル追従機能（モバイル限定）
+function initTextwellCursorTracking() {
+    if (!highlightLayer || !editor) return;
+    
+    // モバイル判定（タッチデバイスかつ画面幅が768px以下）
+    const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
+    if (!isMobile) return;
+    
+    let isTracking = false;
+    
+    // 文字幅を測定するためのCanvas（キャッシュ用）
+    let measureCanvas = null;
+    let measureContext = null;
+    
+    // 文字幅を測定する関数（キャッシュ付き）
+    function measureTextWidth(text, fontStyle) {
+        if (!measureCanvas) {
+            measureCanvas = document.createElement('canvas');
+            measureContext = measureCanvas.getContext('2d');
+        }
+        measureContext.font = fontStyle;
+        return measureContext.measureText(text).width;
+    }
+    
+    // タッチ位置からテキスト内のカーソル位置を計算
+    function getCursorPositionFromTouch(touchX, touchY) {
+        if (!editor || !highlightLayer) return null;
+        
+        const editorRect = editor.getBoundingClientRect();
+        const scrollTop = editor.scrollTop || 0;
+        
+        // タッチ位置をエディタ内の相対座標に変換
+        const relativeX = touchX - editorRect.left;
+        const relativeY = touchY - editorRect.top + scrollTop;
+        
+        // エディタのスタイルを取得
+        const editorStyle = window.getComputedStyle(editor);
+        const lineHeight = parseFloat(editorStyle.lineHeight) || parseFloat(editorStyle.fontSize) * 2;
+        const paddingTop = parseFloat(editorStyle.paddingTop) || 0;
+        const paddingLeft = parseFloat(editorStyle.paddingLeft) || 0;
+        
+        // パディングを考慮した位置
+        const adjustedY = relativeY - paddingTop;
+        const adjustedX = relativeX - paddingLeft;
+        
+        // 行番号を計算
+        const lineIndex = Math.max(0, Math.floor(adjustedY / lineHeight));
+        
+        // テキストを行ごとに分割
+        const text = editor.value || '';
+        const lines = text.split('\n');
+        
+        // 行番号が範囲外の場合は最後の行
+        if (lineIndex >= lines.length) {
+            return text.length;
+        }
+        
+        // 対象行のテキスト
+        const targetLine = lines[lineIndex];
+        
+        // フォントスタイルを構築（実際のフォント設定を使用）
+        const fontSize = editorStyle.fontSize || '16px';
+        const fontFamily = editorStyle.fontFamily || 'serif';
+        const fontWeight = editorStyle.fontWeight || 'normal';
+        const fontStyle = editorStyle.fontStyle || 'normal';
+        const fontString = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
+        
+        // 行内の文字位置を計算（実際の文字幅を測定）
+        let charIndex = 0;
+        let currentWidth = 0;
+        
+        // 文字ごとに幅を測定して、タッチ位置に最も近い位置を見つける
+        for (let i = 0; i < targetLine.length; i++) {
+            const char = targetLine[i];
+            const charWidth = measureTextWidth(char, fontString);
+            const nextWidth = currentWidth + charWidth;
+            
+            // タッチ位置がこの文字の中央より前か後かで判定
+            if (adjustedX < currentWidth + charWidth / 2) {
+                charIndex = i;
+                break;
+            }
+            
+            currentWidth = nextWidth;
+            charIndex = i + 1;
+        }
+        
+        // 範囲内に収める
+        charIndex = Math.max(0, Math.min(charIndex, targetLine.length));
+        
+        // 行の開始位置までの文字数を計算
+        let position = 0;
+        for (let i = 0; i < lineIndex; i++) {
+            position += lines[i].length + 1; // +1は改行文字
+        }
+        
+        // 行内の位置を加算
+        position += charIndex;
+        
+        return Math.min(position, text.length);
+    }
+    
+    // タッチ開始
+    highlightLayer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 0) return;
+        
+        const touch = e.touches[0];
+        const position = getCursorPositionFromTouch(touch.clientX, touch.clientY);
+        
+        if (position !== null) {
+            isTracking = true;
+            editor.setSelectionRange(position, position);
+            editor.focus();
+            // スクロールを防ぐ
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // タッチ移動（スムーズに追従）
+    highlightLayer.addEventListener('touchmove', (e) => {
+        if (!isTracking || e.touches.length === 0) return;
+        
+        const touch = e.touches[0];
+        const position = getCursorPositionFromTouch(touch.clientX, touch.clientY);
+        
+        if (position !== null) {
+            editor.setSelectionRange(position, position);
+            
+            // カーソル位置にスクロール（必要に応じて）
+            if (scrollArea) {
+                const editorRect = editor.getBoundingClientRect();
+                const editorStyle = window.getComputedStyle(editor);
+                const lineHeight = parseFloat(editorStyle.lineHeight) || parseFloat(editorStyle.fontSize) * 2;
+                const paddingTop = parseFloat(editorStyle.paddingTop) || 0;
+                
+                // タッチ位置をエディタ内の相対座標に変換
+                const relativeY = touch.clientY - editorRect.top;
+                const adjustedY = relativeY - paddingTop;
+                
+                // カーソルが画面外に出そうな場合はスクロール
+                const scrollTop = scrollArea.scrollTop || 0;
+                const scrollHeight = scrollArea.scrollHeight || 0;
+                const clientHeight = scrollArea.clientHeight || 0;
+                
+                // 上端に近い場合
+                if (adjustedY < 100) {
+                    const newScrollTop = Math.max(0, scrollTop - 50);
+                    scrollArea.scrollTop = newScrollTop;
+                }
+                // 下端に近い場合
+                else if (adjustedY > clientHeight - 100) {
+                    const newScrollTop = Math.min(scrollHeight - clientHeight, scrollTop + 50);
+                    scrollArea.scrollTop = newScrollTop;
+                }
+            }
+            
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // タッチ終了
+    highlightLayer.addEventListener('touchend', (e) => {
+        isTracking = false;
+    });
+    
+    highlightLayer.addEventListener('touchcancel', (e) => {
+        isTracking = false;
+    });
 }
 
 // Initialize - 複数のタイミングで初期化を試みる（カーソルの内蔵ブラウザ対応）
