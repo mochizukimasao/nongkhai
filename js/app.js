@@ -1038,11 +1038,22 @@ async function updateNoteList() {
         `;
         }
 
+        // Bookmark indicator for sidebar
+        const hasBookmark = note.bookmarkPosition !== undefined && note.bookmarkPosition !== null;
+        const bookmarkIcon = hasBookmark
+            ? `<span class="note-bookmark-icon" title="Bookmarked">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                </svg>
+               </span>`
+            : '';
+
         li.innerHTML = `
         <div style="flex:1; overflow:hidden;">
             <div class="note-title">${title}</div>
             <div class="note-meta">
                 <span>${date}</span>
+                ${bookmarkIcon}
                 <span class="note-fav-icon">★</span>
             </div>
         </div>
@@ -1713,7 +1724,7 @@ function updateBookmarkLineIndicator() {
     // Remove existing indicator
     let indicator = document.getElementById('bookmark-line-indicator');
 
-    if (window.currentBookmarkPos === undefined || window.currentBookmarkPos === null || !editor) {
+    if (window.currentBookmarkPos === undefined || window.currentBookmarkPos === null || !editor || !highlightLayer) {
         if (indicator) indicator.remove();
         return;
     }
@@ -1725,13 +1736,40 @@ function updateBookmarkLineIndicator() {
     const textBeforeBookmark = text.substring(0, pos);
     const lineNumber = textBeforeBookmark.split('\n').length;
 
-    // Get line height from highlightLayer (matches editor)
-    const hlStyle = window.getComputedStyle(highlightLayer);
-    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
-    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+    // Use a temporary span in highlightLayer to measure exact position
+    const measureSpan = document.createElement('span');
+    measureSpan.id = 'bookmark-measure-span';
+    measureSpan.style.visibility = 'hidden';
+    measureSpan.style.position = 'absolute';
+    measureSpan.textContent = '|';
 
-    // Calculate vertical position - center within the line
-    const topPosition = paddingTop + (lineNumber - 1) * lineHeight + (lineHeight - 16) / 2;
+    // Build text up to the line start to insert measurement span
+    const lines = text.split('\n');
+    let htmlContent = '';
+    for (let i = 0; i < lines.length; i++) {
+        if (i === lineNumber - 1) {
+            // Insert measure span at this line start
+            htmlContent += '<span id="bookmark-measure-span">|</span>' + escapeForHTML(lines[i]);
+        } else {
+            htmlContent += escapeForHTML(lines[i]);
+        }
+        if (i < lines.length - 1) htmlContent += '<br>';
+    }
+
+    // Temporarily update highlightLayer to measure
+    const originalHTML = highlightLayer.innerHTML;
+    highlightLayer.innerHTML = htmlContent;
+
+    const measureEl = document.getElementById('bookmark-measure-span');
+    let topPosition = 0;
+    if (measureEl) {
+        const hlRect = highlightLayer.getBoundingClientRect();
+        const spanRect = measureEl.getBoundingClientRect();
+        topPosition = spanRect.top - hlRect.top + (spanRect.height - 16) / 2;
+    }
+
+    // Restore original content
+    highlightLayer.innerHTML = originalHTML;
 
     // Create or update indicator
     if (!indicator) {

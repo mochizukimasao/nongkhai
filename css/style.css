@@ -1145,6 +1145,18 @@ body.light-mode #bookmark-line-indicator {
     /* Same as md-mark in light mode */
 }
 
+/* Bookmark icon in sidebar note list */
+.note-bookmark-icon {
+    color: #5dade2;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+}
+
+body.light-mode .note-bookmark-icon {
+    color: #dc3545;
+}
+
 /* The following keyframes block was part of the original #bookmark-line-indicator animation,
    but was not included in the provided replacement snippet.
    It is kept here to maintain syntactical correctness based on the instruction's intent. */
