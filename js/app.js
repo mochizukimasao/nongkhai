@@ -1362,16 +1362,15 @@ function initTextwellCursorTracking() {
         accY = 0;
 
         // Calculate approx chars per line
-        // Width of editor / approx char width (fontSize * 0.6 is a rough estimate for variable width fonts)
-        // Or just use a fixed estimate if font analysis is too complex.
-        // Let's try to be a bit smarter:
+        // Width of editor / approx char width
+        // For Japanese text (full-width), char width is close to fontSize (1em).
+        // Previous estimate (0.6) was too small, causing charsPerLine to be too large, resulting in skipping lines.
+        // We use 0.95 to be safe (slightly under-estimating line length is better than over-estimating).
         const style = window.getComputedStyle(editor);
         const fontSize = parseFloat(style.fontSize) || 16;
         const width = editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-        // Average char width for Japanese/English mix is tricky. Let's assume 0.8em average?
-        // For strictly monospaced it's easy, but this is variable.
-        // Let's assume 14px roughly?
-        const avgCharWidth = fontSize * 0.6;
+
+        const avgCharWidth = fontSize * 0.95;
         charsPerLine = Math.floor(width / avgCharWidth);
 
         longPressTimer = setTimeout(() => {
