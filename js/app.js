@@ -1726,24 +1726,47 @@ function updateBookmarkLineIndicator() {
     const pos = window.currentBookmarkPos;
     const text = editor.value || '';
 
-    // Calculate which line the bookmark is on (1-indexed)
-    // pos should be at line start, so count newlines before it
+    // Calculate which line the bookmark is on (0-indexed for array access)
     const textBeforeBookmark = text.substring(0, pos);
-    const lineNumber = (textBeforeBookmark.match(/\n/g) || []).length + 1;
+    const lineIndex = (textBeforeBookmark.match(/\n/g) || []).length;
 
-    // Get computed styles from highlightLayer
-    const hlStyle = window.getComputedStyle(highlightLayer);
-    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
-    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+    // Find the corresponding position in highlightLayer
+    // The highlightLayer uses <br> for line breaks
+    // We need to find the Nth text node or <br> to get the line's Y position
 
-    // Calculate vertical position - align with line center
-    const topPosition = paddingTop + (lineNumber - 1) * lineHeight + (lineHeight - 16) / 2;
+    let topPosition = 0;
+    const hlRect = highlightLayer.getBoundingClientRect();
+    const scrollRect = scrollArea ? scrollArea.getBoundingClientRect() : hlRect;
+
+    // Find all <br> elements in highlightLayer
+    const brElements = highlightLayer.querySelectorAll('br');
+
+    if (lineIndex === 0) {
+        // First line - use highlightLayer's padding
+        const hlStyle = window.getComputedStyle(highlightLayer);
+        const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+        const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+        topPosition = paddingTop + (lineHeight - 16) / 2;
+    } else if (lineIndex <= brElements.length) {
+        // Get the position of the <br> before this line (or the previous line's br)
+        const targetBr = brElements[lineIndex - 1];
+        if (targetBr) {
+            const brRect = targetBr.getBoundingClientRect();
+            // Position after the <br>
+            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop;
+        }
+    } else {
+        // Fallback to calculation
+        const hlStyle = window.getComputedStyle(highlightLayer);
+        const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+        const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+        topPosition = paddingTop + lineIndex * lineHeight + (lineHeight - 16) / 2;
+    }
 
     // Create or update indicator
     if (!indicator) {
         indicator = document.createElement('div');
         indicator.id = 'bookmark-line-indicator';
-        // Insert into scroll area so it scrolls with content
         if (scrollArea) {
             scrollArea.appendChild(indicator);
         }
