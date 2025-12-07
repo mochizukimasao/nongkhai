@@ -1740,26 +1740,23 @@ function updateBookmarkLineIndicator() {
 
     // Find all <br> elements in highlightLayer
     const brElements = highlightLayer.querySelectorAll('br');
+    const hlStyle = window.getComputedStyle(highlightLayer);
+    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
 
     if (lineIndex === 0) {
         // First line - use highlightLayer's padding
-        const hlStyle = window.getComputedStyle(highlightLayer);
-        const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
-        const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
         topPosition = paddingTop + (lineHeight - 16) / 2;
     } else if (lineIndex <= brElements.length) {
-        // Get the position of the <br> before this line (or the previous line's br)
+        // Get the position of the <br> before this line
         const targetBr = brElements[lineIndex - 1];
         if (targetBr) {
             const brRect = targetBr.getBoundingClientRect();
-            // Position after the <br>
-            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop;
+            // Position after the <br>, centered within the next line
+            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop + (lineHeight - 16) / 2;
         }
     } else {
         // Fallback to calculation
-        const hlStyle = window.getComputedStyle(highlightLayer);
-        const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
-        const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
         topPosition = paddingTop + lineIndex * lineHeight + (lineHeight - 16) / 2;
     }
 
