@@ -1802,19 +1802,19 @@ function updateBookmarkLineIndicator() {
                 // scrollArea.scrollTop needs to be added.
                 // scrollRect.top needs to be subtracted.
 
-                topPosition = rect.top - scrollRect.top + scrollArea.scrollTop;
+                // Center the 16px icon relative to the text height
+                // rect.top + rect.height/2 is the vertical center of the text
+                // We want the center of the 16px icon to match that
+                // Icon top = Center - 16/2 = Center - 8
 
-                // Center the 16px icon
-                const hlStyle = window.getComputedStyle(highlightLayer);
-                const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
-                topPosition += (lineHeight - 16) / 2;
+                topPosition = (rect.top - scrollRect.top + scrollArea.scrollTop) + (rect.height / 2) - 8;
             } else {
                 // Fallback if no rects (e.g. at end of line or hidden)
                 // Try getting bounding rect of the node itself if it's an element
                 if (targetNode.nodeType === Node.ELEMENT_NODE) {
                     const rect = targetNode.getBoundingClientRect();
                     const scrollRect = scrollArea ? scrollArea.getBoundingClientRect() : highlightLayer.getBoundingClientRect();
-                    topPosition = rect.top - scrollRect.top + scrollArea.scrollTop;
+                    topPosition = (rect.top - scrollRect.top + scrollArea.scrollTop) + (rect.height / 2) - 8;
                 }
             }
         } catch (e) {
