@@ -1320,17 +1320,20 @@ function initSidebarEventListeners() {
 }
 
 // --- Initialize Other Event Listeners ---
-// --- Textwell-like Cursor Tracking (Button Toggle Mode) ---
+// --- Textwell-like Cursor Tracking (Relative Movement) ---
 function initTextwellCursorTracking() {
     if (!highlightLayer || !editor) return;
 
-    const btnCursorMode = document.getElementById('btn-cursor-mode');
     let isCursorMode = false;
-
+    let longPressTimer = null;
     let lastX = 0;
     let lastY = 0;
+    let startX = 0;
+    let startY = 0;
 
     // Parameters
+    const LONG_PRESS_DURATION = 300; // ms
+    const MOVE_THRESHOLD = 10; // px (to cancel long press)
     const SENSITIVITY_X = 12; // px per character
     const SENSITIVITY_Y_FAST = 2; // px per char (Vertical)
 
@@ -1338,43 +1341,48 @@ function initTextwellCursorTracking() {
     let accX = 0;
     let accY = 0;
 
-    // Toggle Mode
-    if (btnCursorMode) {
-        btnCursorMode.addEventListener('click', (e) => {
-            e.preventDefault();
-            isCursorMode = !isCursorMode;
-
-            if (isCursorMode) {
-                btnCursorMode.classList.add('active');
-                highlightLayer.style.opacity = '0.6'; // Visual cue
-                showToast('Cursor Mode: ON');
-            } else {
-                btnCursorMode.classList.remove('active');
-                highlightLayer.style.opacity = '';
-                showToast('Cursor Mode: OFF');
-            }
-        });
-    }
+    const triggerHaptic = () => {
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+    };
 
     const handleTouchStart = (e) => {
-        if (!isCursorMode) return;
         if (e.touches.length !== 1) return;
 
         const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
         lastX = touch.clientX;
         lastY = touch.clientY;
         accX = 0;
         accY = 0;
+
+        longPressTimer = setTimeout(() => {
+            isCursorMode = true;
+            triggerHaptic();
+
+            // Visual feedback
+            highlightLayer.style.opacity = '0.6';
+        }, LONG_PRESS_DURATION);
     };
 
     const handleTouchMove = (e) => {
-        if (!isCursorMode) return;
         if (e.touches.length !== 1) return;
-
-        // Prevent default scrolling when in cursor mode
-        if (e.cancelable) e.preventDefault();
-
         const touch = e.touches[0];
+
+        if (!isCursorMode) {
+            const dx = Math.abs(touch.clientX - startX);
+            const dy = Math.abs(touch.clientY - startY);
+            if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+                clearTimeout(longPressTimer);
+            }
+            return;
+        }
+
+        // Cursor mode active
+        e.preventDefault(); // Stop scrolling
+
         const dx = touch.clientX - lastX;
         const dy = touch.clientY - lastY;
 
@@ -1395,7 +1403,7 @@ function initTextwellCursorTracking() {
             }
         }
 
-        // Vertical Move (Fast Scrub)
+        // Vertical Move (Continuous "Fast Scrub")
         if (Math.abs(accY) >= SENSITIVITY_Y_FAST) {
             const stepsY = Math.floor(accY / SENSITIVITY_Y_FAST);
             if (stepsY !== 0) {
@@ -1416,7 +1424,12 @@ function initTextwellCursorTracking() {
     };
 
     const handleTouchEnd = (e) => {
-        // Nothing to reset for now, mode stays active until button clicked
+        clearTimeout(longPressTimer);
+        if (isCursorMode) {
+            isCursorMode = false;
+            e.preventDefault();
+            highlightLayer.style.opacity = '';
+        }
     };
 
     editor.addEventListener('touchstart', handleTouchStart, { passive: false });
