@@ -1341,6 +1341,9 @@ function initTextwellCursorTracking() {
     let accX = 0;
     let accY = 0;
 
+    // Estimated characters per line (calculated on touchstart)
+    let charsPerLine = 40;
+
     const triggerHaptic = () => {
         if (navigator.vibrate) {
             navigator.vibrate(50);
@@ -1357,6 +1360,19 @@ function initTextwellCursorTracking() {
         lastY = touch.clientY;
         accX = 0;
         accY = 0;
+
+        // Calculate approx chars per line
+        // Width of editor / approx char width (fontSize * 0.6 is a rough estimate for variable width fonts)
+        // Or just use a fixed estimate if font analysis is too complex.
+        // Let's try to be a bit smarter:
+        const style = window.getComputedStyle(editor);
+        const fontSize = parseFloat(style.fontSize) || 16;
+        const width = editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+        // Average char width for Japanese/English mix is tricky. Let's assume 0.8em average?
+        // For strictly monospaced it's easy, but this is variable.
+        // Let's assume 14px roughly?
+        const avgCharWidth = fontSize * 0.6;
+        charsPerLine = Math.floor(width / avgCharWidth);
 
         longPressTimer = setTimeout(() => {
             isCursorMode = true;
@@ -1393,43 +1409,36 @@ function initTextwellCursorTracking() {
         accX += dx;
         accY += dy;
 
+        let totalSteps = 0;
+
         // Horizontal Move
         if (Math.abs(accX) >= SENSITIVITY_X) {
-            const steps = Math.floor(accX / SENSITIVITY_X);
-            if (steps !== 0) {
-                const currentPos = editor.selectionStart;
-                let newPos = currentPos + steps;
-                // Clamp
-                newPos = Math.max(0, Math.min(editor.value.length, newPos));
-
-                editor.setSelectionRange(newPos, newPos);
-                accX -= steps * SENSITIVITY_X; // Keep remainder
+            const stepsX = Math.floor(accX / SENSITIVITY_X);
+            if (stepsX !== 0) {
+                totalSteps += stepsX;
+                accX -= stepsX * SENSITIVITY_X;
             }
         }
 
-        // Vertical Move (Experimental: Jump lines)
-        // Moving vertically is harder to map exactly to lines without knowing line breaks.
-        // But we can approximate by moving ~40 characters (average line length?) or just ignore Y for now to be safe.
-        // Or, we can try to use standard up/down arrow key simulation if possible? No.
-        // Let's stick to X-axis mainly for now, or map Y to X movement (Textwell style often maps 2D slide to 1D cursor).
-        // Actually, Textwell maps Y movement to line jumps.
-        // Let's try a simple heuristic: 1 line ~ 30 chars? No, that varies.
-        // Safer approach: Just map X and Y to linear cursor movement.
-        // Moving right = +1, Moving down = +1 (or +width).
-        // But that's confusing.
+        // Vertical Move
+        if (Math.abs(accY) >= SENSITIVITY_Y) {
+            const stepsY = Math.floor(accY / SENSITIVITY_Y);
+            if (stepsY !== 0) {
+                // Moving down (+) means adding charsPerLine
+                totalSteps += stepsY * charsPerLine;
+                accY -= stepsY * SENSITIVITY_Y;
+            }
+        }
 
-        // Better: X controls char, Y controls line (approx).
-        // To move up/down lines, we need to find the position of the previous/next line.
-        // That's complex.
-        // Let's stick to X-axis control for stability first, OR allow Y to contribute to X speed.
-        // "Scrubbing": Moving finger anywhere moves cursor forward/backward.
-        // This is often the most intuitive on mobile.
-        // Slide Right/Down -> Advance. Slide Left/Up -> Retreat.
+        // Apply movement
+        if (totalSteps !== 0) {
+            const currentPos = editor.selectionStart;
+            let newPos = currentPos + totalSteps;
+            // Clamp
+            newPos = Math.max(0, Math.min(editor.value.length, newPos));
 
-        // Let's try: X movement is primary. Y movement adds to it?
-        // Or just implement X-axis scrubbing (like iOS spacebar).
-        // Let's start with X-axis only for reliability.
-        // If user slides diagonally, we just take X component.
+            editor.setSelectionRange(newPos, newPos);
+        }
     };
 
     const handleTouchEnd = (e) => {
