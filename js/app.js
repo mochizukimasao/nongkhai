@@ -2739,8 +2739,8 @@ editor.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Toggle Bookmark (Cmd+Shift+B)
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+    // Toggle Bookmark (Cmd+S or Ctrl+S)
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         toggleBookmark();
         return;
