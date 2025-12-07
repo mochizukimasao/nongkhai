@@ -123,6 +123,17 @@ nongkhai/
 - ツールバーのナビゲーションボタン配置を「← → ↑ ↓」の順に固定（`index.html`）。
 - 今後レイアウトが乱れた場合は、この順序に戻すこと。
 
+### [2025-??-??] Textwell風カーソル追従トライアル（一旦撤回）
+- 目的: `#highlight-layer` 上のタッチ移動でエディタカーソルを追従させる Textwell 風機能を追加。
+- 実施内容: `initTextwellCursorTracking` 追加、タッチデバイス判定、タッチ座標→カーソル位置計算、pointer-events 有効化、z-index 調整、デバッグログ挿入。
+- 発生した問題: 実機でカーソルが動かず、イベント捕捉や位置計算の整合が取れないまま。既存機能への影響懸念あり。
+- 現在の状態: 実装を全撤回（呼び出し/関数/関連CSSを削除し、z-index も元に戻した）。既存挙動に復帰済み。
+- 再開時のヒント:
+  - スクロール基準は `scrollArea.scrollTop` を使用。
+  - まずタッチイベントが届くか（z-index/pointer-events/touch-action、`passive: false`、ログで touchstart/touchmove 発火確認）。
+  - lineHeight/パディング取得と measureText のズレに注意。位置計算が末尾に偏らないか確認。
+  - ブラウザのデフォルトスクロール抑制には `touch-action: none` が必要な場合あり。
+
 ### [2025-12-05] ハイライト層とカーソルの縦ズレ常習問題の恒久対策
 
 ### 1. 問題の概要

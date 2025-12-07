@@ -786,7 +786,7 @@ body.light-mode #note-list.scrolling::-webkit-scrollbar-thumb {
     /* #editorの上に重ねる - 同じ位置に配置 */
     top: 0;
     left: 0;
-    z-index: 3;
+    z-index: 1;
     pointer-events: none;
     color: #e0e0e0;
     /* Text color */
@@ -804,19 +804,6 @@ body.light-mode #note-list.scrolling::-webkit-scrollbar-thumb {
     word-wrap: inherit;
     overflow-wrap: inherit;
     word-break: inherit;
-}
-
-/* タッチデバイス時: Textwell風カーソル追従機能のため、タッチイベントを有効化 */
-/* マウス操作ではカーソルは追従しない（JavaScript側でタッチイベントのみ処理） */
-@media (hover: none) and (pointer: coarse) {
-    #highlight-layer {
-        pointer-events: auto;
-        /* タッチイベントを有効化して、なぞり操作でカーソルを移動できるようにする */
-    }
-}
-
-.touch-device #highlight-layer {
-    pointer-events: auto;
 }
 
 /* Light Mode Overrides */
