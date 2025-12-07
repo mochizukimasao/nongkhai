@@ -626,6 +626,9 @@ async function toggleBookmark() {
         showToast('Bookmark set');
     }
 
+    // Update sidebar to show/hide bookmark icon
+    updateNoteList();
+
     // Sync if available
     if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
         window.syncManager.queueNoteSync(currentNoteId);
@@ -1723,44 +1726,18 @@ function updateBookmarkLineIndicator() {
     const pos = window.currentBookmarkPos;
     const text = editor.value || '';
 
-    // Calculate which line the bookmark is on
+    // Calculate which line the bookmark is on (1-indexed)
+    // pos should be at line start, so count newlines before it
     const textBeforeBookmark = text.substring(0, pos);
-    const lineNumber = textBeforeBookmark.split('\n').length;
+    const lineNumber = (textBeforeBookmark.match(/\n/g) || []).length + 1;
 
-    // Use a temporary span in highlightLayer to measure exact position
-    const measureSpan = document.createElement('span');
-    measureSpan.id = 'bookmark-measure-span';
-    measureSpan.style.visibility = 'hidden';
-    measureSpan.style.position = 'absolute';
-    measureSpan.textContent = '|';
+    // Get computed styles from highlightLayer
+    const hlStyle = window.getComputedStyle(highlightLayer);
+    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
 
-    // Build text up to the line start to insert measurement span
-    const lines = text.split('\n');
-    let htmlContent = '';
-    for (let i = 0; i < lines.length; i++) {
-        if (i === lineNumber - 1) {
-            // Insert measure span at this line start
-            htmlContent += '<span id="bookmark-measure-span">|</span>' + escapeForHTML(lines[i]);
-        } else {
-            htmlContent += escapeForHTML(lines[i]);
-        }
-        if (i < lines.length - 1) htmlContent += '<br>';
-    }
-
-    // Temporarily update highlightLayer to measure
-    const originalHTML = highlightLayer.innerHTML;
-    highlightLayer.innerHTML = htmlContent;
-
-    const measureEl = document.getElementById('bookmark-measure-span');
-    let topPosition = 0;
-    if (measureEl) {
-        const hlRect = highlightLayer.getBoundingClientRect();
-        const spanRect = measureEl.getBoundingClientRect();
-        topPosition = spanRect.top - hlRect.top + (spanRect.height - 16) / 2;
-    }
-
-    // Restore original content
-    highlightLayer.innerHTML = originalHTML;
+    // Calculate vertical position - align with line center
+    const topPosition = paddingTop + (lineNumber - 1) * lineHeight + (lineHeight - 16) / 2;
 
     // Create or update indicator
     if (!indicator) {
@@ -1772,7 +1749,7 @@ function updateBookmarkLineIndicator() {
         }
     }
 
-    // SVG ribbon bookmark icon (like the one in the toolbar)
+    // SVG ribbon bookmark icon
     indicator.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
         <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
     </svg>`;
