@@ -1340,7 +1340,10 @@ function initTextwellCursorTracking() {
 
     // Helper to get cursor position from touch coordinates
     const getCursorPositionFromTouch = (touchX, touchY) => {
-        // Use document.caretRangeFromPoint (standard) or document.caretPositionFromPoint (Firefox)
+        // We need to hit-test the highlight layer to get the text offset.
+        // For this to work, highlightLayer must have pointer-events: auto (temporarily).
+        // Since we toggle this in the timer, it should be ready.
+
         let range;
         if (document.caretRangeFromPoint) {
             range = document.caretRangeFromPoint(touchX, touchY);
@@ -1355,15 +1358,36 @@ function initTextwellCursorTracking() {
 
         if (!range) return null;
 
-        // Map range in #highlight-layer to character index:
-        // We can walk the DOM of highlightLayer up to the range.startContainer/startOffset to count characters.
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(highlightLayer);
-        preCaretRange.setEnd(range.endContainer, range.endOffset);
+        // Verify we hit the highlight layer or its children
+        let container = range.startContainer;
+        // Traverse up to check if it's inside highlightLayer
+        let isInside = false;
+        let curr = container;
+        while (curr) {
+            if (curr === highlightLayer) {
+                isInside = true;
+                break;
+            }
+            curr = curr.parentNode;
+        }
 
-        // The text content of the range before the caret
-        const textBeforeCaret = preCaretRange.toString();
-        return textBeforeCaret.length;
+        if (!isInside) {
+            // If we missed highlightLayer (e.g. hit padding or margins), 
+            // we might want to clamp or ignore. 
+            // For now, ignore to prevent jumping to 0.
+            return null;
+        }
+
+        // Map range in #highlight-layer to character index
+        try {
+            const preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(highlightLayer);
+            preCaretRange.setEnd(range.startContainer, range.startOffset);
+            return preCaretRange.toString().length;
+        } catch (e) {
+            console.warn('Cursor calc error:', e);
+            return null;
+        }
     };
 
     const handleTouchStart = (e) => {
@@ -1378,8 +1402,9 @@ function initTextwellCursorTracking() {
             isCursorMode = true;
             triggerHaptic();
 
-            // Visual feedback
+            // Visual feedback & Enable hit-testing
             highlightLayer.style.opacity = '0.7';
+            highlightLayer.style.pointerEvents = 'auto'; // CRITICAL: Enable hit-testing
 
             // Initial cursor move
             const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
@@ -1409,6 +1434,8 @@ function initTextwellCursorTracking() {
         const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
         if (index !== null) {
             editor.setSelectionRange(index, index);
+            // Optional: Scroll editor if cursor is near edge? 
+            // Native behavior might handle it if we set selection.
         }
     };
 
@@ -1417,11 +1444,14 @@ function initTextwellCursorTracking() {
         if (isCursorMode) {
             isCursorMode = false;
             e.preventDefault(); // Prevent click
-            highlightLayer.style.opacity = ''; // Restore opacity
+
+            // Reset state
+            highlightLayer.style.opacity = '';
+            highlightLayer.style.pointerEvents = ''; // Revert to CSS (none)
         }
     };
 
-    // Attach listeners to editor (textarea) as it is the top-most interactive element
+    // Attach listeners to editor
     editor.addEventListener('touchstart', handleTouchStart, { passive: false });
     editor.addEventListener('touchmove', handleTouchMove, { passive: false });
     editor.addEventListener('touchend', handleTouchEnd, { passive: false });
