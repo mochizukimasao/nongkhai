@@ -4,11 +4,11 @@ const highlightLayer = document.getElementById('highlight-layer');
 const scrollArea = document.getElementById('editor-scroll-area');
 const toast = document.getElementById('toast');
 
-    // Check if elements are available
-    if (!editor) console.error('Editor element not found');
-    if (!highlightLayer) console.error('Highlight layer element not found');
-    if (!scrollArea) console.error('Scroll area element not found');
-    if (!toast) console.warn('Toast element not found');
+// Check if elements are available
+if (!editor) console.error('Editor element not found');
+if (!highlightLayer) console.error('Highlight layer element not found');
+if (!scrollArea) console.error('Scroll area element not found');
+if (!toast) console.warn('Toast element not found');
 
 // --- Toolbar Buttons ---
 // --- Toolbar Buttons ---
@@ -71,7 +71,7 @@ if (scrollArea) {
         scrollTimeout = setTimeout(() => {
             scrollArea.classList.remove('scrolling');
         }, 500); // Hide after 0.5 second of inactivity
-        
+
         // スクロール時にも位置を同期（必要に応じて）
         // syncHeight()は高さと位置を同期するので、スクロール時にも呼び出す
         syncHeight();
@@ -79,7 +79,7 @@ if (scrollArea) {
 } else {
     console.error('Scroll area element not found');
 }
-    
+
 // Sidebar note list scrollbar auto-hide
 let noteListScrollTimeout;
 if (noteList) {
@@ -113,7 +113,7 @@ function toggleFont() {
 const handleFontButton = (e) => {
     e.preventDefault();
     toggleFont();
-        editor.focus();
+    editor.focus();
 };
 
 btnFont.addEventListener('click', handleFontButton);
@@ -254,8 +254,8 @@ async function initDB() {
         notes: '++id, text, created, updated, favorite, deleted' // Added deleted index
     }).upgrade(tx => {
         // Upgrade existing notes to have deleted: null
-            return tx.notes.toCollection().modify(note => {
-                    note.deleted = null;
+        return tx.notes.toCollection().modify(note => {
+            note.deleted = null;
         });
     });
     db.version(3).stores({
@@ -268,11 +268,11 @@ async function initDB() {
         noteHistory: '++id, noteId, timestamp, title, text'
     }).upgrade(tx => {
         // 既存のノートにfirestoreIdフィールドを追加（nullで初期化）
-            return tx.notes.toCollection().modify(note => {
+        return tx.notes.toCollection().modify(note => {
             if (!note.firestoreId) {
-                    note.firestoreId = null;
-                }
-            });
+                note.firestoreId = null;
+            }
+        });
     });
     window.db = db;
 
@@ -345,20 +345,20 @@ async function loadNote(id) {
         if (loadToken !== noteLoadSequence) return;
     }
 
-        currentNoteId = id;
+    currentNoteId = id;
     window.currentNoteId = currentNoteId;
 
-        if (editor) {
-            editor.value = note.text;
-            }
+    if (editor) {
+        editor.value = note.text;
+    }
 
     updateHighlights();
-            syncHeight();
+    syncHeight();
     updateCharCountDisplay();
-        updateStarState(note.favorite);
-        if (scrollArea) {
-            scrollArea.scrollTop = 0;
-        }
+    updateStarState(note.favorite);
+    if (scrollArea) {
+        scrollArea.scrollTop = 0;
+    }
 
     if (shouldAnimate) {
         if (loadToken === noteLoadSequence) {
@@ -430,12 +430,12 @@ async function saveCurrentNote() {
                 title: getNoteTitle(currentNote.text)
             });
 
-        await db.notes.update(currentNoteId, {
-            text: text,
-            updated: Date.now()
-        });
-        updateNoteList();
-        
+            await db.notes.update(currentNoteId, {
+                text: text,
+                updated: Date.now()
+            });
+            updateNoteList();
+
             if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
                 window.syncManager.queueNoteSync(currentNoteId);
             }
@@ -451,7 +451,7 @@ async function toggleFavorite() {
     const note = await db.notes.get(currentNoteId);
     const newFav = note.favorite ? 0 : 1;
     await db.notes.update(currentNoteId, { favorite: newFav });
-        updateStarState(newFav);
+    updateStarState(newFav);
     updateNoteList();
     showToast(newFav ? 'Added to Favorites' : 'Removed from Favorites');
     playSound('click');
@@ -692,12 +692,12 @@ function toggleSidebar() {
         // 要素の存在確認
         const sidebarEl = document.getElementById('sidebar');
         const sidebarOverlayEl = document.getElementById('sidebar-overlay');
-        
+
         if (!sidebarEl || !sidebarOverlayEl) {
             console.error('[toggleSidebar] Sidebar elements not found');
             return;
         }
-        
+
         if (isSidebarPinActive()) {
             return;
         }
@@ -711,14 +711,14 @@ function toggleSidebar() {
             hideFloatingMenuButton();
             // updateNoteList()はエラーが発生してもサイドバーは開いたままにする
             try {
-        updateNoteList();
+                updateNoteList();
             } catch (error) {
                 console.error('[toggleSidebar] Error updating note list:', error);
             }
-    } else {
+        } else {
             sidebarEl.classList.remove('open');
             sidebarOverlayEl.classList.remove('visible');
-        document.body.classList.remove('sidebar-open');
+            document.body.classList.remove('sidebar-open');
             showFloatingMenuButton();
         }
 
@@ -737,7 +737,7 @@ function toggleSidebar() {
 function toggleFavoritesView() {
     showFavorites = !showFavorites;
     const btn = document.getElementById('btn-toggle-favorites');
-        btn.classList.toggle('active', showFavorites);
+    btn.classList.toggle('active', showFavorites);
     // Disable trash view when showing favorites
     if (showFavorites) {
         showTrash = false;
@@ -750,7 +750,7 @@ function toggleFavoritesView() {
 function toggleTrashView() {
     showTrash = !showTrash;
     const btn = document.getElementById('btn-toggle-trash');
-        btn.classList.toggle('active', showTrash);
+    btn.classList.toggle('active', showTrash);
     // Disable favorites view when showing trash
     if (showTrash) {
         showFavorites = false;
@@ -1079,7 +1079,7 @@ function loadSettings() {
             settings = {};
         }
 
-    // Theme
+        // Theme
         if (settings.theme === 'light') {
             document.body.classList.add('light-mode');
             iconThemeSun.style.display = 'none';
@@ -1088,24 +1088,24 @@ function loadSettings() {
             document.body.classList.remove('light-mode');
             iconThemeSun.style.display = 'block';
             iconThemeMoon.style.display = 'none';
-    }
+        }
 
-    // Font
-            if (settings.font === 'gothic') {
-                document.body.classList.add('font-gothic');
+        // Font
+        if (settings.font === 'gothic') {
+            document.body.classList.add('font-gothic');
             btnFont.querySelector('span').style.fontFamily = 'sans-serif';
-            } else {
-                document.body.classList.remove('font-gothic');
+        } else {
+            document.body.classList.remove('font-gothic');
             btnFont.querySelector('span').style.fontFamily = 'serif';
-    }
+        }
 
-    // Char Count
+        // Char Count
         isCharCountMode = Boolean(settings.charCount);
         if (btnCharCount) {
             btnCharCount.classList.toggle('active', isCharCountMode);
-    }
+        }
 
-    // Sound
+        // Sound
         if (settings.soundEnabled) {
             isSoundEnabled = true;
             currentSoundProfile = settings.soundProfile || 'relax';
@@ -1127,7 +1127,7 @@ function loadSettings() {
             currentBgImageIndex = settings.bgImageIndex;
             bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
         }
-        
+
         // BGM
         if (settings.bgmEnabled) {
             // Delay BGM start slightly to avoid autoplay restrictions
@@ -1155,17 +1155,17 @@ function loadSettings() {
 // --- Initialize Sidebar Event Listeners ---
 function initSidebarEventListeners() {
     console.log('[initSidebarEventListeners] Starting initialization...');
-    
+
     // フローティングメニューボタン
     const floatingMenuBtn = document.getElementById('btn-floating-menu');
     console.log('[initSidebarEventListeners] Floating menu button found:', !!floatingMenuBtn);
-    
+
     if (floatingMenuBtn) {
         // 既存のイベントリスナーを削除（重複防止）
         floatingMenuBtn.onclick = null;
-        
+
         // 複数の方法でイベントリスナーを設定（カーソルの内蔵ブラウザ対応）
-        const handleToggle = function(e) {
+        const handleToggle = function (e) {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1174,25 +1174,25 @@ function initSidebarEventListeners() {
             toggleSidebar();
             return false;
         };
-        
+
         // addEventListener（標準的な方法）
         floatingMenuBtn.addEventListener('click', handleToggle, { capture: true });
-        
+
         // onclick（フォールバック、カーソルの内蔵ブラウザ対応）
         floatingMenuBtn.onclick = handleToggle;
-        
+
         // mousedown（より低レベルのイベント）
-        floatingMenuBtn.addEventListener('mousedown', function(e) {
+        floatingMenuBtn.addEventListener('mousedown', function (e) {
             e.preventDefault();
             e.stopPropagation();
             console.log('[initSidebarEventListeners] Button mousedown!');
             toggleSidebar();
             return false;
         }, { capture: true });
-        
+
         // pointerdown（ポインターイベント）
         if (floatingMenuBtn.addEventListener) {
-            floatingMenuBtn.addEventListener('pointerdown', function(e) {
+            floatingMenuBtn.addEventListener('pointerdown', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('[initSidebarEventListeners] Button pointerdown!');
@@ -1200,7 +1200,7 @@ function initSidebarEventListeners() {
                 return false;
             }, { capture: true });
         }
-        
+
         // ボタンの状態を確認
         const rect = floatingMenuBtn.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(floatingMenuBtn);
@@ -1211,7 +1211,7 @@ function initSidebarEventListeners() {
             position: computedStyle.position,
             rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
         });
-        
+
         // CSSで確実にクリック可能にする
         floatingMenuBtn.style.pointerEvents = 'auto';
         floatingMenuBtn.style.zIndex = '2500';
@@ -1320,29 +1320,139 @@ function initSidebarEventListeners() {
 }
 
 // --- Initialize Other Event Listeners ---
+// --- Textwell-like Cursor Tracking ---
+function initTextwellCursorTracking() {
+    if (!highlightLayer || !editor) return;
+
+    let isCursorMode = false;
+    let longPressTimer = null;
+    let startX = 0;
+    let startY = 0;
+    const LONG_PRESS_DURATION = 300; // ms
+    const MOVE_THRESHOLD = 10; // px
+
+    // Haptic feedback helper
+    const triggerHaptic = () => {
+        if (navigator.vibrate) {
+            navigator.vibrate(50); // Short vibration
+        }
+    };
+
+    // Helper to get cursor position from touch coordinates
+    const getCursorPositionFromTouch = (touchX, touchY) => {
+        // Use document.caretRangeFromPoint (standard) or document.caretPositionFromPoint (Firefox)
+        let range;
+        if (document.caretRangeFromPoint) {
+            range = document.caretRangeFromPoint(touchX, touchY);
+        } else if (document.caretPositionFromPoint) {
+            const pos = document.caretPositionFromPoint(touchX, touchY);
+            if (pos) {
+                range = document.createRange();
+                range.setStart(pos.offsetNode, pos.offset);
+                range.collapse(true);
+            }
+        }
+
+        if (!range) return null;
+
+        // Map range in #highlight-layer to character index:
+        // We can walk the DOM of highlightLayer up to the range.startContainer/startOffset to count characters.
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(highlightLayer);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+        // The text content of the range before the caret
+        const textBeforeCaret = preCaretRange.toString();
+        return textBeforeCaret.length;
+    };
+
+    const handleTouchStart = (e) => {
+        if (e.touches.length !== 1) return;
+
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+
+        // Start long press timer
+        longPressTimer = setTimeout(() => {
+            isCursorMode = true;
+            triggerHaptic();
+
+            // Visual feedback
+            highlightLayer.style.opacity = '0.7';
+
+            // Initial cursor move
+            const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
+            if (index !== null) {
+                editor.setSelectionRange(index, index);
+            }
+        }, LONG_PRESS_DURATION);
+    };
+
+    const handleTouchMove = (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+
+        if (!isCursorMode) {
+            // Check if moved too much before long press triggers
+            const dx = Math.abs(touch.clientX - startX);
+            const dy = Math.abs(touch.clientY - startY);
+            if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+                clearTimeout(longPressTimer);
+            }
+            return; // Allow native scroll
+        }
+
+        // Cursor mode is active
+        e.preventDefault(); // Stop scrolling
+
+        const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
+        if (index !== null) {
+            editor.setSelectionRange(index, index);
+        }
+    };
+
+    const handleTouchEnd = (e) => {
+        clearTimeout(longPressTimer);
+        if (isCursorMode) {
+            isCursorMode = false;
+            e.preventDefault(); // Prevent click
+            highlightLayer.style.opacity = ''; // Restore opacity
+        }
+    };
+
+    // Attach listeners to editor (textarea) as it is the top-most interactive element
+    editor.addEventListener('touchstart', handleTouchStart, { passive: false });
+    editor.addEventListener('touchmove', handleTouchMove, { passive: false });
+    editor.addEventListener('touchend', handleTouchEnd, { passive: false });
+}
+
+// --- Initialize Other Event Listeners ---
 function initOtherEventListeners() {
     // 新規作成ボタンとお気に入りボタンは削除されました
     // サイドバーのボタン（btn-sidebar-new）を使用してください
+
+    initTextwellCursorTracking();
 }
 
 // Initialize - 複数のタイミングで初期化を試みる（カーソルの内蔵ブラウザ対応）
 function initializeApp() {
     console.log('[initializeApp] Starting app initialization...');
     loadSettings(); // Load settings first
-    
+
     // Initialize background image (if not loaded from settings)
     if (bgImage && bgImages.length > 0 && !bgImage.style.backgroundImage) {
         bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
     }
-    
+
     // Initialize event listeners
     initSidebarEventListeners();
     initOtherEventListeners();
-    
+
     initDB();
     initHistoryModalEvents();
     initHelpModalEvents();
-    
+
     // Initialize BGM (but don't auto-start, wait for user interaction)
     initBgm();
 
@@ -1361,7 +1471,7 @@ function initializeApp() {
     if (editor) {
         editor.focus();
     }
-    
+
     console.log('[initializeApp] App initialization complete');
 }
 
@@ -1408,7 +1518,7 @@ setTimeout(() => {
             zIndex: computedStyle.zIndex,
             rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
         });
-        
+
         // まだonclickが設定されていない場合、再初期化
         if (!btn.onclick) {
             initSidebarEventListeners();
@@ -1425,7 +1535,7 @@ function handleAction(e, action) {
     e.preventDefault(); // Keep focus
     action();
     playSound('click');
-        editor.focus(); // Ensure focus
+    editor.focus(); // Ensure focus
 }
 
 function bindToolbarAction(button, action) {
@@ -1433,24 +1543,24 @@ function bindToolbarAction(button, action) {
         console.warn('bindToolbarAction: button is null or undefined');
         return;
     }
-    
+
     try {
         // mousedownでフォーカス維持（デスクトップ用）
-    button.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Keep focus on editor
-    });
+        button.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Keep focus on editor
+        });
 
         // 標準クリックイベントのみ使用
         // ブラウザのネイティブな動作に任せる：
         // - ツールバーの touch-action: pan-x により、水平スクロールが優先される
         // - タップのみの場合は click イベントが発火する
         // - スクロールの場合は click イベントは発火しない
-    button.addEventListener('click', (e) => {
+        button.addEventListener('click', (e) => {
             e.preventDefault();
             try {
-        action();
-        playSound('click');
-        editor.focus();
+                action();
+                playSound('click');
+                editor.focus();
             } catch (error) {
                 console.error('Error in toolbar action:', error);
             }
@@ -1589,27 +1699,27 @@ function syncHeight() {
         console.warn('syncHeight: editor, highlightLayer, or scrollArea is not available');
         return;
     }
-    
+
     try {
         syncHighlightTypography();
         // Reset height to get correct scrollHeight
-    editor.style.height = 'auto';
-    highlightLayer.style.height = 'auto';
+        editor.style.height = 'auto';
+        highlightLayer.style.height = 'auto';
 
         // Calculate height - ensure it's at least the scroll area height
         const scrollAreaHeight = scrollArea.clientHeight;
         const editorScrollHeight = editor.scrollHeight;
         const height = Math.max(editorScrollHeight, scrollAreaHeight);
-        
+
         // Set heights
-    editor.style.height = height + 'px';
-    highlightLayer.style.height = height + 'px';
-        
+        editor.style.height = height + 'px';
+        highlightLayer.style.height = height + 'px';
+
         // #editorと#highlight-layerの位置を完全に一致させる
         // #editorはposition: relativeなので、offsetTop/offsetLeftで親要素からの相対位置を取得
         highlightLayer.style.top = editor.offsetTop + 'px';
         highlightLayer.style.left = editor.offsetLeft + 'px';
-        
+
         // 幅も同じにする（offsetWidthはパディングとボーダーを含む幅）
         highlightLayer.style.width = editor.offsetWidth + 'px';
     } catch (error) {
@@ -1812,13 +1922,13 @@ function toggleCharCountMode() {
     saveSettings();
 }
 
-    bindToolbarAction(btnCopy, copyAll);
+bindToolbarAction(btnCopy, copyAll);
 
-    bindToolbarAction(btnPaste, pastePlain);
+bindToolbarAction(btnPaste, pastePlain);
 bindToolbarAction(btnCharCount, toggleCharCountMode);
 
 
-    // --- Navigation & Selection Logic ---
+// --- Navigation & Selection Logic ---
 function toggleSelectionMode() {
     isSelectionMode = !isSelectionMode;
     if (isSelectionMode) {
@@ -1832,7 +1942,7 @@ function toggleSelectionMode() {
     }
 }
 
-    bindToolbarAction(btnSelectMode, toggleSelectionMode);
+bindToolbarAction(btnSelectMode, toggleSelectionMode);
 
 function moveCursor(direction) {
     const start = editor.selectionStart;
@@ -2116,17 +2226,17 @@ const iconBgmOff = document.getElementById('icon-bgm-off');
 
 function initBgm() {
     if (bgmAudio) return; // Already initialized
-    
+
     bgmAudio = new Audio('../assets/rain_full.ogg');
     bgmAudio.loop = true;
     bgmAudio.volume = 0.3; // 30% volume
-    
+
     // Handle audio errors
     bgmAudio.addEventListener('error', (e) => {
         console.error('BGM audio error:', e);
         showToast('BGM読み込みエラー');
     });
-    
+
     // Handle audio ended (shouldn't happen with loop, but just in case)
     bgmAudio.addEventListener('ended', () => {
         if (isBgmEnabled) {
@@ -2137,7 +2247,7 @@ function initBgm() {
 
 function startBGM() {
     if (!bgmAudio) initBgm();
-    
+
     if (bgmAudio) {
         bgmAudio.play().catch(err => {
             console.error('BGM play error:', err);
@@ -2171,7 +2281,7 @@ function toggleBGM() {
 
 function updateBgmUI() {
     if (!btnBgm || !iconBgmOn || !iconBgmOff) return;
-    
+
     if (isBgmEnabled) {
         btnBgm.classList.add('active');
         iconBgmOn.style.display = 'block';
@@ -2195,11 +2305,11 @@ if (btnBgm) {
 // --- Background Image Toggle Logic ---
 function toggleBackgroundImage() {
     if (!bgImage) return;
-    
+
     // Cycle through background images
     currentBgImageIndex = (currentBgImageIndex + 1) % bgImages.length;
     bgImage.style.backgroundImage = `url('${bgImages[currentBgImageIndex].path}')`;
-    
+
     // Show toast notification
     const imageNames = {
         'trees': 'Trees',
@@ -2207,7 +2317,7 @@ function toggleBackgroundImage() {
     };
     const imageName = imageNames[bgImages[currentBgImageIndex].name] || bgImages[currentBgImageIndex].name;
     showToast(`Background: ${imageName}`);
-    
+
     // Save settings
     saveSettings();
     playSound('click');
@@ -2243,7 +2353,7 @@ function toggleFullscreen() {
 const handleFullscreenButton = (e) => {
     e.preventDefault();
     toggleFullscreen();
-        editor.focus();
+    editor.focus();
 };
 btnFullscreen.addEventListener('click', handleFullscreenButton);
 // attachTouchAction removed
@@ -2253,12 +2363,12 @@ function toggleTheme() {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
 
-        if (isLight) {
-            iconThemeSun.style.display = 'none';
-            iconThemeMoon.style.display = 'block';
-        } else {
-            iconThemeSun.style.display = 'block';
-            iconThemeMoon.style.display = 'none';
+    if (isLight) {
+        iconThemeSun.style.display = 'none';
+        iconThemeMoon.style.display = 'block';
+    } else {
+        iconThemeSun.style.display = 'block';
+        iconThemeMoon.style.display = 'none';
     }
     updateSoundIconColor(); // Update sound icon color for new theme
     playSound('click');
@@ -2269,7 +2379,7 @@ function toggleTheme() {
 const handleThemeButton = (e) => {
     e.preventDefault();
     toggleTheme();
-        editor.focus();
+    editor.focus();
 };
 btnTheme.addEventListener('click', handleThemeButton);
 // attachTouchAction removed
@@ -2369,13 +2479,13 @@ editor.addEventListener('input', (e) => {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
-}
+    }
 });
 
 window.addEventListener('pagehide', () => {
     flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
 });
-    
+
 window.addEventListener('beforeunload', () => {
     flushPendingAutoSave().catch(err => console.error('Auto-save flush failed', err));
 });
@@ -2421,7 +2531,7 @@ editor.addEventListener('keydown', (e) => {
         const quoteMatch = currentLine.match(/^(\s*)>\s/);
         if (quoteMatch) {
             e.preventDefault(); // Stop default enter
-            
+
             // If line is just the quote prefix (empty quote), remove it and new line
             if (currentLine.trim() === quoteMatch[0].trim()) {
                 editor.setRangeText('\n', currentLineStart, start, 'end');
@@ -2430,7 +2540,7 @@ editor.addEventListener('keydown', (e) => {
                 syncHeight();
                 return;
             }
-            
+
             // Continue quote on next line
             const prefix = quoteMatch[0];
             editor.setRangeText('\n' + prefix, start, start, 'end');
@@ -2497,7 +2607,7 @@ function initAuth() {
         console.warn('Firebase Auth not available');
         return;
     }
-    
+
     try {
         // 認証状態の変更を監視
         window.firebaseAuth.onAuthStateChanged(async (user) => {
@@ -2505,21 +2615,21 @@ function initAuth() {
                 if (user) {
                     // ログイン済み
                     updateAuthUI(user);
-                    
+
                     // 同期状態のリスナーを設定
                     if (window.syncManager) {
                         window.syncManager.onSyncStatusChange(updateSyncStatusUI);
-                        
+
                         // Firestoreリスナーを設定
                         window.syncManager.setupFirestoreListener();
-                        
+
                         // 初回同期
                         await window.syncManager.syncFromFirestore();
                     }
                 } else {
                     // ログアウト済み
                     updateAuthUI(null);
-                    
+
                     // 同期を停止
                     if (window.syncManager) {
                         window.syncManager.stopSync();
@@ -2529,13 +2639,13 @@ function initAuth() {
                 console.error('Auth state change error:', error);
             }
         });
-        
+
         // ログインボタンのイベントリスナー
         const btnLoginGoogle = document.getElementById('btn-login-google');
         if (btnLoginGoogle) {
             btnLoginGoogle.addEventListener('click', handleGoogleLogin);
         }
-        
+
         // ログアウトボタンのイベントリスナー
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
@@ -2552,7 +2662,7 @@ async function handleGoogleLogin() {
         showToast('Firebaseが設定されていません');
         return;
     }
-    
+
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         showToast('ログイン中...');
@@ -2567,13 +2677,13 @@ async function handleGoogleLogin() {
 
 async function handleLogout() {
     if (!window.firebaseAuth) return;
-    
+
     try {
         // 同期を停止
         if (window.syncManager) {
             window.syncManager.stopSync();
         }
-        
+
         await window.firebaseAuth.signOut();
         showToast('ログアウトしました');
         playSound('click');
@@ -2586,20 +2696,20 @@ async function handleLogout() {
 function updateAuthUI(user) {
     const authStatus = document.getElementById('auth-status');
     const authLogin = document.getElementById('auth-login');
-    
+
     if (!authStatus || !authLogin) return;
-    
+
     try {
         if (user) {
             // ログイン済みUIを表示
             authLogin.style.display = 'none';
             authStatus.style.display = 'block';
-            
+
             // ユーザー情報を表示
             const userName = document.getElementById('user-name');
             const userEmail = document.getElementById('user-email');
             const userAvatar = document.getElementById('user-avatar');
-            
+
             if (userName) userName.textContent = user.displayName || 'ユーザー';
             if (userEmail) userEmail.textContent = user.email || '';
             if (userAvatar) {
@@ -2625,9 +2735,9 @@ function updateAuthUI(user) {
 function updateSyncStatusUI(status, message, progress = null) {
     const syncIndicator = document.getElementById('sync-indicator');
     const syncText = document.getElementById('sync-text');
-    
+
     if (!syncIndicator || !syncText) return;
-    
+
     try {
         syncIndicator.classList.toggle('syncing', status === 'syncing');
         if (status === 'synced') {
@@ -2654,7 +2764,7 @@ function updateSyncStatusUI(status, message, progress = null) {
             const displayMessage = message ? `${message}${progressText}` : (hasProgress ? `${progress}%` : '');
             syncText.textContent = displayMessage;
         }
-        
+
         // ステータスに応じてインジケーターの色を変更
         switch (status) {
             case 'syncing':
