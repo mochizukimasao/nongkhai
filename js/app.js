@@ -1693,57 +1693,58 @@ function updateHighlights() {
         text = text.replace(/\*\*(.*?)\*\*/g, '**<span class="md-bold">$1</span>**');
 
         // Markdown symbols (#, **) - color the symbols themselves when they are not already wrapped
-        text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
-        text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
-
-        // Insert bookmark indicator if exists
-        if (currentNoteId && window.currentBookmarkPos !== undefined && window.currentBookmarkPos !== null) {
-            const pos = window.currentBookmarkPos;
-            // Insert at the bookmark position (before applying br tags)
-            // We need to count characters carefully due to HTML escaping
-            // Find the insertion point in the original text
-            const originalText = editor.value || '';
-            if (pos >= 0 && pos <= originalText.length) {
-                // Count through the escaped text to find the right spot
-                let charCount = 0;
-                let insertIndex = 0;
-                for (let i = 0; i < text.length; i++) {
-                    if (charCount >= pos) {
-                        insertIndex = i;
-                        break;
-                    }
-                    // Check for escaped entities
-                    if (text.substring(i, i + 5) === '&amp;') {
-                        charCount++;
-                        i += 4;
-                    } else if (text.substring(i, i + 4) === '&lt;' || text.substring(i, i + 4) === '&gt;') {
-                        charCount++;
-                        i += 3;
-                    } else if (text[i] === '<') {
-                        // Skip HTML tags
-                        while (i < text.length && text[i] !== '>') i++;
-                    } else if (text[i] === '\n') {
-                        charCount++;
-                    } else {
-                        charCount++;
-                    }
-                }
-                if (charCount >= pos) {
-                    insertIndex = text.length;
-                }
-                // Insert bookmark marker
-                const bookmarkMarker = '<span class="bookmark-marker">🔖</span>';
-                text = text.substring(0, insertIndex) + bookmarkMarker + text.substring(insertIndex);
-            }
-        }
+        text = text.replace(/(?!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
+        text = text.replace(/(?!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
 
         // Convert all newlines to <br> tags to mirror textarea rendering
         text = text.replace(/\n/g, '<br>');
 
         highlightLayer.innerHTML = text;
+
+        // Update bookmark line indicator (separate from text)
+        updateBookmarkLineIndicator();
     } catch (error) {
         console.error('Error in updateHighlights:', error);
     }
+}
+
+// Bookmark line indicator - shows in left margin
+function updateBookmarkLineIndicator() {
+    // Remove existing indicator
+    let indicator = document.getElementById('bookmark-line-indicator');
+
+    if (window.currentBookmarkPos === undefined || window.currentBookmarkPos === null || !editor) {
+        if (indicator) indicator.remove();
+        return;
+    }
+
+    const pos = window.currentBookmarkPos;
+    const text = editor.value || '';
+
+    // Calculate which line the bookmark is on
+    const textBeforeBookmark = text.substring(0, pos);
+    const lineNumber = textBeforeBookmark.split('\n').length;
+
+    // Get line height
+    const editorStyle = window.getComputedStyle(editor);
+    const lineHeight = parseFloat(editorStyle.lineHeight) || 32;
+    const paddingTop = parseFloat(editorStyle.paddingTop) || 0;
+
+    // Calculate vertical position
+    const topPosition = paddingTop + (lineNumber - 1) * lineHeight;
+
+    // Create or update indicator
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'bookmark-line-indicator';
+        // Insert into scroll area so it scrolls with content
+        if (scrollArea) {
+            scrollArea.appendChild(indicator);
+        }
+    }
+
+    indicator.innerHTML = '🔖';
+    indicator.style.top = topPosition + 'px';
 }
 
 function syncHighlightTypography() {

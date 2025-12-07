@@ -1123,12 +1123,22 @@ body.light-mode .md-mark {
     /* Red matching browser spellcheck underline color for light mode */
 }
 
-/* Bookmark marker */
-.bookmark-marker {
-    display: inline;
-    font-size: 0.9em;
-    vertical-align: middle;
+/* Bookmark line indicator - shows in left margin */
+#bookmark-line-indicator {
+    position: absolute;
+    left: 4px;
+    font-size: 14px;
+    line-height: 1;
+    z-index: 50;
+    pointer-events: none;
+    color: #5dade2;
+    /* Same as md-mark in dark mode */
     animation: bookmark-pulse 2s ease-in-out infinite;
+}
+
+body.light-mode #bookmark-line-indicator {
+    color: #dc3545;
+    /* Same as md-mark in light mode */
 }
 
 @keyframes bookmark-pulse {
@@ -1139,7 +1149,7 @@ body.light-mode .md-mark {
     }
 
     50% {
-        opacity: 0.5;
+        opacity: 0.6;
     }
 }
 
