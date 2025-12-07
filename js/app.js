@@ -2739,6 +2739,13 @@ editor.addEventListener('keydown', (e) => {
         return;
     }
 
+    // Toggle Bookmark (Cmd+Shift+B)
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleBookmark();
+        return;
+    }
+
     // Toggle list (Ctrl/Cmd+L)
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'l' || e.key === 'L')) {
         e.preventDefault();

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
         :root {
             color-scheme: light dark;
         }
+
         body {
             margin: 0;
             padding: 32px 18px 80px;
@@ -16,26 +18,29 @@
             line-height: 1.65;
             color: #e5e5e5;
             background:
-                radial-gradient(120% 120% at 18% 18%, rgba(255,255,255,0.06), transparent 55%),
-                radial-gradient(100% 100% at 78% 12%, rgba(255,255,255,0.05), transparent 60%),
+                radial-gradient(120% 120% at 18% 18%, rgba(255, 255, 255, 0.06), transparent 55%),
+                radial-gradient(100% 100% at 78% 12%, rgba(255, 255, 255, 0.05), transparent 60%),
                 linear-gradient(160deg, #0c0c0e 0%, #0b0b0d 55%, #0e0e11 100%);
         }
+
         main {
             max-width: 820px;
             margin: 0 auto;
             background: rgba(18, 18, 20, 0.72);
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.48);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.48);
             border-radius: 18px;
             padding: 28px 26px 40px;
             backdrop-filter: blur(6px);
         }
+
         h1 {
             font-size: 1.7rem;
             margin-bottom: 4px;
             letter-spacing: 0.015em;
             color: #f0f0f0;
         }
+
         h2 {
             font-size: 1.05rem;
             margin-top: 24px;
@@ -43,78 +48,126 @@
             letter-spacing: 0.02em;
             color: #e2e2e2;
         }
+
         p {
             margin: 8px 0 14px;
         }
+
         ul {
             padding-left: 18px;
             margin: 6px 0 14px;
         }
+
         li {
             margin-bottom: 6px;
         }
+
         .card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 12px;
             padding: 12px 14px;
             margin: 8px 0 16px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 8px 0 16px;
             font-size: 0.9rem;
         }
-        th, td {
-            border: 1px solid rgba(255,255,255,0.08);
+
+        th,
+        td {
+            border: 1px solid rgba(255, 255, 255, 0.08);
             padding: 8px 10px;
             text-align: left;
         }
+
         th {
-            background: rgba(255,255,255,0.07);
+            background: rgba(255, 255, 255, 0.07);
             font-weight: 600;
         }
+
         code {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             padding: 2px 5px;
             border-radius: 4px;
         }
+
         a {
             color: #d8d8d8;
             text-decoration: none;
         }
-        a:hover, a:focus-visible {
+
+        a:hover,
+        a:focus-visible {
             text-decoration: underline;
         }
+
         .muted {
             color: #9aa0aa;
             font-size: 0.95rem;
         }
+
         .pill {
             display: inline-block;
             padding: 4px 10px;
             border-radius: 999px;
-            border: 1px solid rgba(255,255,255,0.16);
-            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.05);
             font-size: 0.8rem;
             color: #e5e5e5;
             letter-spacing: 0.02em;
         }
+
         @media (prefers-color-scheme: light) {
-            body { color: #1f1f23; background: #f7f7f7; }
-            main { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.04); }
-            .card { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.07); }
-            th, td { border-color: rgba(0,0,0,0.08); }
-            th { background: rgba(0,0,0,0.04); }
-            code { background: rgba(0,0,0,0.06); }
-            a { color: #333; }
-            .muted { color: #555; }
-            .pill { border-color: rgba(0,0,0,0.08); background: rgba(0,0,0,0.04); color: #1f1f23; }
+            body {
+                color: #1f1f23;
+                background: #f7f7f7;
+            }
+
+            main {
+                background: rgba(255, 255, 255, 0.9);
+                border-color: rgba(0, 0, 0, 0.04);
+            }
+
+            .card {
+                background: rgba(0, 0, 0, 0.02);
+                border-color: rgba(0, 0, 0, 0.07);
+            }
+
+            th,
+            td {
+                border-color: rgba(0, 0, 0, 0.08);
+            }
+
+            th {
+                background: rgba(0, 0, 0, 0.04);
+            }
+
+            code {
+                background: rgba(0, 0, 0, 0.06);
+            }
+
+            a {
+                color: #333;
+            }
+
+            .muted {
+                color: #555;
+            }
+
+            .pill {
+                border-color: rgba(0, 0, 0, 0.08);
+                background: rgba(0, 0, 0, 0.04);
+                color: #1f1f23;
+            }
         }
     </style>
 </head>
+
 <body>
     <main>
         <h1>Nongkhai 操作マニュアル</h1>
@@ -131,6 +184,7 @@
                 <li><strong>お気に入り/ゴミ箱:</strong> サイドバー上部の★・ゴミ箱トグルで絞り込み。</li>
                 <li><strong>履歴:</strong> ノート行の時計アイコンから復元/参照。</li>
                 <li><strong>テーマ・フォント・文字数:</strong> ツールバー右側の各ボタンで切替。</li>
+                <li><strong>しおり:</strong> ツールバーのリボンアイコン、または <code>Cmd+Shift+B</code> で行にしおりを設定。</li>
                 <li><strong>効果音/BGM:</strong> スピーカー/傘アイコンでON/OFF。音が不要ならOFFのままでOK。</li>
             </ul>
         </div>
@@ -140,16 +194,42 @@
             <h2>ショートカット一覧（現在設定されているもの）</h2>
             <table aria-label="keyboard shortcuts">
                 <thead>
-                    <tr><th>キー</th><th>動作</th></tr>
+                    <tr>
+                        <th>キー</th>
+                        <th>動作</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>Ctrl</code>/<code>Cmd</code> + <code>L</code></td><td>箇条書きトグル（行頭に「- 」を付与）</td></tr>
-                    <tr><td><code>Cmd</code> + <code>Shift</code> + <code>H</code></td><td>見出しトグル（行の # レベルを循環）</td></tr>
-                    <tr><td><code>Ctrl</code>/<code>Cmd</code> + <code>A</code></td><td>全選択（エディタ内でフォーカス維持）</td></tr>
-                    <tr><td><code>Enter</code>（リスト/引用行）</td><td>箇条書き・番号リスト・引用の継続/解除を自動入力</td></tr>
-                    <tr><td><code>Ctrl</code>/<code>Cmd</code> + <code>Z</code></td><td>取り消し（ブラウザ標準、ツールバーのUndoでも可）</td></tr>
-                    <tr><td><code>Ctrl</code>/<code>Cmd</code> + <code>Shift</code> + <code>Z</code> または <code>Ctrl</code>/<code>Cmd</code> + <code>Y</code></td><td>やり直し（ブラウザ標準、ツールバーのRedoでも可）</td></tr>
-                    <tr><td><code>Ctrl</code>/<code>Cmd</code> + <code>C</code> / <code>V</code></td><td>コピー / ペースト（ブラウザ標準、ツールバーのCopy/Pasteボタンでも可）</td></tr>
+                    <tr>
+                        <td><code>Ctrl</code>/<code>Cmd</code> + <code>L</code></td>
+                        <td>箇条書きトグル（行頭に「- 」を付与）</td>
+                    </tr>
+                    <tr>
+                        <td><code>Cmd</code> + <code>Shift</code> + <code>H</code></td>
+                        <td>見出しトグル（行の # レベルを循環）</td>
+                    </tr>
+                    <tr>
+                        <td><code>Ctrl</code>/<code>Cmd</code> + <code>A</code></td>
+                        <td>全選択（エディタ内でフォーカス維持）</td>
+                    </tr>
+                    <tr>
+                        <td><code>Enter</code>（リスト/引用行）</td>
+                        <td>箇条書き・番号リスト・引用の継続/解除を自動入力</td>
+                    </tr>
+                    <tr>
+                        <td><code>Ctrl</code>/<code>Cmd</code> + <code>Z</code></td>
+                        <td>取り消し（ブラウザ標準、ツールバーのUndoでも可）</td>
+                    </tr>
+                    <tr>
+                        <td><code>Ctrl</code>/<code>Cmd</code> + <code>Shift</code> + <code>Z</code> または
+                            <code>Ctrl</code>/<code>Cmd</code> + <code>Y</code>
+                        </td>
+                        <td>やり直し（ブラウザ標準、ツールバーのRedoでも可）</td>
+                    </tr>
+                    <tr>
+                        <td><code>Ctrl</code>/<code>Cmd</code> + <code>C</code> / <code>V</code></td>
+                        <td>コピー / ペースト（ブラウザ標準、ツールバーのCopy/Pasteボタンでも可）</td>
+                    </tr>
                 </tbody>
             </table>
             <p class="muted">現時点では独自のホットキーは上記のみです。その他はブラウザ標準のキー操作がそのまま使えます。</p>
@@ -185,4 +265,5 @@
         </div>
     </main>
 </body>
+
 </html>
