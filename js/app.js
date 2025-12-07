@@ -356,8 +356,27 @@ async function loadNote(id) {
     syncHeight();
     updateCharCountDisplay();
     updateStarState(note.favorite);
+    updateBookmarkState(note.bookmarkPosition);
+
     if (scrollArea) {
         scrollArea.scrollTop = 0;
+    }
+
+    // Restore bookmark position if exists
+    if (note.bookmarkPosition !== undefined && note.bookmarkPosition !== null && editor) {
+        const pos = Math.min(note.bookmarkPosition, editor.value.length);
+        editor.setSelectionRange(pos, pos);
+        // Scroll to cursor position
+        setTimeout(() => {
+            if (editor && scrollArea) {
+                // Create a temporary element to measure position
+                const textBefore = editor.value.substring(0, pos);
+                const lines = textBefore.split('\n').length;
+                const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 24;
+                const targetScroll = Math.max(0, (lines - 3) * lineHeight);
+                scrollArea.scrollTop = targetScroll;
+            }
+        }, 50);
     }
 
     if (shouldAnimate) {
@@ -573,6 +592,52 @@ function updateStarState(isFav) {
     //         btnStar.classList.remove('favorite-active');
     //     }
     // }
+}
+
+// Bookmark state management
+const btnBookmark = document.getElementById('btn-bookmark');
+
+function updateBookmarkState(hasBookmark) {
+    if (btnBookmark) {
+        if (hasBookmark !== undefined && hasBookmark !== null) {
+            btnBookmark.classList.add('active');
+        } else {
+            btnBookmark.classList.remove('active');
+        }
+    }
+}
+
+async function toggleBookmark() {
+    if (!currentNoteId || !editor) {
+        showToast('No note selected');
+        return;
+    }
+
+    const note = await db.notes.get(currentNoteId);
+    if (!note) return;
+
+    if (note.bookmarkPosition !== undefined && note.bookmarkPosition !== null) {
+        // Remove bookmark
+        await db.notes.update(currentNoteId, { bookmarkPosition: null });
+        updateBookmarkState(null);
+        showToast('Bookmark removed');
+    } else {
+        // Set bookmark at current cursor position
+        const pos = editor.selectionStart;
+        await db.notes.update(currentNoteId, { bookmarkPosition: pos });
+        updateBookmarkState(pos);
+        showToast('Bookmark set');
+    }
+
+    // Sync if available
+    if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
+        window.syncManager.queueNoteSync(currentNoteId);
+    }
+}
+
+// Initialize bookmark button
+if (btnBookmark) {
+    btnBookmark.addEventListener('click', toggleBookmark);
 }
 
 // --- Mobile Detection & Responsive Helpers ---
