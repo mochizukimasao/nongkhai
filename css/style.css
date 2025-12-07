@@ -196,12 +196,16 @@ body.sidebar-pinned #sidebar {
 
 #search-input {
     flex: 1;
-    padding: 6px 8px;
+    height: 32px;
+    /* Explicit height */
+    padding: 0 8px;
+    /* Adjust padding for height */
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     color: inherit;
     font: inherit;
+    box-sizing: border-box;
 }
 
 #search-input:focus {
@@ -219,9 +223,15 @@ body.light-mode #search-input {
 }
 
 #btn-clear-search {
-    min-width: 28px;
-    height: 28px;
-    padding: 4px 6px;
+    min-width: 32px;
+    /* Match height */
+    height: 32px;
+    /* Match input height */
+    padding: 0;
+    /* Center icon */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.06);

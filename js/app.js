@@ -1311,10 +1311,14 @@ function initSidebarEventListeners() {
     if (btnClearSearch) {
         btnClearSearch.addEventListener('click', (e) => {
             e.preventDefault();
+            // Close search bar
+            const searchBar = document.getElementById('search-bar');
+            if (searchBar) searchBar.classList.add('hidden');
+
+            // Clear search
             searchQuery = '';
             if (searchInput) searchInput.value = '';
             updateNoteList();
-            searchInput?.focus();
         });
     }
 }
