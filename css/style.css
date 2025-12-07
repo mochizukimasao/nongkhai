@@ -1126,14 +1126,18 @@ body.light-mode .md-mark {
 /* Bookmark line indicator - shows in left margin */
 #bookmark-line-indicator {
     position: absolute;
-    left: 4px;
-    font-size: 14px;
-    line-height: 1;
+    left: 2px;
+    width: 16px;
+    height: 16px;
     z-index: 50;
     pointer-events: none;
     color: #5dade2;
     /* Same as md-mark in dark mode */
-    animation: bookmark-pulse 2s ease-in-out infinite;
+    opacity: 0.8;
+}
+
+#bookmark-line-indicator svg {
+    display: block;
 }
 
 body.light-mode #bookmark-line-indicator {
@@ -1141,6 +1145,9 @@ body.light-mode #bookmark-line-indicator {
     /* Same as md-mark in light mode */
 }
 
+/* The following keyframes block was part of the original #bookmark-line-indicator animation,
+   but was not included in the provided replacement snippet.
+   It is kept here to maintain syntactical correctness based on the instruction's intent. */
 @keyframes bookmark-pulse {
 
     0%,

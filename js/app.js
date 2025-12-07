@@ -1725,13 +1725,13 @@ function updateBookmarkLineIndicator() {
     const textBeforeBookmark = text.substring(0, pos);
     const lineNumber = textBeforeBookmark.split('\n').length;
 
-    // Get line height
-    const editorStyle = window.getComputedStyle(editor);
-    const lineHeight = parseFloat(editorStyle.lineHeight) || 32;
-    const paddingTop = parseFloat(editorStyle.paddingTop) || 0;
+    // Get line height from highlightLayer (matches editor)
+    const hlStyle = window.getComputedStyle(highlightLayer);
+    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
 
-    // Calculate vertical position
-    const topPosition = paddingTop + (lineNumber - 1) * lineHeight;
+    // Calculate vertical position - center within the line
+    const topPosition = paddingTop + (lineNumber - 1) * lineHeight + (lineHeight - 16) / 2;
 
     // Create or update indicator
     if (!indicator) {
@@ -1743,7 +1743,10 @@ function updateBookmarkLineIndicator() {
         }
     }
 
-    indicator.innerHTML = '🔖';
+    // SVG ribbon bookmark icon (like the one in the toolbar)
+    indicator.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+    </svg>`;
     indicator.style.top = topPosition + 'px';
 }
 
