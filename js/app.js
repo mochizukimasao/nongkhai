@@ -1419,13 +1419,18 @@ function initTextwellCursorTracking() {
             }
         }
 
-        // Vertical Move
-        if (Math.abs(accY) >= SENSITIVITY_Y) {
-            const stepsY = Math.floor(accY / SENSITIVITY_Y);
+        // Vertical Move (Continuous "Fast Scrub")
+        // Instead of jumping lines (which is inaccurate), we treat vertical movement
+        // as "fast cursor movement". 
+        // 1px vertical movement = ~0.5 character (2px = 1 char)
+        // This allows smooth scrubbing through text without "skipping" lines unpredictably.
+        const SENSITIVITY_Y_FAST = 2; // px per char (Vertical)
+
+        if (Math.abs(accY) >= SENSITIVITY_Y_FAST) {
+            const stepsY = Math.floor(accY / SENSITIVITY_Y_FAST);
             if (stepsY !== 0) {
-                // Moving down (+) means adding charsPerLine
-                totalSteps += stepsY * charsPerLine;
-                accY -= stepsY * SENSITIVITY_Y;
+                totalSteps += stepsY;
+                accY -= stepsY * SENSITIVITY_Y_FAST;
             }
         }
 
