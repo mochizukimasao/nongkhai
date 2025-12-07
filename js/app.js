@@ -1718,42 +1718,120 @@ function updateBookmarkLineIndicator() {
     const pos = window.currentBookmarkPos;
     const text = editor.value || '';
 
-    // Create a measurement div that mirrors the editor exactly
-    const measureDiv = document.createElement('div');
-    measureDiv.style.cssText = window.getComputedStyle(editor).cssText;
-    measureDiv.style.position = 'absolute';
-    measureDiv.style.visibility = 'hidden';
-    measureDiv.style.height = 'auto';
-    measureDiv.style.width = editor.clientWidth + 'px'; // Match width exactly
-    measureDiv.style.top = '0';
-    measureDiv.style.left = '0';
-    measureDiv.style.whiteSpace = 'pre-wrap'; // Ensure wrapping matches
-    measureDiv.style.wordWrap = 'break-word';
+    // Find the DOM node and offset in highlightLayer corresponding to pos
+    let editorIndex = 0;
+    let targetNode = null;
+    let targetOffset = 0;
+    let found = false;
 
-    // Content up to the bookmark
-    const textBefore = text.substring(0, pos);
-    // We add a zero-width space or similar to ensure the span has height if it's at start of line
-    const spanContent = document.createElement('span');
-    spanContent.textContent = '|';
+    const walker = document.createTreeWalker(highlightLayer, NodeFilter.SHOW_ALL, null, false);
+    let node;
 
-    measureDiv.textContent = textBefore;
-    measureDiv.appendChild(spanContent);
+    while ((node = walker.nextNode())) {
+        if (editorIndex >= pos) {
+            // We might have overshot if the previous node ended exactly at pos
+            // But usually we catch it inside the loop
+            break;
+        }
 
-    // Append to body to measure
-    document.body.appendChild(measureDiv);
+        if (node.nodeType === Node.TEXT_NODE) {
+            const nodeText = node.textContent;
+            let nodeIndex = 0;
 
-    // Calculate position
-    // The top of the span relative to the measureDiv is what we want
-    const spanTop = spanContent.offsetTop;
-    const lineHeight = parseFloat(window.getComputedStyle(editor).lineHeight) || 32;
+            // Consume text node
+            while (nodeIndex < nodeText.length && editorIndex < pos) {
+                const char = text[editorIndex];
 
-    // Cleanup
-    document.body.removeChild(measureDiv);
+                if (char === '\t') {
+                    // Tab consumes 4 chars in highlightLayer (TAB_ENTITY)
+                    // Check if we have 4 spaces here
+                    // We assume highlightLayer is correct
+                    nodeIndex += 4;
+                    editorIndex++;
+                } else {
+                    // Normal char
+                    nodeIndex++;
+                    editorIndex++;
+                }
 
-    // Apply to indicator
-    // Position: spanTop + padding + centering offset
-    const paddingTop = parseFloat(window.getComputedStyle(editor).paddingTop) || 0;
-    const topPosition = paddingTop + spanTop + (lineHeight - 16) / 2;
+                if (editorIndex === pos) {
+                    targetNode = node;
+                    targetOffset = nodeIndex;
+                    found = true;
+                    break;
+                }
+            }
+        } else if (node.nodeName === 'BR') {
+            // BR corresponds to \n in editor
+            if (text[editorIndex] === '\n') {
+                editorIndex++;
+                if (editorIndex === pos) {
+                    // Target is right after this BR
+                    targetNode = node;
+                    targetOffset = 0; // Special case: use the BR node itself or next node?
+                    // Range.setStartAfter(node) is better
+                    found = true;
+                }
+            }
+        }
+
+        if (found) break;
+    }
+
+    let topPosition = 0;
+
+    if (found && targetNode) {
+        const range = document.createRange();
+        try {
+            if (targetNode.nodeName === 'BR') {
+                range.setStartAfter(targetNode);
+            } else {
+                range.setStart(targetNode, targetOffset);
+            }
+            range.collapse(true);
+
+            const rects = range.getClientRects();
+            if (rects.length > 0) {
+                const rect = rects[0];
+                const hlRect = highlightLayer.getBoundingClientRect();
+                const scrollRect = scrollArea ? scrollArea.getBoundingClientRect() : hlRect;
+
+                // Calculate relative top position
+                // rect.top is viewport relative. 
+                // We want position relative to scrollArea content.
+                // scrollArea.scrollTop needs to be added.
+                // scrollRect.top needs to be subtracted.
+
+                topPosition = rect.top - scrollRect.top + scrollArea.scrollTop;
+
+                // Center the 16px icon
+                const hlStyle = window.getComputedStyle(highlightLayer);
+                const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+                topPosition += (lineHeight - 16) / 2;
+            } else {
+                // Fallback if no rects (e.g. at end of line or hidden)
+                // Try getting bounding rect of the node itself if it's an element
+                if (targetNode.nodeType === Node.ELEMENT_NODE) {
+                    const rect = targetNode.getBoundingClientRect();
+                    const scrollRect = scrollArea ? scrollArea.getBoundingClientRect() : highlightLayer.getBoundingClientRect();
+                    topPosition = rect.top - scrollRect.top + scrollArea.scrollTop;
+                }
+            }
+        } catch (e) {
+            console.warn('Bookmark range error:', e);
+        }
+    } else {
+        // Fallback: if pos is at the very end of text
+        if (pos >= text.length) {
+            // Use total height?
+            const hlStyle = window.getComputedStyle(highlightLayer);
+            const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
+            const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+            // Estimate based on lines
+            const lines = text.split('\n').length;
+            topPosition = paddingTop + (lines - 1) * lineHeight + (lineHeight - 16) / 2;
+        }
+    }
 
     // Create or update indicator
     if (!indicator) {
