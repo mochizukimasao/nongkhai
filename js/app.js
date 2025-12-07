@@ -1320,85 +1320,61 @@ function initSidebarEventListeners() {
 }
 
 // --- Initialize Other Event Listeners ---
-// --- Textwell-like Cursor Tracking (Relative Movement) ---
+// --- Textwell-like Cursor Tracking (Button Toggle Mode) ---
 function initTextwellCursorTracking() {
     if (!highlightLayer || !editor) return;
 
+    const btnCursorMode = document.getElementById('btn-cursor-mode');
     let isCursorMode = false;
-    let longPressTimer = null;
+
     let lastX = 0;
     let lastY = 0;
-    let startX = 0;
-    let startY = 0;
 
     // Parameters
-    const LONG_PRESS_DURATION = 300; // ms
-    const MOVE_THRESHOLD = 10; // px (to cancel long press)
     const SENSITIVITY_X = 12; // px per character
-    const SENSITIVITY_Y = 24; // px per line (approx line height)
+    const SENSITIVITY_Y_FAST = 2; // px per char (Vertical)
 
-    // Accumulators for smooth movement
+    // Accumulators
     let accX = 0;
     let accY = 0;
 
-    // Estimated characters per line (calculated on touchstart)
-    let charsPerLine = 40;
+    // Toggle Mode
+    if (btnCursorMode) {
+        btnCursorMode.addEventListener('click', (e) => {
+            e.preventDefault();
+            isCursorMode = !isCursorMode;
 
-    const triggerHaptic = () => {
-        if (navigator.vibrate) {
-            navigator.vibrate(50);
-        }
-    };
+            if (isCursorMode) {
+                btnCursorMode.classList.add('active');
+                highlightLayer.style.opacity = '0.6'; // Visual cue
+                showToast('Cursor Mode: ON');
+            } else {
+                btnCursorMode.classList.remove('active');
+                highlightLayer.style.opacity = '';
+                showToast('Cursor Mode: OFF');
+            }
+        });
+    }
 
     const handleTouchStart = (e) => {
+        if (!isCursorMode) return;
         if (e.touches.length !== 1) return;
 
         const touch = e.touches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
         lastX = touch.clientX;
         lastY = touch.clientY;
         accX = 0;
         accY = 0;
-
-        // Calculate approx chars per line
-        // Width of editor / approx char width
-        // For Japanese text (full-width), char width is close to fontSize (1em).
-        // Previous estimate (0.6) was too small, causing charsPerLine to be too large, resulting in skipping lines.
-        // We use 0.95 to be safe (slightly under-estimating line length is better than over-estimating).
-        const style = window.getComputedStyle(editor);
-        const fontSize = parseFloat(style.fontSize) || 16;
-        const width = editor.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-
-        const avgCharWidth = fontSize * 0.95;
-        charsPerLine = Math.floor(width / avgCharWidth);
-
-        longPressTimer = setTimeout(() => {
-            isCursorMode = true;
-            triggerHaptic();
-
-            // Visual feedback
-            highlightLayer.style.opacity = '0.6';
-            // We don't need pointer-events: auto for relative movement
-        }, LONG_PRESS_DURATION);
     };
 
     const handleTouchMove = (e) => {
+        if (!isCursorMode) return;
         if (e.touches.length !== 1) return;
+
+        // Prevent default scrolling when in cursor mode
+        if (e.cancelable) e.preventDefault();
+
         const touch = e.touches[0];
-
-        if (!isCursorMode) {
-            const dx = Math.abs(touch.clientX - startX);
-            const dy = Math.abs(touch.clientY - startY);
-            if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
-                clearTimeout(longPressTimer);
-            }
-            return;
-        }
-
-        // Cursor mode active
-        e.preventDefault(); // Stop scrolling
-
         const dx = touch.clientX - lastX;
         const dy = touch.clientY - lastY;
 
@@ -1419,13 +1395,7 @@ function initTextwellCursorTracking() {
             }
         }
 
-        // Vertical Move (Continuous "Fast Scrub")
-        // Instead of jumping lines (which is inaccurate), we treat vertical movement
-        // as "fast cursor movement". 
-        // 1px vertical movement = ~0.5 character (2px = 1 char)
-        // This allows smooth scrubbing through text without "skipping" lines unpredictably.
-        const SENSITIVITY_Y_FAST = 2; // px per char (Vertical)
-
+        // Vertical Move (Fast Scrub)
         if (Math.abs(accY) >= SENSITIVITY_Y_FAST) {
             const stepsY = Math.floor(accY / SENSITIVITY_Y_FAST);
             if (stepsY !== 0) {
@@ -1446,12 +1416,7 @@ function initTextwellCursorTracking() {
     };
 
     const handleTouchEnd = (e) => {
-        clearTimeout(longPressTimer);
-        if (isCursorMode) {
-            isCursorMode = false;
-            e.preventDefault();
-            highlightLayer.style.opacity = '';
-        }
+        // Nothing to reset for now, mode stays active until button clicked
     };
 
     editor.addEventListener('touchstart', handleTouchStart, { passive: false });

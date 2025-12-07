@@ -60,7 +60,8 @@
                 <div style="display:flex; gap:6px;">
                     <button id="btn-search" class="tool-btn" title="Search notes" style="margin: 0;">
                         <svg viewBox="0 0 24 24">
-                            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/>
+                            <path
+                                d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z" />
                         </svg>
                     </button>
                     <button id="btn-pin-sidebar" class="tool-btn" title="Pin Sidebar" style="margin: 0;">
@@ -171,6 +172,12 @@
                 <button class="tool-btn" id="btn-down" aria-label="Move Cursor Down">
                     <svg viewBox="0 0 24 24">
                         <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" id="btn-cursor-mode" aria-label="Cursor Movement Mode">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z" />
                     </svg>
                 </button>
                 <button class="tool-btn" id="btn-select-mode" aria-label="Selection Mode">
@@ -327,7 +334,8 @@
                 </div>
                 <div class="help-body">
                     <section class="help-intro">
-                        <p>メコン川の壮大さと静けさをイメージした、余白のあるミニマルな筆記空間。音・背景・光を静かに調律し、ローカル保存の安心とワンタップ同期の身軽さで、思考を邪魔せず書くことだけに没頭できるメモ空間。</p>
+                        <p>メコン川の壮大さと静けさをイメージした、余白のあるミニマルな筆記空間。音・背景・光を静かに調律し、ローカル保存の安心とワンタップ同期の身軽さで、思考を邪魔せず書くことだけに没頭できるメモ空間。
+                        </p>
                     </section>
 
                     <section>
@@ -346,16 +354,40 @@
                         <h2>ショートカット</h2>
                         <table aria-label="keyboard shortcuts">
                             <thead>
-                                <tr><th>キー</th><th>動作</th></tr>
+                                <tr>
+                                    <th>キー</th>
+                                    <th>動作</th>
+                                </tr>
                             </thead>
                             <tbody>
-                                <tr><td>Ctrl/Cmd + L</td><td>箇条書きトグル（行頭に「- 」を付与）</td></tr>
-                                <tr><td>Cmd + Shift + H</td><td>見出しトグル（行の # レベルを循環）</td></tr>
-                                <tr><td>Ctrl/Cmd + A</td><td>全選択</td></tr>
-                                <tr><td>Enter（リスト/引用行）</td><td>箇条書き・番号リスト・引用の継続/解除</td></tr>
-                                <tr><td>Ctrl/Cmd + Z</td><td>取り消し</td></tr>
-                                <tr><td>Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y</td><td>やり直し</td></tr>
-                                <tr><td>Ctrl/Cmd + C / V</td><td>コピー / ペースト</td></tr>
+                                <tr>
+                                    <td>Ctrl/Cmd + L</td>
+                                    <td>箇条書きトグル（行頭に「- 」を付与）</td>
+                                </tr>
+                                <tr>
+                                    <td>Cmd + Shift + H</td>
+                                    <td>見出しトグル（行の # レベルを循環）</td>
+                                </tr>
+                                <tr>
+                                    <td>Ctrl/Cmd + A</td>
+                                    <td>全選択</td>
+                                </tr>
+                                <tr>
+                                    <td>Enter（リスト/引用行）</td>
+                                    <td>箇条書き・番号リスト・引用の継続/解除</td>
+                                </tr>
+                                <tr>
+                                    <td>Ctrl/Cmd + Z</td>
+                                    <td>取り消し</td>
+                                </tr>
+                                <tr>
+                                    <td>Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y</td>
+                                    <td>やり直し</td>
+                                </tr>
+                                <tr>
+                                    <td>Ctrl/Cmd + C / V</td>
+                                    <td>コピー / ペースト</td>
+                                </tr>
                             </tbody>
                         </table>
                         <p class="muted">独自ホットキーは上記のみです。他はブラウザ標準を利用します。</p>
