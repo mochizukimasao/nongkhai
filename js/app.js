@@ -1320,73 +1320,30 @@ function initSidebarEventListeners() {
 }
 
 // --- Initialize Other Event Listeners ---
-// --- Textwell-like Cursor Tracking ---
+// --- Textwell-like Cursor Tracking (Relative Movement) ---
 function initTextwellCursorTracking() {
     if (!highlightLayer || !editor) return;
 
     let isCursorMode = false;
     let longPressTimer = null;
+    let lastX = 0;
+    let lastY = 0;
     let startX = 0;
     let startY = 0;
-    const LONG_PRESS_DURATION = 300; // ms
-    const MOVE_THRESHOLD = 10; // px
 
-    // Haptic feedback helper
+    // Parameters
+    const LONG_PRESS_DURATION = 300; // ms
+    const MOVE_THRESHOLD = 10; // px (to cancel long press)
+    const SENSITIVITY_X = 12; // px per character
+    const SENSITIVITY_Y = 24; // px per line (approx line height)
+
+    // Accumulators for smooth movement
+    let accX = 0;
+    let accY = 0;
+
     const triggerHaptic = () => {
         if (navigator.vibrate) {
-            navigator.vibrate(50); // Short vibration
-        }
-    };
-
-    // Helper to get cursor position from touch coordinates
-    const getCursorPositionFromTouch = (touchX, touchY) => {
-        // We need to hit-test the highlight layer to get the text offset.
-        // For this to work, highlightLayer must have pointer-events: auto (temporarily).
-        // Since we toggle this in the timer, it should be ready.
-
-        let range;
-        if (document.caretRangeFromPoint) {
-            range = document.caretRangeFromPoint(touchX, touchY);
-        } else if (document.caretPositionFromPoint) {
-            const pos = document.caretPositionFromPoint(touchX, touchY);
-            if (pos) {
-                range = document.createRange();
-                range.setStart(pos.offsetNode, pos.offset);
-                range.collapse(true);
-            }
-        }
-
-        if (!range) return null;
-
-        // Verify we hit the highlight layer or its children
-        let container = range.startContainer;
-        // Traverse up to check if it's inside highlightLayer
-        let isInside = false;
-        let curr = container;
-        while (curr) {
-            if (curr === highlightLayer) {
-                isInside = true;
-                break;
-            }
-            curr = curr.parentNode;
-        }
-
-        if (!isInside) {
-            // If we missed highlightLayer (e.g. hit padding or margins), 
-            // we might want to clamp or ignore. 
-            // For now, ignore to prevent jumping to 0.
-            return null;
-        }
-
-        // Map range in #highlight-layer to character index
-        try {
-            const preCaretRange = range.cloneRange();
-            preCaretRange.selectNodeContents(highlightLayer);
-            preCaretRange.setEnd(range.startContainer, range.startOffset);
-            return preCaretRange.toString().length;
-        } catch (e) {
-            console.warn('Cursor calc error:', e);
-            return null;
+            navigator.vibrate(50);
         }
     };
 
@@ -1396,21 +1353,18 @@ function initTextwellCursorTracking() {
         const touch = e.touches[0];
         startX = touch.clientX;
         startY = touch.clientY;
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+        accX = 0;
+        accY = 0;
 
-        // Start long press timer
         longPressTimer = setTimeout(() => {
             isCursorMode = true;
             triggerHaptic();
 
-            // Visual feedback & Enable hit-testing
-            highlightLayer.style.opacity = '0.7';
-            highlightLayer.style.pointerEvents = 'auto'; // CRITICAL: Enable hit-testing
-
-            // Initial cursor move
-            const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
-            if (index !== null) {
-                editor.setSelectionRange(index, index);
-            }
+            // Visual feedback
+            highlightLayer.style.opacity = '0.6';
+            // We don't need pointer-events: auto for relative movement
         }, LONG_PRESS_DURATION);
     };
 
@@ -1419,39 +1373,74 @@ function initTextwellCursorTracking() {
         const touch = e.touches[0];
 
         if (!isCursorMode) {
-            // Check if moved too much before long press triggers
             const dx = Math.abs(touch.clientX - startX);
             const dy = Math.abs(touch.clientY - startY);
             if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
                 clearTimeout(longPressTimer);
             }
-            return; // Allow native scroll
+            return;
         }
 
-        // Cursor mode is active
+        // Cursor mode active
         e.preventDefault(); // Stop scrolling
 
-        const index = getCursorPositionFromTouch(touch.clientX, touch.clientY);
-        if (index !== null) {
-            editor.setSelectionRange(index, index);
-            // Optional: Scroll editor if cursor is near edge? 
-            // Native behavior might handle it if we set selection.
+        const dx = touch.clientX - lastX;
+        const dy = touch.clientY - lastY;
+
+        lastX = touch.clientX;
+        lastY = touch.clientY;
+
+        accX += dx;
+        accY += dy;
+
+        // Horizontal Move
+        if (Math.abs(accX) >= SENSITIVITY_X) {
+            const steps = Math.floor(accX / SENSITIVITY_X);
+            if (steps !== 0) {
+                const currentPos = editor.selectionStart;
+                let newPos = currentPos + steps;
+                // Clamp
+                newPos = Math.max(0, Math.min(editor.value.length, newPos));
+
+                editor.setSelectionRange(newPos, newPos);
+                accX -= steps * SENSITIVITY_X; // Keep remainder
+            }
         }
+
+        // Vertical Move (Experimental: Jump lines)
+        // Moving vertically is harder to map exactly to lines without knowing line breaks.
+        // But we can approximate by moving ~40 characters (average line length?) or just ignore Y for now to be safe.
+        // Or, we can try to use standard up/down arrow key simulation if possible? No.
+        // Let's stick to X-axis mainly for now, or map Y to X movement (Textwell style often maps 2D slide to 1D cursor).
+        // Actually, Textwell maps Y movement to line jumps.
+        // Let's try a simple heuristic: 1 line ~ 30 chars? No, that varies.
+        // Safer approach: Just map X and Y to linear cursor movement.
+        // Moving right = +1, Moving down = +1 (or +width).
+        // But that's confusing.
+
+        // Better: X controls char, Y controls line (approx).
+        // To move up/down lines, we need to find the position of the previous/next line.
+        // That's complex.
+        // Let's stick to X-axis control for stability first, OR allow Y to contribute to X speed.
+        // "Scrubbing": Moving finger anywhere moves cursor forward/backward.
+        // This is often the most intuitive on mobile.
+        // Slide Right/Down -> Advance. Slide Left/Up -> Retreat.
+
+        // Let's try: X movement is primary. Y movement adds to it?
+        // Or just implement X-axis scrubbing (like iOS spacebar).
+        // Let's start with X-axis only for reliability.
+        // If user slides diagonally, we just take X component.
     };
 
     const handleTouchEnd = (e) => {
         clearTimeout(longPressTimer);
         if (isCursorMode) {
             isCursorMode = false;
-            e.preventDefault(); // Prevent click
-
-            // Reset state
+            e.preventDefault();
             highlightLayer.style.opacity = '';
-            highlightLayer.style.pointerEvents = ''; // Revert to CSS (none)
         }
     };
 
-    // Attach listeners to editor
     editor.addEventListener('touchstart', handleTouchStart, { passive: false });
     editor.addEventListener('touchmove', handleTouchMove, { passive: false });
     editor.addEventListener('touchend', handleTouchEnd, { passive: false });
