@@ -362,23 +362,6 @@ async function loadNote(id) {
         scrollArea.scrollTop = 0;
     }
 
-    // Restore bookmark position if exists
-    if (note.bookmarkPosition !== undefined && note.bookmarkPosition !== null && editor) {
-        const pos = Math.min(note.bookmarkPosition, editor.value.length);
-        editor.setSelectionRange(pos, pos);
-        // Scroll to cursor position
-        setTimeout(() => {
-            if (editor && scrollArea) {
-                // Create a temporary element to measure position
-                const textBefore = editor.value.substring(0, pos);
-                const lines = textBefore.split('\n').length;
-                const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 24;
-                const targetScroll = Math.max(0, (lines - 3) * lineHeight);
-                scrollArea.scrollTop = targetScroll;
-            }
-        }, 50);
-    }
-
     if (shouldAnimate) {
         if (loadToken === noteLoadSequence) {
             await animateNoteLayers(1);
@@ -628,10 +611,18 @@ async function toggleBookmark() {
         updateBookmarkState(null);
         showToast('Bookmark removed');
     } else {
-        // Set bookmark at current cursor position
-        const pos = editor.selectionStart;
-        await db.notes.update(currentNoteId, { bookmarkPosition: pos });
-        updateBookmarkState(pos);
+        // Set bookmark at the START of the current line
+        const text = editor.value || '';
+        const cursorPos = editor.selectionStart;
+
+        // Find the start of the current line
+        let lineStart = cursorPos;
+        while (lineStart > 0 && text[lineStart - 1] !== '\n') {
+            lineStart--;
+        }
+
+        await db.notes.update(currentNoteId, { bookmarkPosition: lineStart });
+        updateBookmarkState(lineStart);
         showToast('Bookmark set');
     }
 
