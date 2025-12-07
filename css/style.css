@@ -1123,6 +1123,26 @@ body.light-mode .md-mark {
     /* Red matching browser spellcheck underline color for light mode */
 }
 
+/* Bookmark marker */
+.bookmark-marker {
+    display: inline;
+    font-size: 0.9em;
+    vertical-align: middle;
+    animation: bookmark-pulse 2s ease-in-out infinite;
+}
+
+@keyframes bookmark-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
 .md-quote {
     font-weight: normal;
     color: #5dade2;

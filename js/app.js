@@ -598,6 +598,9 @@ function updateStarState(isFav) {
 const btnBookmark = document.getElementById('btn-bookmark');
 
 function updateBookmarkState(hasBookmark) {
+    // Store in window for highlight layer to access
+    window.currentBookmarkPos = hasBookmark;
+
     if (btnBookmark) {
         if (hasBookmark !== undefined && hasBookmark !== null) {
             btnBookmark.classList.add('active');
@@ -605,6 +608,9 @@ function updateBookmarkState(hasBookmark) {
             btnBookmark.classList.remove('active');
         }
     }
+
+    // Update highlights to show/hide bookmark marker
+    updateHighlights();
 }
 
 async function toggleBookmark() {
@@ -1689,6 +1695,47 @@ function updateHighlights() {
         // Markdown symbols (#, **) - color the symbols themselves when they are not already wrapped
         text = text.replace(/(?<!<span class="md-mark">)(#{1,6})(?!<\/span>)/g, '<span class="md-mark">$1</span>');
         text = text.replace(/(?<!<span class="md-mark">)\*\*(?!<\/span>)/g, '<span class="md-mark">**</span>');
+
+        // Insert bookmark indicator if exists
+        if (currentNoteId && window.currentBookmarkPos !== undefined && window.currentBookmarkPos !== null) {
+            const pos = window.currentBookmarkPos;
+            // Insert at the bookmark position (before applying br tags)
+            // We need to count characters carefully due to HTML escaping
+            // Find the insertion point in the original text
+            const originalText = editor.value || '';
+            if (pos >= 0 && pos <= originalText.length) {
+                // Count through the escaped text to find the right spot
+                let charCount = 0;
+                let insertIndex = 0;
+                for (let i = 0; i < text.length; i++) {
+                    if (charCount >= pos) {
+                        insertIndex = i;
+                        break;
+                    }
+                    // Check for escaped entities
+                    if (text.substring(i, i + 5) === '&amp;') {
+                        charCount++;
+                        i += 4;
+                    } else if (text.substring(i, i + 4) === '&lt;' || text.substring(i, i + 4) === '&gt;') {
+                        charCount++;
+                        i += 3;
+                    } else if (text[i] === '<') {
+                        // Skip HTML tags
+                        while (i < text.length && text[i] !== '>') i++;
+                    } else if (text[i] === '\n') {
+                        charCount++;
+                    } else {
+                        charCount++;
+                    }
+                }
+                if (charCount >= pos) {
+                    insertIndex = text.length;
+                }
+                // Insert bookmark marker
+                const bookmarkMarker = '<span class="bookmark-marker">🔖</span>';
+                text = text.substring(0, insertIndex) + bookmarkMarker + text.substring(insertIndex);
+            }
+        }
 
         // Convert all newlines to <br> tags to mirror textarea rendering
         text = text.replace(/\n/g, '<br>');
