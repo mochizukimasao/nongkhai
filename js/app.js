@@ -611,18 +611,10 @@ async function toggleBookmark() {
         updateBookmarkState(null);
         showToast('Bookmark removed');
     } else {
-        // Set bookmark at the START of the current line
-        const text = editor.value || '';
-        const cursorPos = editor.selectionStart;
-
-        // Find the start of the current line
-        let lineStart = cursorPos;
-        while (lineStart > 0 && text[lineStart - 1] !== '\n') {
-            lineStart--;
-        }
-
-        await db.notes.update(currentNoteId, { bookmarkPosition: lineStart });
-        updateBookmarkState(lineStart);
+        // Set bookmark at current cursor position (to support visual line positioning)
+        const pos = editor.selectionStart;
+        await db.notes.update(currentNoteId, { bookmarkPosition: pos });
+        updateBookmarkState(pos);
         showToast('Bookmark set');
     }
 
@@ -1706,7 +1698,7 @@ function updateHighlights() {
 
         highlightLayer.innerHTML = text;
 
-        // Update bookmark line indicator (separate from text)
+        // Update bookmark line indicator
         updateBookmarkLineIndicator();
     } catch (error) {
         console.error('Error in updateHighlights:', error);
@@ -1726,40 +1718,42 @@ function updateBookmarkLineIndicator() {
     const pos = window.currentBookmarkPos;
     const text = editor.value || '';
 
-    // Calculate which line the bookmark is on (0-indexed for array access)
-    const textBeforeBookmark = text.substring(0, pos);
-    const lineIndex = (textBeforeBookmark.match(/\n/g) || []).length;
+    // Create a measurement div that mirrors the editor exactly
+    const measureDiv = document.createElement('div');
+    measureDiv.style.cssText = window.getComputedStyle(editor).cssText;
+    measureDiv.style.position = 'absolute';
+    measureDiv.style.visibility = 'hidden';
+    measureDiv.style.height = 'auto';
+    measureDiv.style.width = editor.clientWidth + 'px'; // Match width exactly
+    measureDiv.style.top = '0';
+    measureDiv.style.left = '0';
+    measureDiv.style.whiteSpace = 'pre-wrap'; // Ensure wrapping matches
+    measureDiv.style.wordWrap = 'break-word';
 
-    // Find the corresponding position in highlightLayer
-    // The highlightLayer uses <br> for line breaks
-    // We need to find the Nth text node or <br> to get the line's Y position
+    // Content up to the bookmark
+    const textBefore = text.substring(0, pos);
+    // We add a zero-width space or similar to ensure the span has height if it's at start of line
+    const spanContent = document.createElement('span');
+    spanContent.textContent = '|';
 
-    let topPosition = 0;
-    const hlRect = highlightLayer.getBoundingClientRect();
-    const scrollRect = scrollArea ? scrollArea.getBoundingClientRect() : hlRect;
+    measureDiv.textContent = textBefore;
+    measureDiv.appendChild(spanContent);
 
-    // Find all <br> elements in highlightLayer
-    const brElements = highlightLayer.querySelectorAll('br');
-    const hlStyle = window.getComputedStyle(highlightLayer);
-    const lineHeight = parseFloat(hlStyle.lineHeight) || 32;
-    const paddingTop = parseFloat(hlStyle.paddingTop) || 0;
+    // Append to body to measure
+    document.body.appendChild(measureDiv);
 
-    if (lineIndex === 0) {
-        // First line - use highlightLayer's padding
-        topPosition = paddingTop + (lineHeight - 16) / 2;
-    } else if (lineIndex <= brElements.length) {
-        // Get the position of the <br> before this line
-        const targetBr = brElements[lineIndex - 1];
-        if (targetBr) {
-            const brRect = targetBr.getBoundingClientRect();
-            // Position after the <br>, with offset to center icon within the line
-            // brRect.bottom is at the end of previous line; add lineHeight/2 to center in next line
-            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop + lineHeight / 2 - 8;
-        }
-    } else {
-        // Fallback to calculation
-        topPosition = paddingTop + lineIndex * lineHeight + (lineHeight - 16) / 2;
-    }
+    // Calculate position
+    // The top of the span relative to the measureDiv is what we want
+    const spanTop = spanContent.offsetTop;
+    const lineHeight = parseFloat(window.getComputedStyle(editor).lineHeight) || 32;
+
+    // Cleanup
+    document.body.removeChild(measureDiv);
+
+    // Apply to indicator
+    // Position: spanTop + padding + centering offset
+    const paddingTop = parseFloat(window.getComputedStyle(editor).paddingTop) || 0;
+    const topPosition = paddingTop + spanTop + (lineHeight - 16) / 2;
 
     // Create or update indicator
     if (!indicator) {
