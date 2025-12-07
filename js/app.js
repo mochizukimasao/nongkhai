@@ -1752,8 +1752,9 @@ function updateBookmarkLineIndicator() {
         const targetBr = brElements[lineIndex - 1];
         if (targetBr) {
             const brRect = targetBr.getBoundingClientRect();
-            // Position after the <br>, centered within the next line
-            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop + (lineHeight - 16) / 2;
+            // Position after the <br>, with offset to center icon within the line
+            // brRect.bottom is at the end of previous line; add lineHeight/2 to center in next line
+            topPosition = brRect.bottom - scrollRect.top + scrollArea.scrollTop + lineHeight / 2 - 8;
         }
     } else {
         // Fallback to calculation
