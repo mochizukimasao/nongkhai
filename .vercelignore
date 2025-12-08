@@ -1,0 +1,13 @@
+# Xcode project files (Mac app development - should not be deployed to web server)
+Xcode/
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
