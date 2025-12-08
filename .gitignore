@@ -40,3 +40,16 @@ assets/RAINMisc-*.wav
 assets/WINDVege-*.wav
 assets/rain-street-*.wav
 
+# Xcode project files (Mac app development - should not be deployed to web server)
+Xcode/
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+

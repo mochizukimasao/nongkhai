@@ -1,4 +1,7 @@
 {
+  "ignore": [
+    "Xcode/**"
+  ],
   "headers": [
     {
       "source": "/(.*)",
