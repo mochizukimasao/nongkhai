@@ -2131,11 +2131,30 @@ function pastePlain() {
 
 async function clearCurrentNote() {
     if (!editor) return;
-    editor.value = '';
+    const prevValue = editor.value || '';
+
+    // ネイティブのUndoスタックに載せるため、execCommand を試す
+    editor.focus();
+    editor.setSelectionRange(0, prevValue.length);
+    let usedNativeClear = false;
+    try {
+        if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+            usedNativeClear = document.execCommand('insertText', false, '');
+        }
+    } catch (e) {
+        usedNativeClear = false;
+    }
+
+    if (!usedNativeClear) {
+        // フォールバック: 値を直接クリア
+        editor.value = '';
+    }
+
     updateHighlights();
     syncHeight();
     updateCharCountDisplay();
     editor.focus();
+
     try {
         await saveCurrentNote();
         showToast('Note cleared');
