@@ -26,6 +26,7 @@ const btnList = document.getElementById('btn-list');
 const btnOrderedList = document.getElementById('btn-ordered-list');
 const btnCopy = document.getElementById('btn-copy');
 const btnPaste = document.getElementById('btn-paste');
+const btnDeleteAll = document.getElementById('btn-delete-all');
 const btnCharCount = document.getElementById('btn-char-count');
 const btnSelectMode = document.getElementById('btn-select-mode');
 const btnUp = document.getElementById('btn-up');
@@ -2128,6 +2129,25 @@ function pastePlain() {
     });
 }
 
+async function clearCurrentNote() {
+    if (!editor) return;
+    editor.value = '';
+    updateHighlights();
+    syncHeight();
+    updateCharCountDisplay();
+    editor.focus();
+    try {
+        await saveCurrentNote();
+        showToast('Note cleared');
+        if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function' && currentNoteId) {
+            window.syncManager.queueNoteSync(currentNoteId);
+        }
+    } catch (error) {
+        console.error('Clear note failed', error);
+        showToast('Clear failed');
+    }
+}
+
 function getCharCount(text = '') {
     // Array.from handles surrogate pairs so Japanese characters are counted correctly
     return Array.from(text || '').length;
@@ -2159,8 +2179,8 @@ function toggleCharCountMode() {
 }
 
 bindToolbarAction(btnCopy, copyAll);
-
 bindToolbarAction(btnPaste, pastePlain);
+bindToolbarAction(btnDeleteAll, clearCurrentNote);
 bindToolbarAction(btnCharCount, toggleCharCountMode);
 
 
