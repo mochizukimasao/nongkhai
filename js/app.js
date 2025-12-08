@@ -414,6 +414,11 @@ async function saveCurrentNote() {
             if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
                 window.syncManager.queueNoteSync(newId);
             }
+            
+            // iCloud Syncに保存（Macアプリ版）
+            if (window.iCloudSync && typeof window.iCloudSync.saveNotes === 'function') {
+                await syncToICloud();
+            }
             return;
         }
 
@@ -440,6 +445,11 @@ async function saveCurrentNote() {
 
             if (window.syncManager && typeof window.syncManager.queueNoteSync === 'function') {
                 window.syncManager.queueNoteSync(currentNoteId);
+            }
+            
+            // iCloud Syncに保存（Macアプリ版）
+            if (window.iCloudSync && typeof window.iCloudSync.saveNotes === 'function') {
+                await syncToICloud();
             }
         }
     } catch (e) {
@@ -1024,23 +1034,11 @@ async function updateNoteList() {
         `;
         }
 
-        // Bookmark indicator for sidebar
-        const hasBookmark = note.bookmarkPosition !== undefined && note.bookmarkPosition !== null;
-        const bookmarkIcon = hasBookmark
-            ? `<span class="note-bookmark-icon" title="Bookmarked">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
-                </svg>
-               </span>`
-            : '';
-
         li.innerHTML = `
         <div style="flex:1; overflow:hidden;">
             <div class="note-title">${title}</div>
             <div class="note-meta">
                 <span>${date}</span>
-                ${bookmarkIcon}
-                <span class="note-fav-icon">★</span>
             </div>
         </div>
         <div class="note-actions">
@@ -1544,6 +1542,15 @@ function initializeApp() {
             initAuth();
         } catch (e) {
             console.warn('initAuth failed:', e);
+        }
+    }
+
+    // iCloud Sync の初期化（Macアプリ版）
+    if (typeof window.iCloudSync !== 'undefined') {
+        try {
+            initICloudSync();
+        } catch (e) {
+            console.warn('initICloudSync failed:', e);
         }
     }
 
@@ -2965,6 +2972,133 @@ function updateAuthUI(user) {
         }
     } catch (error) {
         console.error('Update auth UI error:', error);
+    }
+}
+
+// --- iCloud Sync Functions (Mac App) ---
+async function initICloudSync() {
+    console.log('[initICloudSync] Initializing iCloud Drive synchronization...');
+    
+    if (!window.iCloudSync) {
+        console.warn('[initICloudSync] iCloudSync not available');
+        return;
+    }
+    
+    try {
+        // iCloud Syncの利用可能性を確認
+        const isAvailable = window.iCloudSync.isAvailable();
+        if (!isAvailable) {
+            console.warn('[initICloudSync] iCloud Sync is not available');
+            return;
+        }
+        
+        // CloudKitからデータを読み込む
+        await loadFromICloud();
+    } catch (error) {
+        console.error('[initICloudSync] Error initializing iCloud Sync:', error);
+    }
+}
+
+async function loadFromICloud() {
+    console.log('[loadFromICloud] Loading notes from iCloud Drive...');
+    
+    if (!window.iCloudSync || typeof window.iCloudSync.loadNotes !== 'function') {
+        console.warn('[loadFromICloud] iCloudSync.loadNotes not available');
+        return;
+    }
+    
+    try {
+        const cloudNotes = await window.iCloudSync.loadNotes();
+        
+        if (!Array.isArray(cloudNotes) || cloudNotes.length === 0) {
+            console.log('[loadFromICloud] No notes found in iCloud');
+            return;
+        }
+        
+        console.log(`[loadFromICloud] Loaded ${cloudNotes.length} notes from iCloud`);
+        
+        // CloudKitから読み込んだノートをローカルDBにマージ
+        for (const cloudNote of cloudNotes) {
+            const noteId = cloudNote.id;
+            const cloudTimestamp = cloudNote.timestamp || 0;
+            
+            // ローカルDBから既存のノートを取得
+            const localNote = await db.notes.get(noteId);
+            
+            if (!localNote) {
+                // ローカルに存在しない場合は新規作成
+                // 注意: noteIdが文字列の場合は数値に変換する必要がある
+                const numericId = typeof noteId === 'string' ? parseInt(noteId, 10) : noteId;
+                if (!isNaN(numericId)) {
+                    await db.notes.put({
+                        id: numericId,
+                        text: cloudNote.content || '',
+                        created: cloudTimestamp,
+                        updated: cloudTimestamp,
+                        favorite: cloudNote.favorite ? 1 : 0,
+                        deleted: null,
+                        tags: cloudNote.tags || []
+                    });
+                } else {
+                    // IDが無効な場合は新規作成（自動ID）
+                    await db.notes.add({
+                        text: cloudNote.content || '',
+                        created: cloudTimestamp,
+                        updated: cloudTimestamp,
+                        favorite: cloudNote.favorite ? 1 : 0,
+                        deleted: null,
+                        tags: cloudNote.tags || []
+                    });
+                }
+            } else {
+                // ローカルに存在する場合は、新しい方で更新
+                const localTimestamp = localNote.updated || 0;
+                if (cloudTimestamp > localTimestamp) {
+                    await db.notes.update(noteId, {
+                        text: cloudNote.content || '',
+                        updated: cloudTimestamp,
+                        favorite: cloudNote.favorite ? 1 : 0,
+                        tags: cloudNote.tags || []
+                    });
+                }
+            }
+        }
+        
+        // ノートリストを更新
+        updateNoteList();
+        
+        console.log('[loadFromICloud] Successfully merged iCloud notes');
+    } catch (error) {
+        console.error('[loadFromICloud] Error loading from iCloud:', error);
+    }
+}
+
+async function syncToICloud() {
+    if (!window.iCloudSync || typeof window.iCloudSync.saveNotes !== 'function') {
+        return;
+    }
+    
+    try {
+        // すべてのノートを取得
+        const allNotes = await db.notes.filter(n => !n.deleted).toArray();
+        
+        // iCloud Sync用の形式に変換
+        const notesToSync = allNotes.map(note => ({
+            id: String(note.id),
+            content: note.text || '',
+            timestamp: note.updated || note.created || Date.now(),
+            favorite: note.favorite === 1,
+            tags: note.tags || []
+        }));
+        
+        // CloudKitに保存
+        const result = await window.iCloudSync.saveNotes(notesToSync);
+        
+        if (result && result.success) {
+            console.log(`[syncToICloud] Successfully synced ${result.saved || 0} notes to iCloud`);
+        }
+    } catch (error) {
+        console.error('[syncToICloud] Error syncing to iCloud:', error);
     }
 }
 
